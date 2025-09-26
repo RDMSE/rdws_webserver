@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# Script simples para criar um pacote compactado do projeto
-# Útil para backup ou transferência manual
+# simple script to create a compressed package of the project
+# useful for backup or manual transfer
 
-echo "📦 Criando pacote do projeto C++ REST Server..."
+echo "Creating package of C++ REST Server project..."
 
 cd /home/rdias/sources/lab/server
 
-# Criar arquivo tar compactado excluindo arquivos de build
+# Create compressed tar file excluding build files
 tar czf /tmp/cpp-rest-server-$(date +%Y%m%d-%H%M).tar.gz \
     --exclude='build' \
     --exclude='.git' \
@@ -18,9 +18,9 @@ tar czf /tmp/cpp-rest-server-$(date +%Y%m%d-%H%M).tar.gz \
 
 PACKAGE_FILE=$(ls -t /tmp/cpp-rest-server-*.tar.gz | head -1)
 
-echo "✅ Pacote criado: $PACKAGE_FILE"
-echo "💾 Tamanho: $(du -h "$PACKAGE_FILE" | cut -f1)"
+echo "Package created: $PACKAGE_FILE"
+echo "Size: $(du -h "$PACKAGE_FILE" | cut -f1)"
 
 echo ""
-echo "Para usar:"
-echo "  scp $PACKAGE_FILE sua-maquina:~/"
+echo "To use:"
+echo "  scp $PACKAGE_FILE your-machine:~/"

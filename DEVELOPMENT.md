@@ -1,116 +1,116 @@
-# 🏠➡️🖥️ Local Development + Remote Deploy Guide
+# Local Development + Remote Deploy Guide
 
-## Visão Geral
+## Overview
 
-Este guia explica como desenvolver localmente no Linux Mint e fazer deploy no servidor Fedora remoto.
+This guide explains how to develop locally on Linux Mint and deploy to the remote Fedora server.
 
-## 📋 Pré-requisitos
+## Prerequisites
 
-### Na sua máquina local (Linux Mint):
-- VS Code instalado
-- Git instalado
-- SSH configurado para o servidor
-- Docker (opcional, mas recomendado)
+### On your local machine (Linux Mint):
+- VS Code installed
+- Git installed
+- SSH configured for the server
+- Docker (optional, but recommended)
 
-### No servidor remoto (Fedora):
-- Projeto já configurado (como está agora)
-- SSH server rodando
-- Suas chaves SSH configuradas
+### On remote server (Fedora):
+- Project already configured (as it is now)
+- SSH server running
+- Your SSH keys configured
 
-## 🚀 Setup Inicial
+## Initial Setup
 
-### 1. Copiar projeto para máquina local
+### 1. Copy project to local machine
 
-Agora que o shell está configurado corretamente, você pode usar métodos padrão:
+Now that the shell is properly configured, you can use standard methods:
 
-**Método Recomendado - SCP**:
+**Recommended Method - SCP**:
 ```bash
-# Na sua máquina Linux Mint
+# On your Linux Mint machine
 scp -r rdias@fedora-server.local:/home/rdias/sources/lab/server ~/cpp-projects/
 cd ~/cpp-projects/server
 ```
 
-**Alternativa - Rsync** (mais rápido para atualizações):
+**Alternative - Rsync** (faster for updates):
 ```bash
-# Sincronização com rsync
+# Synchronization with rsync
 rsync -avz --exclude='build/' --exclude='.git/' \
     rdias@fedora-server.local:/home/rdias/sources/lab/server/ \
     ~/cpp-projects/server/
 cd ~/cpp-projects/server
 ```
 
-**Para backup/pacote** (opcional):
+**For backup/package** (optional):
 ```bash
-# No servidor, criar pacote com timestamp
+# On server, create timestamped package
 ssh rdias@fedora-server.local "cd /home/rdias/sources/lab/server && ./scripts/create_package.sh"
 
-# Baixar o pacote
+# Download the package
 scp rdias@fedora-server.local:/tmp/cpp-rest-server-*.tar.gz ~/cpp-projects/
 cd ~/cpp-projects && tar xzf cpp-rest-server-*.tar.gz
 ```
 
-### 2. Configurar VS Code
+### 2. Configure VS Code
 
 ```bash
-# Copiar configurações para desenvolvimento local
+# Copy settings for local development
 cp .vscode/settings-local-dev.json .vscode/settings.json
 cp .vscode/tasks-local-dev.json .vscode/tasks.json
 ```
 
-Edite `.vscode/settings.json` e ajuste:
+Edit `.vscode/settings.json` and adjust:
 ```json
 {
-    "remote.host": "fedora-server.local",  // ou IP do seu servidor
-    "remote.user": "rdias",                // seu usuário no servidor
+    "remote.host": "fedora-server.local",  // or your server IP
+    "remote.user": "rdias",                // your username on server
     "remote.path": "/home/rdias/sources/lab/server"
 }
 ```
 
-### 3. Configurar SSH (se não feito)
+### 3. Configure SSH (if not done)
 
 ```bash
-# Gerar chave SSH (se não tiver)
-ssh-keygen -t rsa -b 4096 -C "seu_email@exemplo.com"
+# Generate SSH key (if you don't have one)
+ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
 
-# Copiar chave para servidor
+# Copy key to server
 ssh-copy-id rdias@fedora-server.local
 
-# Testar conexão
-ssh rdias@fedora-server.local "echo 'SSH funcionando!'"
+# Test connection
+ssh rdias@fedora-server.local "echo 'SSH working!'"
 ```
 
-## 💻 Opções de Desenvolvimento Local
+## Local Development Options
 
-### Opção 1: Docker (Recomendado)
+### Option 1: Docker (Recommended)
 
-**Vantagens:**
-- Ambiente idêntico ao servidor
-- Não precisa instalar dependências localmente
-- Isolamento completo
+**Advantages:**
+- Environment identical to server
+- No need to install dependencies locally
+- Complete isolation
 
 ```bash
-# Iniciar ambiente de desenvolvimento
+# Start development environment
 docker-compose up -d
 
-# Entrar no container
+# Enter the container
 docker-compose exec cpp-dev bash
 
-# Dentro do container, você pode:
+# Inside the container, you can:
 mkdir build && cd build
 PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig cmake ..
 make
 ```
 
-### Opção 2: Instalação Nativa Linux Mint
+### Option 2: Native Linux Mint Installation
 
 ```bash
-# Instalar dependências
+# Install dependencies
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y build-essential cmake git curl
 sudo apt install -y libcurl4-openssl-dev rapidjson-dev
 sudo apt install -y libgtest-dev libgmock-dev
 
-# Compilar Pistache (se não estiver nos repos)
+# Compile Pistache (if not in repos)
 git clone https://github.com/pistacheio/pistache.git /tmp/pistache
 cd /tmp/pistache
 meson setup build --buildtype=release
@@ -119,182 +119,182 @@ sudo meson install -C build
 sudo ldconfig
 ```
 
-## 🔄 Workflow de Desenvolvimento
+## Development Workflow
 
 ### VS Code Tasks (Ctrl+Shift+P → "Tasks: Run Task")
 
-1. **🔄 Full Deploy & Run**
-   - Deploy código → Build remoto → Testa → Executa servidor
-   - Use este para deployment completo
+1. **Full Deploy & Run**
+   - Deploy code → Remote build → Test → Run server
+   - Use this for complete deployment
 
-2. **⚡ Quick Deploy & Build**  
-   - Deploy código → Build remoto
-   - Use durante desenvolvimento
+2. **Quick Deploy & Build**
+   - Deploy code → Remote build
+   - Use during development
 
-3. **🚀 Deploy to Server**
-   - Apenas sincroniza arquivos
-   - Rápido para mudanças pequenas
+3. **Deploy to Server**
+   - Only synchronizes files
+   - Fast for small changes
 
-4. **🧪 Remote Test**
-   - Executa testes no servidor
-   - Unitários + Integração
+4. **Remote Test**
+   - Run tests on server
+   - Unit + Integration
 
-5. **🛑 Remote Stop**
-   - Para o servidor remoto
+5. **Remote Stop**
+   - Stop remote server
 
-6. **📊 Remote Status**
-   - Verifica se servidor está rodando
+6. **Remote Status**
+   - Check if server is running
 
-7. **📋 View Remote Logs**
-   - Visualiza logs do servidor
+7. **View Remote Logs**
+   - View server logs
 
-### Workflow Típico de Desenvolvimento
+### Typical Development Workflow
 
 ```bash
-# 1. Editar código localmente no VS Code
-# 2. Salvar arquivos
-# 3. Executar task "⚡ Quick Deploy & Build"
-# 4. Se tudo OK, executar "🧪 Remote Test"
-# 5. Para produção, executar "🔄 Full Deploy & Run"
+# 1. Edit code locally in VS Code
+# 2. Save files
+# 3. Run task "⚡ Quick Deploy & Build"
+# 4. If everything OK, run "Remote Test"
+# 5. For production, run "Full Deploy & Run"
 ```
 
-## 📁 Estrutura de Arquivos
+## File Structure
 
 ```
 server/
 ├── scripts/
-│   ├── deploy.sh           # Script de deploy
-│   ├── remote_build.sh     # Build no servidor
-│   ├── remote_test.sh      # Testes no servidor  
-│   ├── remote_run.sh       # Execução no servidor
-│   └── local_setup.sh      # Setup desenvolvimento local
+│   ├── deploy.sh           # Deploy script
+│   ├── remote_build.sh     # Build on server
+│   ├── remote_test.sh      # Tests on server
+│   ├── remote_run.sh       # Execution on server
+│   └── local_setup.sh      # Local development setup
 ├── .vscode/
-│   ├── tasks-local-dev.json    # Tasks para dev local
-│   └── settings-local-dev.json # Configurações para dev local
-├── .deployignore          # Arquivos para não enviar no deploy
-├── Dockerfile              # Container para dev local
-└── docker-compose.yml      # Orquestração Docker
+│   ├── tasks-local-dev.json    # Tasks for local dev
+│   └── settings-local-dev.json # Settings for local dev
+├── .deployignore          # Files not to send on deploy
+├── Dockerfile              # Container for local dev
+└── docker-compose.yml      # Docker orchestration
 ```
 
-## 🛠️ Scripts Disponíveis
+## Available Scripts
 
-### Local (sua máquina):
+### Local (your machine):
 ```bash
-./scripts/deploy.sh                    # Deploy para servidor
-./scripts/local_setup.sh               # Setup ambiente local
-./scripts/local_setup.sh --docker      # Setup com Docker
+./scripts/deploy.sh                    # Deploy to server
+./scripts/local_setup.sh               # Setup local environment
+./scripts/local_setup.sh --docker      # Setup with Docker
 ```
 
-### Remoto (servidor):
+### Remote (server):
 ```bash
-./scripts/remote_build.sh              # Compilar projeto
-./scripts/remote_test.sh               # Executar todos os testes
-./scripts/remote_test.sh --report      # Testes + relatórios XML
-./scripts/remote_run.sh                # Executar servidor (foreground)
-./scripts/remote_run.sh --background   # Executar servidor (background)
-./scripts/remote_run.sh --stop         # Parar servidor
-./scripts/remote_run.sh --status       # Status do servidor
+./scripts/remote_build.sh              # Compile project
+./scripts/remote_test.sh               # Run all tests
+./scripts/remote_test.sh --report      # Tests + XML reports
+./scripts/remote_run.sh                # Run server (foreground)
+./scripts/remote_run.sh --background   # Run server (background)
+./scripts/remote_run.sh --stop         # Stop server
+./scripts/remote_run.sh --status       # Server status
 ```
 
-## 🔧 Comandos SSH Manuais
+## Manual SSH Commands
 
 ```bash
-# Deploy manual
+# Manual deploy
 rsync -avz --exclude-from=.deployignore ./ rdias@fedora-server.local:/home/rdias/sources/lab/server/
 
-# Build remoto
+# Remote build
 ssh rdias@fedora-server.local "cd /home/rdias/sources/lab/server && ./scripts/remote_build.sh"
 
-# Testes remotos
+# Remote tests
 ssh rdias@fedora-server.local "cd /home/rdias/sources/lab/server && ./scripts/remote_test.sh"
 
-# Executar servidor
+# Run server
 ssh rdias@fedora-server.local "cd /home/rdias/sources/lab/server && ./scripts/remote_run.sh --background"
 
-# Ver logs
+# View logs
 ssh rdias@fedora-server.local "cd /home/rdias/sources/lab/server && tail -f server.log"
 ```
 
-## 🎯 Dicas de Desenvolvimento
+## Development Tips
 
-### Desenvolvimento Eficiente:
-1. **Use Docker** para consistência de ambiente
-2. **Configure SSH keys** para evitar digitar senhas
-3. **Use VS Code tasks** ao invés de comandos manuais
-4. **Teste localmente** quando possível (Docker)
-5. **Deploy frequentemente** com "Quick Deploy & Build"
+### Efficient Development:
+1. **Use Docker** for environment consistency
+2. **Configure SSH keys** to avoid typing passwords
+3. **Use VS Code tasks** instead of manual commands
+4. **Test locally** when possible (Docker)
+5. **Deploy frequently** with "Quick Deploy & Build"
 
 ### Debugging:
-1. **Logs do servidor**: Task "📋 View Remote Logs"
-2. **Status do servidor**: Task "📊 Remote Status"  
-3. **Rebuild completo**: Task "🔄 Full Deploy & Run"
-4. **Testes isolados**: SSH manual + `./scripts/remote_test.sh`
+1. **Server logs**: Task "View Remote Logs"
+2. **Server status**: Task "Remote Status"
+3. **Complete rebuild**: Task "Full Deploy & Run"
+4. **Isolated tests**: Manual SSH + `./scripts/remote_test.sh`
 
-### Estrutura de Deploy:
-- `.deployignore` controla o que NÃO é enviado
-- `rsync` mantém sincronização eficiente
-- Scripts remotos são executados via SSH
+### Deploy Structure:
+- `.deployignore` controls what is NOT sent
+- `rsync` maintains efficient synchronization
+- Remote scripts are executed via SSH
 
-## 🚨 Troubleshooting
+## Troubleshooting
 
-### Erro de SSH/SCP: "Received message too long" ou "shell produces output"
+### SSH/SCP Error: "Received message too long" or "shell produces output"
 
-**Causa**: Seu `.bashrc` ou `.bash_profile` está gerando saída em sessões não-interativas.
+**Cause**: Your `.bashrc` or `.bash_profile` is generating output in non-interactive sessions.
 
-**Culpados comuns**: `neofetch`, `fortune`, `cowsay`, `figlet`, `motd`, `echo` statements.
+**Common culprits**: `neofetch`, `fortune`, `cowsay`, `figlet`, `motd`, `echo` statements.
 
-**Solução permanente** (recomendada):
+**Permanent solution** (recommended):
 ```bash
-# Edite ~/.bashrc no servidor e mude:
-# neofetch                    # ❌ Executa sempre
-# Para:
-[[ $- == *i* ]] && neofetch   # ✅ Só em sessões interativas
+# Edit ~/.bashrc on server and change:
+# neofetch                    # Always executes
+# To:
+[[ $- == *i* ]] && neofetch   # Only in interactive sessions
 
-# Ou use if:
+# Or use if:
 if [[ $- == *i* ]]; then
     neofetch
     fortune
-    # outros comandos que geram saída
+    # other commands that generate output
 fi
 ```
 
-**Soluções temporárias** (se não puder editar .bashrc):
+**Temporary solutions** (if you can't edit .bashrc):
 
-1. **Use o método de pacote**:
+1. **Use the package method**:
    ```bash
    ssh rdias@fedora-server.local "./scripts/create_package.sh"
    scp rdias@fedora-server.local:/tmp/cpp-rest-server-*.tar.gz ~/
    ```
 
-2. **Temporariamente renomeie .bashrc**:
+2. **Temporarily rename .bashrc**:
    ```bash
    ssh rdias@fedora-server.local "mv ~/.bashrc ~/.bashrc.tmp"
-   # Faça a cópia normalmente
+   # Do the copy normally
    ssh rdias@fedora-server.local "mv ~/.bashrc.tmp ~/.bashrc"
    ```
 
-### Erro de SSH: "Permission denied" ou "Host key verification failed"
+### SSH Error: "Permission denied" or "Host key verification failed"
 
 ```bash
-# Configurar chaves SSH
-ssh-keygen -t rsa -b 4096 -C "seu_email@exemplo.com"
+# Configure SSH keys
+ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
 ssh-copy-id rdias@fedora-server.local
 
-# Testar conexão
+# Test connection
 ssh rdias@fedora-server.local "echo 'SSH OK'"
 ```
 
-### Erro de Deploy: "rsync command not found" ou "connection refused"
+### Deploy Error: "rsync command not found" or "connection refused"
 
 ```bash
-# Verificar conectividade
+# Check connectivity
 ping fedora-server.local
 
-# Testar SSH verbose
+# Test SSH verbose
 ssh -v rdias@fedora-server.local
 
-# Usar IP ao invés de hostname
-ssh rdias@10.0.0.32  # substitua pelo IP do seu servidor
+# Use IP instead of hostname
+ssh rdias@10.0.0.32  # replace with your server IP
 ```
 
-Este setup permite desenvolvimento ágil local com deploy simples para produção! 🚀
+This setup allows agile local development with simple deployment to production!

@@ -1,49 +1,49 @@
 # C++ REST Server with Pistache
 
-Um servidor REST simples em C++ usando o framework Pistache, criado para Fedora Server.
+A simple REST server in C++ using the Pistache framework, built for Fedora Server.
 
-> 🏠➡️🖥️ **Desenvolvimento Local + Deploy Remoto**: Veja [DEVELOPMENT.md](DEVELOPMENT.md) para guia completo de como desenvolver localmente (Linux Mint) e fazer deploy no servidor.
+> 🏠➡️🖥️ **Local Development + Remote Deploy**: See [DEVELOPMENT.md](DEVELOPMENT.md) for complete guide on how to develop locally (Linux Mint) and deploy to server.
 
-## Funcionalidades
+## Features
 
-- Servidor HTTP REST básico
-- Endpoint GET `/hello` que retorna "Hello World from C++ REST Server!"
-- Endpoint GET `/` (raiz) que também retorna a mensagem de Hello World
-- Execução em http://localhost:9080
-- Shutdown gracioso com Ctrl+C
+- Basic HTTP REST server
+- GET endpoint `/hello` that returns "Hello World from C++ REST Server!"
+- GET endpoint `/` (root) that also returns the Hello World message
+- Runs on http://localhost:9080
+- Graceful shutdown with Ctrl+C
 
-## Pré-requisitos
+## Prerequisites
 
 ### Fedora Server
 
-Instale as dependências necessárias:
+Install the required dependencies:
 
 ```bash
-# Atualizar sistema
+# Update system
 sudo dnf update -y
 
-# Instalar ferramentas de desenvolvimento essenciais
+# Install essential development tools
 sudo dnf groupinstall -y "Development Tools" "Development Libraries"
 
-# Instalar CMake
+# Install CMake
 sudo dnf install -y cmake
 
-# Instalar compilador C++ e ferramentas
+# Install C++ compiler and tools
 sudo dnf install -y gcc-c++ make
 
-# Instalar dependências do Pistache
+# Install Pistache dependencies
 sudo dnf install -y pistache-devel
 
-# Se pistache-devel não estiver disponível, instalar dependências para compilar do código fonte
+# If pistache-devel is not available, install dependencies to compile from source
 sudo dnf install -y curl-devel rapidjson-devel
 ```
 
-### Se Pistache não estiver nos repositórios
+### If Pistache is not available in repositories
 
-Caso o Pistache não esteja disponível via DNF, você pode compilá-lo do código fonte:
+If Pistache is not available via DNF, you can compile it from source:
 
 ```bash
-# Clonar e compilar Pistache
+# Clone and compile Pistache
 git clone https://github.com/pistacheio/pistache.git
 cd pistache
 mkdir build && cd build
@@ -54,27 +54,27 @@ sudo ldconfig
 cd ../..
 ```
 
-## Estrutura do Projeto
+## Project Structure
 
 ```
 server/
 ├── src/
-│   ├── main.cpp           # Arquivo principal com inicialização do servidor
-│   └── hello_server.cpp   # Implementação da classe HelloServer
+│   ├── main.cpp           # Main file with server initialization
+│   └── hello_server.cpp   # HelloServer class implementation
 ├── include/
-│   └── hello_server.h     # Cabeçalho da classe HelloServer
-├── CMakeLists.txt         # Configuração do CMake
-└── README.md             # Esta documentação
+│   └── hello_server.h     # HelloServer class header
+├── CMakeLists.txt         # CMake configuration
+└── README.md             # This documentation
 ```
 
-## Compilação
+## Building
 
-1. Crie um diretório de build:
+1. Create a build directory:
 ```bash
 mkdir build && cd build
 ```
 
-2. Configure o projeto com CMake:
+2. Configure the project with CMake:
 ```bash
 cmake ..
 ```
@@ -84,91 +84,91 @@ cmake ..
 make
 ```
 
-## Execução
+## Running
 
-Após a compilação, execute o servidor:
+After compilation, run the server:
 
 ```bash
-# A partir do diretório build
+# From the build directory
 ./rest_server
 ```
 
-O servidor iniciará e estará disponível em:
+The server will start and be available at:
 - http://localhost:9080/hello
 - http://localhost:9080/
 
-## Testando
+## Testing
 
-Você pode testar os endpoints usando curl:
+You can test the endpoints using curl:
 
 ```bash
-# Teste o endpoint /hello
+# Test the /hello endpoint
 curl http://localhost:9080/hello
 
-# Teste o endpoint raiz
+# Test the root endpoint
 curl http://localhost:9080/
 
-# Ambos devem retornar: "Hello World from C++ REST Server!"
+# Both should return: "Hello World from C++ REST Server!"
 ```
 
-## Configuração
+## Configuration
 
-O servidor está configurado para:
-- **Porta**: 9080 (configurável no main.cpp)
-- **Threads**: 2 (configurável no main.cpp)
-- **IP**: 0.0.0.0 (aceita conexões de qualquer IP)
+The server is configured for:
+- **Port**: 9080 (configurable in main.cpp)
+- **Threads**: 2 (configurable in main.cpp)
+- **IP**: 0.0.0.0 (accepts connections from any IP)
 
-Para alterar essas configurações, edite o arquivo `src/main.cpp`.
+To change these settings, edit the `src/main.cpp` file.
 
-## Testando
+## Testing
 
-O projeto inclui dois tipos de testes:
+The project includes two types of tests:
 
-### 🧪 **Testes Unitários** (Google Test)
-Testam a lógica das classes sem dependências externas.
+### 🧪 **Unit Tests** (Google Test)
+Test class logic without external dependencies.
 
-### 🌐 **Testes de Integração** 
-Testam endpoints HTTP reais com requisições completas.
+### 🌐 **Integration Tests**
+Test real HTTP endpoints with complete requests.
 
-### Executar Testes
+### Running Tests
 
 ```bash
-# Compilar e executar apenas testes unitários
+# Compile and run only unit tests
 cd build
 PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig cmake ..
 make unit_tests
 ./tests/unit_tests
 
-# Compilar e executar testes de integração
+# Compile and run integration tests
 make integration_tests
 ./tests/integration_tests
 
-# Executar todos os testes
+# Run all tests
 ./tests/unit_tests && ./tests/integration_tests
 
-# Usar as tarefas do VS Code (Recomendado)
-# Ctrl+Shift+P -> Tasks: Run Task -> "Run Tests" (unitários)
+# Use VS Code tasks (Recommended)
+# Ctrl+Shift+P -> Tasks: Run Task -> "Run Tests" (unit tests)
 # Ctrl+Shift+P -> Tasks: Run Task -> "Run Integration Tests"
 # Ctrl+Shift+P -> Tasks: Run Task -> "Run All Tests"
 ```
 
-### Testes Unitários (7 testes)
+### Unit Tests (7 tests)
 
-- **HelloServerTest**: Testa inicialização básica do servidor
-- **HelloServerConstructorTest**: Testa diferentes configurações de endereço
-- **HelloServerFunctionalTest**: Testes funcionais básicos
-- **HelloServerMultipleInstancesTest**: Testa múltiplas instâncias
-- **HelloServerConfigTest**: Testa diferentes configurações de threads
-- **HelloServerEdgeCasesTest**: Testa casos extremos
+- **HelloServerTest**: Tests basic server initialization
+- **HelloServerConstructorTest**: Tests different address configurations
+- **HelloServerFunctionalTest**: Basic functional tests
+- **HelloServerMultipleInstancesTest**: Tests multiple instances
+- **HelloServerConfigTest**: Tests different thread configurations
+- **HelloServerEdgeCasesTest**: Tests edge cases
 
-### Testes de Integração (4 testes)
+### Integration Tests (4 tests)
 
-- **TestRootEndpoint**: Testa GET / retorna "Hello World"
-- **TestHelloEndpoint**: Testa GET /hello retorna "Hello World"
-- **TestNonExistentEndpoint**: Testa endpoint inexistente retorna 404
-- **TestConcurrentRequests**: Testa 5 requisições simultâneas
+- **TestRootEndpoint**: Tests GET / returns "Hello World"
+- **TestHelloEndpoint**: Tests GET /hello returns "Hello World"
+- **TestNonExistentEndpoint**: Tests non-existent endpoint returns 404
+- **TestConcurrentRequests**: Tests 5 concurrent requests
 
-### Executar Testes com Saída Detalhada
+### Running Tests with Detailed Output
 
 ```bash
 cd build
@@ -176,49 +176,49 @@ cd build
 ./tests/integration_tests --gtest_verbose
 ```
 
-## Desenvolvimento
+## Development
 
-### Adicionando Novos Endpoints
+### Adding New Endpoints
 
-Para adicionar novos endpoints, edite os métodos na classe `HelloServer`:
+To add new endpoints, edit the methods in the `HelloServer` class:
 
-1. Adicione a declaração no header `include/hello_server.h`
-2. Implemente o método em `src/hello_server.cpp`
-3. Registre a rota no método `setupRoutes()`
+1. Add the declaration in the header `include/hello_server.h`
+2. Implement the method in `src/hello_server.cpp`
+3. Register the route in the `setupRoutes()` method
 
-### Exemplo de Novo Endpoint
+### New Endpoint Example
 
 ```cpp
-// No header file
-void statusHandler(const Pistache::Rest::Request& request, 
+// In header file
+void statusHandler(const Pistache::Rest::Request& request,
                   Pistache::Http::ResponseWriter response);
 
-// Na implementação
-void HelloServer::statusHandler(const Pistache::Rest::Request& request, 
+// In implementation
+void HelloServer::statusHandler(const Pistache::Rest::Request& request,
                                Pistache::Http::ResponseWriter response) {
     response.send(Pistache::Http::Code::Ok, "Server is running!");
 }
 
-// No setupRoutes()
+// In setupRoutes()
 Routes::Get(router, "/status", Routes::bind(&HelloServer::statusHandler, this));
 ```
 
 ## Troubleshooting
 
-### Erro de biblioteca não encontrada
-Se encontrar erros relacionados a bibliotecas não encontradas:
+### Library not found error
+If you encounter errors related to missing libraries:
 ```bash
 sudo ldconfig
 ```
 
-### Porta em uso
-Se a porta 9080 estiver em uso, altere no `main.cpp`:
+### Port in use
+If port 9080 is already in use, change it in `main.cpp`:
 ```cpp
-Port port(8080); // ou outra porta disponível
+Port port(8080); // or another available port
 ```
 
 ### Firewall
-Se não conseguir acessar de outras máquinas, configure o firewall:
+If you can't access from other machines, configure the firewall:
 ```bash
 sudo firewall-cmd --permanent --add-port=9080/tcp
 sudo firewall-cmd --reload
