@@ -1,0 +1,50 @@
+# Deployment ignore file
+# Files and directories to exclude when deploying to remote server
+
+# Build artifacts
+build/
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+
+# IDE files (keep basic .vscode/tasks.json but exclude personal settings)
+.vscode/settings.json
+.vscode/launch.json
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*~
+.#*
+
+# Personal development files
+.env.local
+.env.development
+local_config.json
+
+# Test results
+test_results.xml
+*.gcov
+*.gcda
+*.gcno
+
+# Git (uncomment if you don't want .git on server)
+# .git/
+
+# Node modules if you add any JS tooling
+node_modules/
+
+# Python cache if you add Python scripts
+__pycache__/
+*.pyc

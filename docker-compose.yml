@@ -1,0 +1,24 @@
+# Docker Compose for local development
+version: '3.8'
+
+services:
+  cpp-dev:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USERNAME: developer
+        USER_UID: 1000
+        USER_GID: 1000
+    container_name: cpp-rest-dev
+    volumes:
+      - .:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "9080:9080"  # Server port
+    working_dir: /workspace
+    tty: true
+    stdin_open: true
+    environment:
+      - PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig
+    command: /bin/bash
