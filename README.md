@@ -86,6 +86,7 @@ make
 
 ## Running
 
+### Method 1: Direct Execution
 After compilation, run the server:
 
 ```bash
@@ -93,9 +94,36 @@ After compilation, run the server:
 ./rest_server
 ```
 
+### Method 2: As System Service (Recommended)
+Install and run as a systemd service:
+
+```bash
+# Install service
+sudo ./scripts/service_manager.sh install
+
+# Start service
+sudo ./scripts/service_manager.sh start
+
+# Check status
+sudo ./scripts/service_manager.sh status
+
+# View logs
+sudo ./scripts/service_manager.sh logs
+```
+
 The server will start and be available at:
 - http://localhost:9080/hello
 - http://localhost:9080/
+
+### Service Management Commands:
+```bash
+sudo ./scripts/service_manager.sh start     # Start service
+sudo ./scripts/service_manager.sh stop      # Stop service
+sudo ./scripts/service_manager.sh restart   # Restart service
+sudo ./scripts/service_manager.sh status    # Check status
+sudo ./scripts/service_manager.sh logs      # View logs
+sudo ./scripts/service_manager.sh uninstall # Remove service
+```
 
 ## Testing
 

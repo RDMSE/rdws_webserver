@@ -9,6 +9,7 @@ on:
 env:
   BUILD_TYPE: Debug
   PKG_CONFIG_PATH: /usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig
+  BUILD_DIR: ${{ github.workspace }}/build
 
 jobs:
   build-and-test:
@@ -21,12 +22,14 @@ jobs:
 
     - name: Clean previous builds
       run: |
-        rm -rf build
-        mkdir -p build
+        rm -rf ${{ env.BUILD_DIR }}
+        mkdir -p ${{ env.BUILD_DIR }}
 
     - name: Verify environment
       run: |
         echo "Running on self-hosted Fedora runner"
+        echo "Build directory: ${{ env.BUILD_DIR }}"
+        echo "Production directory: /opt/cpp-rest-server"
         whoami
         pwd
         which cmake
@@ -35,25 +38,25 @@ jobs:
 
     - name: Configure CMake
       run: |
-        cd build
+        cd ${{ env.BUILD_DIR }}
         PKG_CONFIG_PATH=${{ env.PKG_CONFIG_PATH }} cmake .. \
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
           -DCMAKE_CXX_STANDARD=17
 
     - name: Build project
       run: |
-        cd build
+        cd ${{ env.BUILD_DIR }}
         make -j$(nproc)
 
     - name: Run unit tests
       run: |
-        cd build
+        cd ${{ env.BUILD_DIR }}
         make unit_tests
         ./tests/unit_tests --gtest_output=xml:unit_test_results.xml
 
     - name: Run integration tests
       run: |
-        cd build
+        cd ${{ env.BUILD_DIR }}
         make integration_tests
         ./tests/integration_tests --gtest_output=xml:integration_test_results.xml
 
@@ -63,17 +66,17 @@ jobs:
       with:
         name: test-results-${{ github.run_number }}
         path: |
-          build/unit_test_results.xml
-          build/integration_test_results.xml
+          ${{ env.BUILD_DIR }}/unit_test_results.xml
+          ${{ env.BUILD_DIR }}/integration_test_results.xml
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: rest-server-binary-${{ github.run_number }}
         path: |
-          build/rest_server
-          build/tests/unit_tests
-          build/tests/integration_tests
+          ${{ env.BUILD_DIR }}/rest_server
+          ${{ env.BUILD_DIR }}/tests/unit_tests
+          ${{ env.BUILD_DIR }}/tests/integration_tests
 
   code-quality:
     name: Code Quality
