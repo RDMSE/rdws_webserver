@@ -19,7 +19,7 @@ env:
 
 jobs:
   deploy:
-    name: 🚀 Deploy to Fedora Server
+    name: Deploy to Fedora Server
     runs-on: [self-hosted, Linux, X64, webserver, fedora]
     environment:
       name: ${{ github.event.inputs.environment || 'production' }}
