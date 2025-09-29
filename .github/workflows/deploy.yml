@@ -110,12 +110,12 @@ jobs:
       run: |
         # Create production directory if it doesn't exist
         mkdir -p ${{ env.PRODUCTION_DIR }}
-        
+
         # Copy executable and essential files to production
         cp ${{ env.BUILD_DIR }}/rest_server ${{ env.PRODUCTION_DIR }}/
         cp -r scripts ${{ env.PRODUCTION_DIR }}/
         cp cpp-rest-server.service ${{ env.PRODUCTION_DIR }}/
-        
+
         # Make executable
         chmod +x ${{ env.PRODUCTION_DIR }}/rest_server
         chmod +x ${{ env.PRODUCTION_DIR }}/scripts/*.sh
@@ -124,7 +124,7 @@ jobs:
       run: |
         # Copy service file to systemd directory
         sudo cp ${{ env.PRODUCTION_DIR }}/cpp-rest-server.service /etc/systemd/system/
-        
+
         # Reload systemd and enable service
         sudo systemctl daemon-reload
         sudo systemctl enable cpp-rest-server
@@ -138,7 +138,7 @@ jobs:
       run: |
         # Start via systemd
         sudo systemctl start cpp-rest-server
-        
+
     - name: Wait for server startup
       run: |
         sleep 5
