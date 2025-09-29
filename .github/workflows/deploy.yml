@@ -137,7 +137,9 @@ jobs:
     - name: Start server
       run: |
         # Start via systemd
-        sudo systemctl start cpp-rest-server    - name: Wait for server startup
+        sudo systemctl start cpp-rest-server
+
+    - name: Wait for server startup
       run: |
         sleep 5
 
