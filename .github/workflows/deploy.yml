@@ -16,6 +16,8 @@ on:
 
 env:
   PKG_CONFIG_PATH: /usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig
+  BUILD_DIR: ${{ github.workspace }}/build
+  PRODUCTION_DIR: /home/rdias/cpp-rest-server
 
 jobs:
   deploy:
@@ -92,7 +94,7 @@ jobs:
 
     - name: Run tests
       run: |
-        cd build
+        cd ${{ env.BUILD_DIR }}
         make unit_tests integration_tests
         ./tests/unit_tests --gtest_output=xml:unit_test_results.xml
         ./tests/integration_tests --gtest_output=xml:integration_test_results.xml
@@ -102,15 +104,40 @@ jobs:
       if: always()
       with:
         name: server-test-results-${{ github.run_number }}
-        path: build/*test_results.xml
+        path: ${{ env.BUILD_DIR }}/*test_results.xml
+
+    - name: Deploy to production directory
+      run: |
+        # Create production directory if it doesn't exist
+        mkdir -p ${{ env.PRODUCTION_DIR }}
+
+        # Copy executable and essential files to production
+        cp ${{ env.BUILD_DIR }}/rest_server ${{ env.PRODUCTION_DIR }}/
+        cp -r scripts ${{ env.PRODUCTION_DIR }}/
+        cp cpp-rest-server.service ${{ env.PRODUCTION_DIR }}/
+
+        # Make executable
+        chmod +x ${{ env.PRODUCTION_DIR }}/rest_server
+        chmod +x ${{ env.PRODUCTION_DIR }}/scripts/*.sh
+
+    - name: Install/Update systemd service
+      run: |
+        # Copy service file to systemd directory
+        sudo cp ${{ env.PRODUCTION_DIR }}/cpp-rest-server.service /etc/systemd/system/
+
+        # Reload systemd and enable service
+        sudo systemctl daemon-reload
+        sudo systemctl enable cpp-rest-server
 
     - name: Stop existing server
       run: |
-        ./scripts/remote_run.sh --stop || echo "No server running"
+        # Stop systemd service if running
+        sudo systemctl stop cpp-rest-server || echo "Service not running"
 
     - name: Start server
       run: |
-        ./scripts/remote_run.sh --background
+        # Start via systemd
+        sudo systemctl start cpp-rest-server
 
     - name: Wait for server startup
       run: |
@@ -118,7 +145,16 @@ jobs:
 
     - name: Verify deployment
       run: |
-        ./scripts/remote_run.sh --status
+        # Check service status
+        if sudo systemctl is-active --quiet cpp-rest-server; then
+          echo "✅ Service is running"
+          sudo systemctl status cpp-rest-server --no-pager
+        else
+          echo "❌ Service failed to start"
+          sudo systemctl status cpp-rest-server --no-pager
+          sudo journalctl -u cpp-rest-server --no-pager -n 20
+          exit 1
+        fi
 
     - name: Health check
       run: |
