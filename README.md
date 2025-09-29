@@ -2,7 +2,7 @@
 
 A simple REST server in C++ using the Pistache framework, built for Fedora Server.
 
-> 🏠➡️🖥️ **Local Development + Remote Deploy**: See [DEVELOPMENT.md](DEVELOPMENT.md) for complete guide on how to develop locally (Linux Mint) and deploy to server.
+> **Local Development + Remote Deploy**: See [DEVELOPMENT.md](DEVELOPMENT.md) for complete guide on how to develop locally (Linux Mint) and deploy to server.
 
 ## Features
 
@@ -124,10 +124,10 @@ To change these settings, edit the `src/main.cpp` file.
 
 The project includes two types of tests:
 
-### 🧪 **Unit Tests** (Google Test)
+### **Unit Tests** (Google Test)
 Test class logic without external dependencies.
 
-### 🌐 **Integration Tests**
+### **Integration Tests**
 Test real HTTP endpoints with complete requests.
 
 ### Running Tests

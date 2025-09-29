@@ -1,0 +1,92 @@
+name: CI - Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  BUILD_TYPE: Debug
+  PKG_CONFIG_PATH: /usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig
+
+jobs:
+  build-and-test:
+    name: Build & Test on Fedora
+    runs-on: [self-hosted, Linux, X64, webserver, fedora]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Clean previous builds
+      run: |
+        rm -rf build
+        mkdir -p build
+
+    - name: Verify environment
+      run: |
+        echo "Running on self-hosted Fedora runner"
+        whoami
+        pwd
+        which cmake
+        which g++
+        pkg-config --exists libpistache && echo "Pistache available" || echo "Pistache not found"
+
+    - name: Configure CMake
+      run: |
+        cd build
+        PKG_CONFIG_PATH=${{ env.PKG_CONFIG_PATH }} cmake .. \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DCMAKE_CXX_STANDARD=17
+
+    - name: Build project
+      run: |
+        cd build
+        make -j$(nproc)
+
+    - name: Run unit tests
+      run: |
+        cd build
+        make unit_tests
+        ./tests/unit_tests --gtest_output=xml:unit_test_results.xml
+
+    - name: Run integration tests
+      run: |
+        cd build
+        make integration_tests
+        ./tests/integration_tests --gtest_output=xml:integration_test_results.xml
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-${{ github.run_number }}
+        path: |
+          build/unit_test_results.xml
+          build/integration_test_results.xml
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: rest-server-binary-${{ github.run_number }}
+        path: |
+          build/rest_server
+          build/tests/unit_tests
+          build/tests/integration_tests
+
+  code-quality:
+    name: Code Quality
+    runs-on: [self-hosted, Linux, X64, webserver, fedora]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run clang-format check
+      run: |
+        if command -v clang-format >/dev/null 2>&1; then
+          find src include tests -name "*.cpp" -o -name "*.h" | xargs clang-format --dry-run --Werror || true
+        else
+          echo "clang-format not available, skipping format check"
+        fi

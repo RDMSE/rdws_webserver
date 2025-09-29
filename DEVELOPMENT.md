@@ -153,7 +153,7 @@ sudo ldconfig
 ```bash
 # 1. Edit code locally in VS Code
 # 2. Save files
-# 3. Run task "⚡ Quick Deploy & Build"
+# 3. Run task "Quick Deploy & Build"
 # 4. If everything OK, run "Remote Test"
 # 5. For production, run "Full Deploy & Run"
 ```
