@@ -1,0 +1,250 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags like v1.0.0, v1.2.3-beta
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  BUILD_TYPE: Release
+  PKG_CONFIG_PATH: /usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: [self-hosted, Linux, X64, webserver, fedora]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Need full history for changelog
+
+    - name: Clean previous release builds
+      run: |
+        rm -rf build packages
+        mkdir -p build packages
+
+    - name: Verify environment
+      run: |
+        echo "Running on self-hosted Fedora runner"
+        whoami
+        pwd
+        which cmake
+        which g++
+        pkg-config --exists libpistache && echo "Pistache available" || echo "Pistache not found"
+
+    - name: Build release version
+      run: |
+        mkdir -p build
+        cd build
+        PKG_CONFIG_PATH=${{ env.PKG_CONFIG_PATH }} cmake .. \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DCMAKE_CXX_STANDARD=17
+        make -j$(nproc)
+
+    - name: Run all tests
+      run: |
+        cd build
+        make unit_tests integration_tests
+        ./tests/unit_tests --gtest_output=xml:release_unit_test_results.xml
+        ./tests/integration_tests --gtest_output=xml:release_integration_test_results.xml
+
+    - name: Get version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          VERSION="${{ github.ref_name }}"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "version_no_v=${VERSION#v}" >> $GITHUB_OUTPUT
+
+    - name: Create release package
+      run: |
+        VERSION="${{ steps.version.outputs.version_no_v }}"
+        PACKAGE_NAME="cpp-rest-server-$VERSION"
+
+        # Create package directory
+        mkdir -p packages/$PACKAGE_NAME
+
+        # Copy binary and essential files
+        cp build/rest_server packages/$PACKAGE_NAME/
+        cp -r scripts packages/$PACKAGE_NAME/
+        cp README.md packages/$PACKAGE_NAME/
+        cp DEVELOPMENT.md packages/$PACKAGE_NAME/
+
+        # Create startup script
+        cat > packages/$PACKAGE_NAME/start_server.sh << 'EOF'
+        #!/bin/bash
+        # C++ REST Server Startup Script
+        cd "$(dirname "$0")"
+        echo "Starting C++ REST Server..."
+        ./rest_server
+        EOF
+        chmod +x packages/$PACKAGE_NAME/start_server.sh
+
+        # Create systemd service file
+        cat > packages/$PACKAGE_NAME/cpp-rest-server.service << 'EOF'
+        [Unit]
+        Description=C++ REST Server
+        After=network.target
+
+        [Service]
+        Type=simple
+        User=rdias
+        WorkingDirectory=/opt/cpp-rest-server
+        ExecStart=/opt/cpp-rest-server/rest_server
+        Restart=always
+        RestartSec=3
+
+        [Install]
+        WantedBy=multi-user.target
+        EOF
+
+        # Create install script
+        cat > packages/$PACKAGE_NAME/install.sh << 'EOF'
+        #!/bin/bash
+        echo "Installing C++ REST Server..."
+
+        # Create installation directory
+        sudo mkdir -p /opt/cpp-rest-server
+
+        # Copy files
+        sudo cp rest_server /opt/cpp-rest-server/
+        sudo cp -r scripts /opt/cpp-rest-server/
+        sudo cp start_server.sh /opt/cpp-rest-server/
+        sudo chmod +x /opt/cpp-rest-server/rest_server
+        sudo chmod +x /opt/cpp-rest-server/start_server.sh
+        sudo chmod +x /opt/cpp-rest-server/scripts/*.sh
+
+        # Install systemd service (optional)
+        if [ "$1" = "--systemd" ]; then
+            sudo cp cpp-rest-server.service /etc/systemd/system/
+            sudo systemctl daemon-reload
+            sudo systemctl enable cpp-rest-server
+            echo "Systemd service installed. Start with: sudo systemctl start cpp-rest-server"
+        fi
+
+        echo "Installation complete!"
+        echo "Manual start: /opt/cpp-rest-server/start_server.sh"
+        EOF
+        chmod +x packages/$PACKAGE_NAME/install.sh
+
+        # Create the package
+        cd packages
+        tar czf $PACKAGE_NAME.tar.gz $PACKAGE_NAME
+        cd ..
+
+        # Create checksums
+        cd packages
+        sha256sum $PACKAGE_NAME.tar.gz > $PACKAGE_NAME.tar.gz.sha256
+        cd ..
+
+    - name: Generate changelog
+      id: changelog
+      run: |
+        # Get commits since last tag
+        LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        if [ -z "$LAST_TAG" ]; then
+          COMMITS=$(git log --oneline --pretty=format:"- %s" HEAD)
+        else
+          COMMITS=$(git log --oneline --pretty=format:"- %s" $LAST_TAG..HEAD)
+        fi
+
+        # Create changelog
+        cat > CHANGELOG.md << EOF
+        # Changes in ${{ steps.version.outputs.version }}
+
+        ## What's New
+
+        $COMMITS
+
+        ## Package Contents
+        - \`rest_server\` - Main server binary
+        - \`scripts/\` - Deployment and management scripts
+        - \`install.sh\` - Installation script
+        - \`start_server.sh\` - Quick start script
+        - \`cpp-rest-server.service\` - Systemd service file
+
+        ## Installation
+
+        ### Quick Install
+        \`\`\`bash
+        tar xzf cpp-rest-server-${{ steps.version.outputs.version_no_v }}.tar.gz
+        cd cpp-rest-server-${{ steps.version.outputs.version_no_v }}
+        ./install.sh
+        \`\`\`
+
+        ### With Systemd Service
+        \`\`\`bash
+        ./install.sh --systemd
+        sudo systemctl start cpp-rest-server
+        \`\`\`
+
+        ### Manual Start
+        \`\`\`bash
+        ./start_server.sh
+        \`\`\`
+
+        ## Verification
+        \`\`\`bash
+        curl http://localhost:9080/hello
+        # Should return: Hello World from C++ REST Server!
+        \`\`\`
+        EOF
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.version.outputs.version }}
+        name: Release ${{ steps.version.outputs.version }}
+        body_path: CHANGELOG.md
+        files: |
+          packages/cpp-rest-server-${{ steps.version.outputs.version_no_v }}.tar.gz
+          packages/cpp-rest-server-${{ steps.version.outputs.version_no_v }}.tar.gz.sha256
+          build/release_unit_test_results.xml
+          build/release_integration_test_results.xml
+        prerelease: ${{ github.event.inputs.prerelease || contains(steps.version.outputs.version, '-') }}
+        draft: false
+
+    - name: Upload release artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-package
+        path: |
+          packages/cpp-rest-server-${{ steps.version.outputs.version_no_v }}.tar.gz
+          packages/cpp-rest-server-${{ steps.version.outputs.version_no_v }}.tar.gz.sha256
+          CHANGELOG.md
+
+  deploy-release:
+    name: Deploy Release to Production
+    needs: create-release
+    runs-on: [self-hosted, Linux, X64, webserver, fedora]
+    environment: production
+    if: ${{ !github.event.inputs.prerelease && !contains(github.ref_name, '-') }}
+
+    steps:
+    - name: Download release package
+      uses: actions/download-artifact@v4
+      with:
+        name: release-package
+
+    - name: Install release locally
+      run: |
+        # Extract and install package locally
+        tar xzf cpp-rest-server-*.tar.gz
+        cd cpp-rest-server-*
+        sudo ./install.sh --systemd
