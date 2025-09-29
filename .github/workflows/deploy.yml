@@ -1,0 +1,162 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual trigger
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+        - staging
+
+env:
+  PKG_CONFIG_PATH: /usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig
+
+jobs:
+  deploy:
+    name: 🚀 Deploy to Fedora Server
+    runs-on: [self-hosted, Linux, X64, webserver, fedora]
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Clean and prepare
+      run: |
+        # Clean previous builds
+        rm -rf build
+        mkdir -p build
+
+        # Create .deployignore if it doesn't exist
+        if [ ! -f .deployignore ]; then
+          cat > .deployignore << 'EOF'
+        # Build artifacts
+        build/
+        *.o
+        *.a
+        *.so
+        *.dylib
+        *.exe
+
+        # IDE files
+        .vscode/settings.json
+        .vscode/launch.json
+        .idea/
+        *.swp
+        *.swo
+
+        # OS files
+        .DS_Store
+        Thumbs.db
+        desktop.ini
+
+        # Logs and temporary files
+        *.log
+        *.tmp
+        *.temp
+        *~
+        .#*
+
+        # Test results
+        test_results.xml
+        *.gcov
+        *.gcda
+        *.gcno
+
+        # Git
+        .git/
+
+        # GitHub Actions
+        .github/
+        EOF
+        fi
+
+    - name: Set permissions
+      run: |
+        chmod +x scripts/*.sh
+
+    - name: Build project
+      run: |
+        cd build
+        PKG_CONFIG_PATH=${{ env.PKG_CONFIG_PATH }} cmake .. \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_CXX_STANDARD=17
+        make -j$(nproc)
+
+    - name: Run tests
+      run: |
+        cd build
+        make unit_tests integration_tests
+        ./tests/unit_tests --gtest_output=xml:unit_test_results.xml
+        ./tests/integration_tests --gtest_output=xml:integration_test_results.xml
+
+    - name: Upload test reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: server-test-results-${{ github.run_number }}
+        path: build/*test_results.xml
+
+    - name: Stop existing server
+      run: |
+        ./scripts/remote_run.sh --stop || echo "No server running"
+
+    - name: Start server
+      run: |
+        ./scripts/remote_run.sh --background
+
+    - name: Wait for server startup
+      run: |
+        sleep 5
+
+    - name: Verify deployment
+      run: |
+        ./scripts/remote_run.sh --status
+
+    - name: Health check
+      run: |
+        # Try to reach the server endpoint
+        MAX_RETRIES=5
+        RETRY_COUNT=0
+
+        while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+          if curl -f http://localhost:9080/hello --max-time 10; then
+            echo "Server is responding"
+            exit 0
+          else
+            echo "Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES failed, retrying..."
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            sleep 5
+          fi
+        done
+
+        echo "Health check failed after $MAX_RETRIES attempts"
+        exit 1
+
+  notify:
+    name: Notify deployment status
+    runs-on: self-hosted
+    needs: deploy
+    if: always()
+
+    steps:
+    - name: Deployment Success
+      if: needs.deploy.result == 'success'
+      run: |
+        echo "Deployment to ${{ github.event.inputs.environment || 'production' }} successful!"
+        echo "Server is available at http://localhost:9080"
+        echo "Health check: curl http://localhost:9080/hello"
+
+    - name: Deployment Failed
+      if: needs.deploy.result == 'failure'
+      run: |
+        echo "Deployment to ${{ github.event.inputs.environment || 'production' }} failed!"
+        echo "Check the logs above for details"
+        exit 1
