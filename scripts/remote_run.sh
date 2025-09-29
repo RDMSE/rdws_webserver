@@ -107,19 +107,19 @@ if [ "$STOP" = true ]; then
         local pid=$(cat "$PID_FILE")
         print_status "Stopping server (PID: $pid)..."
         kill "$pid"
-        
+
         # Wait for server to stop
         local count=0
         while kill -0 "$pid" 2>/dev/null && [ $count -lt 10 ]; do
             sleep 1
             count=$((count + 1))
         done
-        
+
         if kill -0 "$pid" 2>/dev/null; then
             print_warning "Server didn't stop gracefully, forcing..."
             kill -9 "$pid"
         fi
-        
+
         rm -f "$PID_FILE"
         print_success "Server stopped successfully"
     else
@@ -150,12 +150,12 @@ print_status "Starting C++ REST Server..."
 if [ "$BACKGROUND" = true ]; then
     # Run in background
     nohup ./rest_server > ../server.log 2>&1 &
-    local server_pid=$!
+    server_pid=$!
     echo $server_pid > "$PID_FILE"
-    
+
     # Give server time to start
     sleep 2
-    
+
     if is_server_running; then
         print_success "Server started in background (PID: $server_pid)"
         print_success "Log file: $PROJECT_ROOT/server.log"
