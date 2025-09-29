@@ -1,7 +1,11 @@
 # Configuration file for C++ REST Server development
 # Copy this file to config.local and customize as needed
 
-# Remote server settings
+# Build and deployment directories
+BUILD_DIR=/workspace/build
+PRODUCTION_DIR=/opt/cpp-rest-server
+
+# Remote server settings (for manual deployment)
 REMOTE_HOST=fedora-server.local
 REMOTE_USER=rdias
 REMOTE_PATH=/home/rdias/sources/lab/rdws_webserver
