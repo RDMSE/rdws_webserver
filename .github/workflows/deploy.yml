@@ -198,7 +198,9 @@ jobs:
           fi
         else
           echo "No serverless functions found to deploy"
-        fi    - name: Install/Update systemd service
+        fi
+
+    - name: Install/Update systemd service
       run: |
         # Copy service file to systemd directory
         sudo cp ${{ env.PRODUCTION_DIR }}/cpp-rest-server.service /etc/systemd/system/
