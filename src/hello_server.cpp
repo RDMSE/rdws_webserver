@@ -41,12 +41,12 @@ void HelloServer::setupRoutes()
     Routes::Get(router, "/", Routes::bind(&HelloServer::helloHandler, this));
 }
 
-void HelloServer::helloHandler(const Pistache::Rest::Request &request, Pistache::Http::ResponseWriter response)
+void HelloServer::helloHandler(const Pistache::Rest::Request & /* request */, Pistache::Http::ResponseWriter response)
 {
     response.send(Pistache::Http::Code::Ok, "Hello World from C++ REST Server!");
 }
 
-void HelloServer::usersHandler(const Pistache::Rest::Request &request, Pistache::Http::ResponseWriter response)
+void HelloServer::usersHandler(const Pistache::Rest::Request & /* request */, Pistache::Http::ResponseWriter response)
 {
     // Simular dados de usuários
     std::string jsonResponse = R"({
@@ -66,7 +66,7 @@ void HelloServer::usersHandler(const Pistache::Rest::Request &request, Pistache:
     response.send(Pistache::Http::Code::Ok, jsonResponse);
 }
 
-void HelloServer::proxyToServerlessFunction(const Pistache::Rest::Request &request, Pistache::Http::ResponseWriter response)
+void HelloServer::proxyToServerlessFunction(const Pistache::Rest::Request & /* request */, Pistache::Http::ResponseWriter response)
 {
     try
     {
@@ -107,9 +107,9 @@ std::string HelloServer::makeHttpRequest(const std::string &url)
     try
     {
         // Usar Pistache HTTP Client para fazer requisição
-        Pistache::Http::Client client;
+        Pistache::Http::Experimental::Client client;
 
-        auto opts = Pistache::Http::Client::options()
+        auto opts = Pistache::Http::Experimental::Client::options()
                         .threads(1)
                         .maxConnectionsPerHost(8);
         client.init(opts);
