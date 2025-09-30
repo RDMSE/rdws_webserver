@@ -84,6 +84,17 @@ jobs:
       run: |
         chmod +x scripts/*.sh
 
+    - name: Check sudo permissions
+      run: |
+        # Check if we can run sudo without password
+        if sudo -n true 2>/dev/null; then
+          echo "Sudo access available without password"
+        else
+          echo "Warning: Sudo requires password - some operations may fail"
+          echo "Current user: $(whoami)"
+          echo "Groups: $(groups)"
+        fi
+
     - name: Build project
       run: |
         cd build
@@ -175,9 +186,21 @@ jobs:
 
     - name: Deploy serverless functions
       run: |
-        # Stop and remove existing function containers
-        docker stop hello-function users-function orders-function || echo "Containers not running"
-        docker rm hello-function users-function orders-function || echo "Containers not found"
+        # Stop and remove existing function containers (ignore errors if they don't exist)
+        echo "Stopping existing containers..."
+        docker stop hello-function 2>/dev/null || echo "hello-function not running"
+        docker stop users-function 2>/dev/null || echo "users-function not running"
+        docker stop orders-function 2>/dev/null || echo "orders-function not running"
+
+        docker rm hello-function 2>/dev/null || echo "hello-function not found"
+        docker rm users-function 2>/dev/null || echo "users-function not found"
+        docker rm orders-function 2>/dev/null || echo "orders-function not found"
+
+        # Check and free up ports if needed (try without sudo first)
+        echo "Checking for processes using ports..."
+        lsof -ti:8082 | xargs -r kill -9 2>/dev/null || echo "Port 8082 free or no permission"
+        lsof -ti:8083 | xargs -r kill -9 2>/dev/null || echo "Port 8083 free or no permission"
+        lsof -ti:8084 | xargs -r kill -9 2>/dev/null || echo "Port 8084 free or no permission"
 
         # Create serverless function directory
         mkdir -p ${{ env.PRODUCTION_DIR }}/functions
