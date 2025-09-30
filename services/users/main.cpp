@@ -49,7 +49,7 @@ std::string usersToJson(const std::vector<User> &users)
 
 int main(int argc, char *argv[])
 {
-    // Simular base de dados de usuários
+    // Simulate users database
     std::vector<User> users = {
         {1, "João Silva", "joao@example.com"},
         {2, "Maria Santos", "maria@example.com"},
@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
         {4, "Ana Oliveira", "ana@example.com"},
         {5, "Carlos Ferreira", "carlos@example.com"}};
 
-    // Processar argumentos da linha de comando
+    // Process command line arguments
     std::string method = "GET";
     std::string path = "/users";
 
@@ -70,18 +70,18 @@ int main(int argc, char *argv[])
         path = argv[2];
     }
 
-    // Processar requisição
+    // Process request
     if (method == "GET")
     {
         if (path == "/users" || path == "/")
         {
-            // Listar todos os usuários
+            // List all users
             std::cout << usersToJson(users) << std::endl;
             return 0;
         }
         else if (path.find("/users/") == 0)
         {
-            // Buscar usuário específico
+            // Fetch specific user
             try
             {
                 int userId = std::stoi(path.substr(7)); // Remove "/users/"
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
                     }
                 }
 
-                // Usuário não encontrado
+                // User not found
                 std::cout << "{"
                           << "\"error\":\"User not found\","
                           << "\"userId\":" << userId << ","
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
     }
     else if (method == "POST")
     {
-        // Simular criação de usuário
+        // Simulate user creation
         int newId = users.size() + 1;
         User newUser = {newId, "Novo Usuário", "novo@example.com"};
 
@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    // Método não suportado
+    // MMethod not supported
     std::cout << "{"
               << "\"error\":\"Method not allowed\","
               << "\"method\":\"" << method << "\","

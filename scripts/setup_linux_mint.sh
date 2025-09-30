@@ -170,13 +170,13 @@ else
 fi
 
 echo ""
-print_success "✅ Linux Mint development environment setup complete!"
+print_success "Linux Mint development environment setup complete!"
 echo ""
 echo -e "${YELLOW}Next steps:${NC}"
 echo "1. 📂 Open project in VS Code"
-echo "2. 🔧 Use VS Code tasks (Ctrl+Shift+P → 'Tasks: Run Task')"
+echo "2. Use VS Code tasks (Ctrl+Shift+P → 'Tasks: Run Task')"
 echo "3. 🐳 For Docker development: ./scripts/local_setup.sh --docker"
-echo "4. 🚀 For remote deploy: Use VS Code task '🚀 Deploy to Server'"
+echo "4. For remote deploy: Use VS Code task 'Deploy to Server'"
 echo ""
 echo -e "${YELLOW}Build locally:${NC}"
 echo "  mkdir build && cd build"

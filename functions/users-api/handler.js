@@ -9,16 +9,16 @@ module.exports = async (event, context) => {
     const path = event.path || '/users';
 
     try {
-        // Caminho para o executável C++ do serviço de usuários
+        // C++ executable path for users service
         const executablePath = '/home/rdias/cpp-rest-server/services/users_service';
 
-        // Chamar o executável C++ passando método e path
+        // Call the C++ executable with method and path
         const command = `${executablePath} "${method}" "${path}"`;
 
         console.log(`Calling C++ service: ${command}`);
 
         const { stdout, stderr } = await execAsync(command, {
-            timeout: 5000, // 5 segundos de timeout
+            timeout: 5000, // 5 seconds timeout
             encoding: 'utf8'
         });
 
@@ -26,7 +26,7 @@ module.exports = async (event, context) => {
             console.error('C++ service stderr:', stderr);
         }
 
-        // Parse do JSON retornado pelo executável C++
+        // Parse JSON returned by C++ executable
         let responseData;
         try {
             responseData = JSON.parse(stdout.trim());
@@ -39,7 +39,7 @@ module.exports = async (event, context) => {
             };
         }
 
-        // Adicionar metadados da função serverless
+        // Add metadata for serverless function
         responseData.serverlessWrapper = true;
         responseData.functionName = "users-api";
         responseData.executedCommand = command;

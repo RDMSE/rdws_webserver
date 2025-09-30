@@ -53,14 +53,14 @@ std::string ordersToJson(const std::vector<Order> &orders)
 
 int main(int argc, char *argv[])
 {
-    // Simular base de dados de pedidos
+    // Simulate orders database
     std::vector<Order> orders = {
         {1, 1, "Laptop Dell", 2500.00, "completed"},
         {2, 2, "Mouse Logitech", 150.00, "pending"},
         {3, 1, "Teclado Mecânico", 400.00, "shipped"},
         {4, 3, "Monitor 4K", 1200.00, "completed"}};
 
-    // Processar argumentos
+    // Process command line arguments
     std::string method = "GET";
     std::string path = "/orders";
 
@@ -73,18 +73,18 @@ int main(int argc, char *argv[])
         path = argv[2];
     }
 
-    // Processar requisição
+    // Process request
     if (method == "GET")
     {
         if (path == "/orders" || path == "/")
         {
-            // Listar todos os pedidos
+            // List all orders
             std::cout << ordersToJson(orders) << std::endl;
             return 0;
         }
         else if (path.find("/orders/") == 0)
         {
-            // Buscar pedido específico
+            // Fetch specific order
             try
             {
                 int orderId = std::stoi(path.substr(8)); // Remove "/orders/"
@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
                     }
                 }
 
-                // Pedido não encontrado
+                // Order not found
                 std::cout << "{"
                           << "\"error\":\"Order not found\","
                           << "\"orderId\":" << orderId << ","
@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    // Método não suportado
+    // MMethod not supported
     std::cout << "{"
               << "\"error\":\"Method not allowed\","
               << "\"method\":\"" << method << "\","

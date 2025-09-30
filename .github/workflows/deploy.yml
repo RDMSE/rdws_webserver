@@ -130,11 +130,11 @@ jobs:
         mkdir -p ${{ env.PRODUCTION_DIR }}/services
         if [ -f ${{ env.BUILD_DIR }}/services/users/users_service ]; then
           cp ${{ env.BUILD_DIR }}/services/users/users_service ${{ env.PRODUCTION_DIR }}/services/
-          echo "✅ users_service copied"
+          echo "users_service copied"
         fi
         if [ -f ${{ env.BUILD_DIR }}/services/orders/orders_service ]; then
           cp ${{ env.BUILD_DIR }}/services/orders/orders_service ${{ env.PRODUCTION_DIR }}/services/
-          echo "✅ orders_service copied"
+          echo "orders_service copied"
         fi
 
         # Copy environment configuration
@@ -178,7 +178,7 @@ jobs:
             echo "Building hello-simple function..."
             faas-cli build -f stack.yaml --filter hello-simple
             docker run -d --name hello-function --restart=always -p 8082:8080 local/hello-simple:latest
-            echo "✅ hello-simple function deployed on port 8082"
+            echo "hello-simple function deployed on port 8082"
           fi
 
           # Build users function
@@ -186,7 +186,7 @@ jobs:
             echo "Building users-api function..."
             faas-cli build -f stack.yaml --filter users-api
             docker run -d --name users-function --restart=always -p 8083:8080 local/users-api:latest
-            echo "✅ users-api function deployed on port 8083 (calls C++ users_service)"
+            echo "users-api function deployed on port 8083 (calls C++ users_service)"
           fi
 
           # Build orders function
@@ -194,7 +194,7 @@ jobs:
             echo "Building orders-api function..."
             faas-cli build -f stack.yaml --filter orders-api
             docker run -d --name orders-function --restart=always -p 8084:8080 local/orders-api:latest
-            echo "✅ orders-api function deployed on port 8084 (calls C++ orders_service)"
+            echo "orders-api function deployed on port 8084 (calls C++ orders_service)"
           fi
         else
           echo "No serverless functions found to deploy"
