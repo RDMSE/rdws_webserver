@@ -196,11 +196,31 @@ jobs:
         docker rm users-function 2>/dev/null || echo "users-function not found"
         docker rm orders-function 2>/dev/null || echo "orders-function not found"
 
-        # Check and free up ports if needed (try without sudo first)
-        echo "Checking for processes using ports..."
-        lsof -ti:8082 | xargs -r kill -9 2>/dev/null || echo "Port 8082 free or no permission"
-        lsof -ti:8083 | xargs -r kill -9 2>/dev/null || echo "Port 8083 free or no permission"
-        lsof -ti:8084 | xargs -r kill -9 2>/dev/null || echo "Port 8084 free or no permission"
+        # Force clean any containers using the same image names
+        echo "Cleaning up any containers using function images..."
+        docker ps -a --filter "ancestor=local/hello-simple:latest" -q | xargs -r docker rm -f || echo "No hello-simple containers"
+        docker ps -a --filter "ancestor=local/users-api:latest" -q | xargs -r docker rm -f || echo "No users-api containers"
+        docker ps -a --filter "ancestor=local/orders-api:latest" -q | xargs -r docker rm -f || echo "No orders-api containers"
+
+        # Check what's using the ports
+        echo "Checking port usage..."
+        echo "Port 8082:" && (lsof -i:8082 || echo "Free")
+        echo "Port 8083:" && (lsof -i:8083 || echo "Free")
+        echo "Port 8084:" && (lsof -i:8084 || echo "Free")
+
+        # Kill processes using the ports more aggressively
+        echo "Freeing up ports..."
+        for port in 8082 8083 8084; do
+          pid=$(lsof -ti:$port 2>/dev/null)
+          if [ ! -z "$pid" ]; then
+            echo "Killing process $pid using port $port"
+            kill -9 $pid 2>/dev/null || echo "Could not kill process $pid"
+            sleep 1
+          fi
+        done
+
+        # Wait a moment for ports to be freed
+        sleep 2
 
         # Create serverless function directory
         mkdir -p ${{ env.PRODUCTION_DIR }}/functions
@@ -218,6 +238,15 @@ jobs:
           if [ -f "hello-simple/handler.js" ]; then
             echo "Building hello-simple function..."
             faas-cli build -f stack.yaml --filter hello-simple
+
+            # Final port check before running
+            if lsof -i:8082 >/dev/null 2>&1; then
+              echo "Port 8082 still in use, waiting 5 seconds..."
+              sleep 5
+              lsof -ti:8082 | xargs -r kill -9 2>/dev/null || echo "Could not free port 8082"
+              sleep 2
+            fi
+
             docker run -d --name hello-function --restart=always -p 8082:8080 local/hello-simple:latest
             echo "hello-simple function deployed on port 8082"
           fi
@@ -226,6 +255,15 @@ jobs:
           if [ -f "users-api/handler.js" ]; then
             echo "Building users-api function..."
             faas-cli build -f stack.yaml --filter users-api
+
+            # Final port check before running
+            if lsof -i:8083 >/dev/null 2>&1; then
+              echo "Port 8083 still in use, waiting 5 seconds..."
+              sleep 5
+              lsof -ti:8083 | xargs -r kill -9 2>/dev/null || echo "Could not free port 8083"
+              sleep 2
+            fi
+
             docker run -d --name users-function --restart=always -p 8083:8080 local/users-api:latest
             echo "users-api function deployed on port 8083 (calls C++ users_service)"
           fi
@@ -234,6 +272,15 @@ jobs:
           if [ -f "orders-api/handler.js" ]; then
             echo "Building orders-api function..."
             faas-cli build -f stack.yaml --filter orders-api
+
+            # Final port check before running
+            if lsof -i:8084 >/dev/null 2>&1; then
+              echo "Port 8084 still in use, waiting 5 seconds..."
+              sleep 5
+              lsof -ti:8084 | xargs -r kill -9 2>/dev/null || echo "Could not free port 8084"
+              sleep 2
+            fi
+
             docker run -d --name orders-function --restart=always -p 8084:8080 local/orders-api:latest
             echo "orders-api function deployed on port 8084 (calls C++ orders_service)"
           fi
