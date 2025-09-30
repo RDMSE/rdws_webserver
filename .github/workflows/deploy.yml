@@ -116,6 +116,24 @@ jobs:
         # Stop systemd service if running
         sudo systemctl stop cpp-rest-server || echo "Service not running"
 
+    - name: Stop existing service before deployment
+      run: |
+        # Stop service if it's running to avoid "Text file busy" error
+        if sudo systemctl is-active --quiet cpp-rest-server; then
+          echo "Stopping cpp-rest-server service..."
+          sudo systemctl stop cpp-rest-server
+          sleep 2
+        else
+          echo "Service is not running"
+        fi
+
+        # Also kill any running processes using the executable
+        if pgrep -f "rest_server" > /dev/null; then
+          echo "Killing running rest_server processes..."
+          sudo pkill -f "rest_server" || true
+          sleep 1
+        fi
+
     - name: Deploy to production directory
       run: |
         # Create production directory if it doesn't exist
@@ -211,8 +229,14 @@ jobs:
 
     - name: Start server
       run: |
-        # Start via systemd
+        # Restart the systemd service
+        echo "Starting cpp-rest-server service..."
         sudo systemctl start cpp-rest-server
+
+        # Enable service to start on boot
+        sudo systemctl enable cpp-rest-server
+
+        echo "Service started successfully"
 
     - name: Wait for server startup
       run: |
