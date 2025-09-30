@@ -204,20 +204,25 @@ jobs:
 
         # Check what's using the ports
         echo "Checking port usage..."
-        echo "Port 8082:" && (lsof -i:8082 || echo "Free")
-        echo "Port 8083:" && (lsof -i:8083 || echo "Free")
-        echo "Port 8084:" && (lsof -i:8084 || echo "Free")
+        echo "Port 8082:" && (lsof -i:8082 2>/dev/null || echo "Free")
+        echo "Port 8083:" && (lsof -i:8083 2>/dev/null || echo "Free")
+        echo "Port 8084:" && (lsof -i:8084 2>/dev/null || echo "Free")
 
-        # Kill processes using the ports more aggressively
-        echo "Freeing up ports..."
-        for port in 8082 8083 8084; do
-          pid=$(lsof -ti:$port 2>/dev/null)
-          if [ ! -z "$pid" ]; then
-            echo "Killing process $pid using port $port"
-            kill -9 $pid 2>/dev/null || echo "Could not kill process $pid"
-            sleep 1
-          fi
-        done
+        # Only kill processes if ports are actually in use
+        echo "Freeing up ports if needed..."
+        if lsof -i:8082 >/dev/null 2>&1; then
+          echo "Killing process on port 8082"
+          lsof -ti:8082 | xargs -r kill -9 2>/dev/null || echo "Could not kill process on 8082"
+        fi
+        if lsof -i:8083 >/dev/null 2>&1; then
+          echo "Killing process on port 8083"
+          lsof -ti:8083 | xargs -r kill -9 2>/dev/null || echo "Could not kill process on 8083"
+        fi
+        if lsof -i:8084 >/dev/null 2>&1; then
+          echo "Killing process on port 8084"
+          lsof -ti:8084 | xargs -r kill -9 2>/dev/null || echo "Could not kill process on 8084"
+        fi
+        echo "Port cleanup completed"
 
         # Wait a moment for ports to be freed
         sleep 2
