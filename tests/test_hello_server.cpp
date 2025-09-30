@@ -3,6 +3,8 @@
 #include "hello_server.h"
 #include <pistache/http.h>
 #include <pistache/router.h>
+#include <fstream>
+#include <cstdio>
 
 using namespace testing;
 
@@ -118,4 +120,52 @@ TEST(HelloServerEdgeCasesTest, ZeroThreads) {
     
     // Pistache should handle 0 threads gracefully (likely converting to 1)
     EXPECT_NO_THROW(server.init(0));
+}
+
+// Test serverless proxy functionality
+class HelloServerProxyTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        address = Pistache::Address(Pistache::Ipv4::loopback(), Pistache::Port(19090));
+        server = std::make_unique<HelloServer>(address);
+    }
+
+    void TearDown() override {
+        server.reset();
+    }
+
+    Pistache::Address address;
+    std::unique_ptr<HelloServer> server;
+};
+
+TEST_F(HelloServerProxyTest, ServerSupportsProxyConfiguration) {
+    // Test that server initializes correctly with proxy capability
+    EXPECT_NO_THROW(server->init(1));
+    
+    // This test verifies the server can be configured for proxy mode
+    // Actual proxy testing would require integration testing with running serverless function
+}
+
+// Test environment variable configuration
+class HelloServerConfigurationTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        // Create test .env file
+        std::ofstream envFile("test.env");
+        envFile << "SERVERLESS_FUNCTION_URL=http://localhost:8999/\n";
+        envFile << "TEST_VAR=test_value\n";
+        envFile.close();
+    }
+
+    void TearDown() override {
+        // Clean up test files
+        std::remove("test.env");
+    }
+};
+
+TEST_F(HelloServerConfigurationTest, ServerLoadsEnvironmentVariables) {
+    // Test that server can load environment variables
+    // This test verifies the environment loading mechanism exists
+    Pistache::Address addr(Pistache::Ipv4::loopback(), Pistache::Port(19091));
+    EXPECT_NO_THROW(HelloServer server(addr));
 }

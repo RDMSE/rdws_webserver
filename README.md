@@ -1,16 +1,95 @@
-# C++ REST Server with Pistache
+# C++ REST Server with Serverless Architecture
 
-A simple REST server in C++ using the Pistache framework, built for Fedora Server.
+A hybrid REST server in C++ using Pistache framework with serverless functions support, built for Fedora Server.
 
 > **Local Development + Remote Deploy**: See [DEVELOPMENT.md](DEVELOPMENT.md) for complete guide on how to develop locally (Linux Mint) and deploy to server.
 
+## 🏗️ Architecture
+
+### **Hybrid Serverless Model**
+- **Main Server**: C++ Pistache server on port 9080 (routing/proxy layer)
+- **Serverless Functions**: Node.js containers on port 8082+ (business logic)
+- **Auto-Deployment**: GitHub Actions with both C++ server and function deployment
+
+### **Request Flow**
+```
+Client Request → C++ Server (9080) → Proxy → Serverless Function (8082) → Response
+                     ↓ (if function unavailable)
+                 Fallback Response
+```
+
 ## Features
 
-- Basic HTTP REST server
-- GET endpoint `/hello` that returns "Hello World from C++ REST Server!"
-- GET endpoint `/` (root) that also returns the Hello World message
-- Runs on http://localhost:9080
+- **Intelligent Proxy**: `/hello` endpoint proxies to serverless function with fallback
+- **Serverless Functions**: Node.js functions deployed as Docker containers
+- **Auto-Deployment**: CI/CD pipeline deploys both server and functions
+- **Fallback Support**: C++ server provides fallback if serverless function unavailable
+- **Real-time Health Checks**: Tests both main server and serverless functions
+- Basic HTTP REST server on http://localhost:9080
 - Graceful shutdown with Ctrl+C
+
+## 🚀 Quick Start
+
+### Configure Environment Variables
+
+1. **Copy environment template:**
+```bash
+cp .env.example .env
+```
+
+2. **Edit configuration:**
+```bash
+# Edit .env file with your settings
+SERVERLESS_FUNCTION_URL=http://localhost:8082/
+```
+
+### Test the Serverless Architecture
+
+```bash
+# Test main server (fallback)
+curl http://fedora-server.local:9080/
+
+# Test serverless proxy endpoint
+curl http://fedora-server.local:9080/hello
+
+# Test serverless function directly
+curl http://fedora-server.local:8082/
+```
+
+The `/hello` endpoint now returns JSON from the serverless function:
+```json
+{
+  "timestamp": "2025-09-30T07:20:53.210Z",
+  "originalEndpoint": "/hello",
+  "serverless": true
+}
+```
+
+## ⚙️ Configuration
+
+The server supports configuration via environment variables and `.env` file:
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SERVERLESS_FUNCTION_URL` | `http://localhost:8082/` | URL of the serverless function |
+
+### Configuration Precedence
+
+1. **System environment variables** (highest priority)
+2. **`.env` file** (loaded automatically)
+3. **Default values** (fallback)
+
+### Example .env file:
+```bash
+# Serverless Configuration
+SERVERLESS_FUNCTION_URL=http://localhost:8082/
+
+# Future configurations
+# SERVER_PORT=9080
+# SERVER_THREADS=2
+```
 
 ## Prerequisites
 
@@ -60,10 +139,19 @@ cd ../..
 server/
 ├── src/
 │   ├── main.cpp           # Main file with server initialization
-│   └── hello_server.cpp   # HelloServer class implementation
+│   └── hello_server.cpp   # HelloServer class with serverless proxy
 ├── include/
-│   └── hello_server.h     # HelloServer class header
-├── CMakeLists.txt         # CMake configuration
+│   └── hello_server.h     # HelloServer class header with proxy methods
+├── functions/             # Serverless functions directory
+│   ├── hello-simple/      # Node.js serverless function
+│   │   ├── handler.js     # Function implementation
+│   │   └── package.json   # Node.js dependencies
+│   ├── stack.yaml         # OpenFaaS function configuration
+│   └── README.md          # Serverless functions documentation
+├── .github/workflows/     # GitHub Actions CI/CD
+│   ├── ci.yml            # Continuous Integration
+│   └── deploy.yml        # Deployment (C++ + Serverless)
+├── CMakeLists.txt        # CMake configuration
 └── README.md             # This documentation
 ```
 

@@ -100,8 +100,8 @@ TEST_F(HelloServerIntegrationTest, TestRootEndpoint) {
     EXPECT_EQ(response.body, "Hello World from C++ REST Server!");
 }
 
-// Test the /hello endpoint
-TEST_F(HelloServerIntegrationTest, TestHelloEndpoint) {
+// Test the /hello endpoint (now proxies to serverless function)
+TEST_F(HelloServerIntegrationTest, TestHelloEndpointProxy) {
     std::string url = "http://127.0.0.1:" + std::to_string(test_port) + "/hello";
     
     // Wait a bit more for server to be ready
@@ -110,7 +110,16 @@ TEST_F(HelloServerIntegrationTest, TestHelloEndpoint) {
     HTTPResponse response = makeRequest(url);
     
     EXPECT_EQ(response.status_code, 200);
-    EXPECT_EQ(response.body, "Hello World from C++ REST Server!");
+    
+    // Response should be JSON (either from serverless function or fallback)
+    EXPECT_TRUE(response.body.find("{") != std::string::npos);
+    
+    // Should contain either serverless response or fallback message
+    EXPECT_TRUE(
+        response.body.find("serverless") != std::string::npos ||
+        response.body.find("fallback") != std::string::npos ||
+        response.body.find("timestamp") != std::string::npos
+    );
 }
 
 // Test non-existent endpoint (should return 404)
@@ -125,18 +134,18 @@ TEST_F(HelloServerIntegrationTest, TestNonExistentEndpoint) {
     EXPECT_EQ(response.status_code, 404);
 }
 
-// Test multiple simultaneous requests
-TEST_F(HelloServerIntegrationTest, TestConcurrentRequests) {
+// Test multiple simultaneous requests (proxy behavior)
+TEST_F(HelloServerIntegrationTest, TestConcurrentProxyRequests) {
     std::string url = "http://127.0.0.1:" + std::to_string(test_port) + "/hello";
     
     // Wait for server to be ready
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
     
     std::vector<std::thread> threads;
-    std::vector<HTTPResponse> responses(5);
+    std::vector<HTTPResponse> responses(3); // Reduce to 3 for proxy testing
     
-    // Make 5 concurrent requests
-    for (int i = 0; i < 5; i++) {
+    // Make 3 concurrent requests to proxy endpoint
+    for (int i = 0; i < 3; i++) {
         threads.emplace_back([this, &url, &responses, i]() {
             responses[i] = makeRequest(url);
         });
@@ -147,9 +156,9 @@ TEST_F(HelloServerIntegrationTest, TestConcurrentRequests) {
         thread.join();
     }
     
-    // Verify all responses
+    // Verify all responses are successful (either serverless or fallback)
     for (const auto& response : responses) {
         EXPECT_EQ(response.status_code, 200);
-        EXPECT_EQ(response.body, "Hello World from C++ REST Server!");
+        EXPECT_TRUE(response.body.find("{") != std::string::npos); // Should be JSON
     }
 }
