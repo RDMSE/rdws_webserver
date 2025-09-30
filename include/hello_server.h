@@ -16,9 +16,9 @@ public:
 
 private:
     void setupRoutes();
-    void helloHandler(const Pistache::Rest::Request &request, Pistache::Http::ResponseWriter response);
-    void usersHandler(const Pistache::Rest::Request &request, Pistache::Http::ResponseWriter response);
-    void proxyToServerlessFunction(const Pistache::Rest::Request &request, Pistache::Http::ResponseWriter response);
+    void helloHandler(const Pistache::Rest::Request & /* request */, Pistache::Http::ResponseWriter response);
+    void usersHandler(const Pistache::Rest::Request & /* request */, Pistache::Http::ResponseWriter response);
+    void proxyToServerlessFunction(const Pistache::Rest::Request & /* request */, Pistache::Http::ResponseWriter response);
     std::string makeHttpRequest(const std::string &url);
     void loadEnvironmentVariables();
     std::string getEnvVar(const std::string &key, const std::string &defaultValue = "");
