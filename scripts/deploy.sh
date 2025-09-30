@@ -18,7 +18,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}🚀 C++ REST Server Deployment${NC}"
+echo -e "${BLUE}C++ REST Server Deployment${NC}"
 echo -e "${BLUE}==============================${NC}"
 echo -e "Local project: ${LOCAL_PROJECT_DIR}"
 echo -e "Remote server: ${SERVER_USER}@${SERVER_HOST}:${REMOTE_PATH}"
@@ -112,7 +112,7 @@ fi
 print_status "Setting executable permissions on remote scripts..."
 ssh "${SERVER_USER}@${SERVER_HOST}" "chmod +x ${REMOTE_PATH}/scripts/*.sh" 2>/dev/null || true
 
-print_success "✅ Deployment completed successfully!"
+print_success "Deployment completed successfully!"
 echo ""
 echo -e "${YELLOW}Next steps:${NC}"
 echo "1. Build on server: ssh ${SERVER_USER}@${SERVER_HOST} 'cd ${REMOTE_PATH} && ./scripts/remote_build.sh'"

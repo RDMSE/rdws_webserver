@@ -88,22 +88,22 @@ fi
 # Generate test report if requested
 if [ "$1" = "--report" ] || [ "$1" = "-r" ]; then
     print_status "Generating test reports..."
-    
+
     # Run tests with XML output
     ./tests/unit_tests --gtest_output=xml:unit_test_results.xml
     timeout 60s ./tests/integration_tests --gtest_output=xml:integration_test_results.xml
-    
+
     print_success "Test reports generated:"
     echo "- Unit tests: build/unit_test_results.xml"
     echo "- Integration tests: build/integration_test_results.xml"
 fi
 
 echo ""
-print_success "✅ All tests passed successfully!"
+print_success "All tests passed successfully!"
 echo ""
 echo -e "${YELLOW}Test Summary:${NC}"
-echo "- Unit tests: ✅ PASSED"
-echo "- Integration tests: ✅ PASSED"
+echo "- Unit tests: PASSED"
+echo "- Integration tests: PASSED"
 echo ""
 echo -e "${YELLOW}Next step:${NC}"
 echo "- Start server: ./scripts/remote_run.sh"

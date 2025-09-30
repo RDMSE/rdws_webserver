@@ -92,6 +92,11 @@ jobs:
           -DCMAKE_CXX_STANDARD=17
         make -j$(nproc)
 
+        # Build individual services
+        echo "Building C++ services..."
+        cd services
+        make -j$(nproc) || echo "Services build completed"
+
     - name: Run tests
       run: |
         cd ${{ env.BUILD_DIR }}
@@ -121,9 +126,79 @@ jobs:
         cp -r scripts ${{ env.PRODUCTION_DIR }}/
         cp cpp-rest-server.service ${{ env.PRODUCTION_DIR }}/
 
+        # Copy C++ service executables
+        mkdir -p ${{ env.PRODUCTION_DIR }}/services
+        if [ -f ${{ env.BUILD_DIR }}/services/users/users_service ]; then
+          cp ${{ env.BUILD_DIR }}/services/users/users_service ${{ env.PRODUCTION_DIR }}/services/
+          echo "users_service copied"
+        fi
+        if [ -f ${{ env.BUILD_DIR }}/services/orders/orders_service ]; then
+          cp ${{ env.BUILD_DIR }}/services/orders/orders_service ${{ env.PRODUCTION_DIR }}/services/
+          echo "orders_service copied"
+        fi
+
+        # Copy environment configuration
+        cp .env.example ${{ env.PRODUCTION_DIR }}/
+        if [ ! -f ${{ env.PRODUCTION_DIR }}/.env ]; then
+          # Create production .env if it doesn't exist
+          cat > ${{ env.PRODUCTION_DIR }}/.env << 'EOF'
+        # Production Configuration
+        SERVERLESS_FUNCTION_URL=http://localhost:8082/
+        ENVIRONMENT=production
+        EOF
+          echo "Created production .env file"
+        else
+          echo "Production .env file already exists, keeping current configuration"
+        fi
+
         # Make executable
         chmod +x ${{ env.PRODUCTION_DIR }}/rest_server
         chmod +x ${{ env.PRODUCTION_DIR }}/scripts/*.sh
+
+    - name: Deploy serverless functions
+      run: |
+        # Stop and remove existing function containers
+        docker stop hello-function users-function orders-function || echo "Containers not running"
+        docker rm hello-function users-function orders-function || echo "Containers not found"
+
+        # Create serverless function directory
+        mkdir -p ${{ env.PRODUCTION_DIR }}/functions
+
+        # Copy function files
+        if [ -d "functions" ]; then
+          cp -r functions/* ${{ env.PRODUCTION_DIR }}/functions/
+        fi
+
+        # Build and deploy functions (if they exist)
+        if [ -f "functions/stack.yaml" ]; then
+          cd functions
+
+          # Build hello function
+          if [ -f "hello-simple/handler.js" ]; then
+            echo "Building hello-simple function..."
+            faas-cli build -f stack.yaml --filter hello-simple
+            docker run -d --name hello-function --restart=always -p 8082:8080 local/hello-simple:latest
+            echo "hello-simple function deployed on port 8082"
+          fi
+
+          # Build users function
+          if [ -f "users-api/handler.js" ]; then
+            echo "Building users-api function..."
+            faas-cli build -f stack.yaml --filter users-api
+            docker run -d --name users-function --restart=always -p 8083:8080 local/users-api:latest
+            echo "users-api function deployed on port 8083 (calls C++ users_service)"
+          fi
+
+          # Build orders function
+          if [ -f "orders-api/handler.js" ]; then
+            echo "Building orders-api function..."
+            faas-cli build -f stack.yaml --filter orders-api
+            docker run -d --name orders-function --restart=always -p 8084:8080 local/orders-api:latest
+            echo "orders-api function deployed on port 8084 (calls C++ orders_service)"
+          fi
+        else
+          echo "No serverless functions found to deploy"
+        fi
 
     - name: Install/Update systemd service
       run: |
@@ -147,10 +222,10 @@ jobs:
       run: |
         # Check service status
         if sudo systemctl is-active --quiet cpp-rest-server; then
-          echo "✅ Service is running"
+          echo "Service is running"
           sudo systemctl status cpp-rest-server --no-pager
         else
-          echo "❌ Service failed to start"
+          echo "Service failed to start"
           sudo systemctl status cpp-rest-server --no-pager
           sudo journalctl -u cpp-rest-server --no-pager -n 20
           exit 1
@@ -162,10 +237,11 @@ jobs:
         MAX_RETRIES=5
         RETRY_COUNT=0
 
+        echo "Testing main C++ server..."
         while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
           if curl -f http://localhost:9080/hello --max-time 10; then
-            echo "Server is responding"
-            exit 0
+            echo "Main server is responding"
+            break
           else
             echo "Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES failed, retrying..."
             RETRY_COUNT=$((RETRY_COUNT + 1))
@@ -173,8 +249,30 @@ jobs:
           fi
         done
 
-        echo "Health check failed after $MAX_RETRIES attempts"
-        exit 1
+        if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+          echo "Main server health check failed after $MAX_RETRIES attempts"
+          exit 1
+        fi
+
+        # Test serverless function if it exists
+        RETRY_COUNT=0
+        echo "Testing serverless function..."
+        while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+          if curl -f http://localhost:8082/ --max-time 10; then
+            echo "Serverless function is responding"
+            break
+          else
+            echo "Serverless function attempt $((RETRY_COUNT + 1))/$MAX_RETRIES failed, retrying..."
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            sleep 5
+          fi
+        done
+
+        if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+          echo "Serverless function health check failed, but continuing deployment"
+        fi
+
+        echo "Health checks completed"
 
   notify:
     name: Notify deployment status

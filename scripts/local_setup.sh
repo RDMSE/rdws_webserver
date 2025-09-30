@@ -35,7 +35,7 @@ echo ""
 # Check if Docker is available
 if command -v docker >/dev/null 2>&1 && command -v docker-compose >/dev/null 2>&1; then
     print_status "Docker and Docker Compose found"
-    
+
     echo ""
     echo -e "${YELLOW}Option 1: Docker Development Environment${NC}"
     echo "This creates a containerized environment identical to your server"
@@ -54,7 +54,7 @@ if command -v lsb_release >/dev/null 2>&1; then
     OS_NAME=$(lsb_release -is)
     OS_VERSION=$(lsb_release -rs)
     print_status "Detected OS: $OS_NAME $OS_VERSION"
-    
+
     if [[ "$OS_NAME" == "LinuxMint" ]]; then
         echo ""
         echo -e "${YELLOW}Option 2: Native Linux Mint Development${NC}"
@@ -82,18 +82,18 @@ echo ""
 echo -e "${YELLOW}Setup Steps for Local Development:${NC}"
 echo ""
 echo "1. 📋 Copy project to your local Linux Mint machine"
-echo "2. 🔧 Choose development method (Docker or Native)"
+echo "2. Choose development method (Docker or Native)"
 echo "3. ⚙️  Configure VS Code settings:"
 echo "   - Copy .vscode/settings-local-dev.json to .vscode/settings.json"
-echo "   - Copy .vscode/tasks-local-dev.json to .vscode/tasks.json"  
+echo "   - Copy .vscode/tasks-local-dev.json to .vscode/tasks.json"
 echo "   - Update remote server details in settings.json"
 echo "4. 🔑 Set up SSH key authentication to your server"
-echo "5. 🚀 Use VS Code tasks for deploy & remote execution"
+echo "5. Use VS Code tasks for deploy & remote execution"
 echo ""
 echo -e "${YELLOW}VS Code Task Usage:${NC}"
 echo "  Ctrl+Shift+P → 'Tasks: Run Task' → '🔄 Full Deploy & Run'"
 echo "  Ctrl+Shift+P → 'Tasks: Run Task' → '⚡ Quick Deploy & Build'"
-echo "  Ctrl+Shift+P → 'Tasks: Run Task' → '🚀 Deploy to Server'"
+echo "  Ctrl+Shift+P → 'Tasks: Run Task' → 'Deploy to Server'"
 echo ""
 echo -e "${YELLOW}SSH Setup (run on your local machine):${NC}"
 echo "  ssh-keygen -t rsa -b 4096 -C 'your_email@example.com'"

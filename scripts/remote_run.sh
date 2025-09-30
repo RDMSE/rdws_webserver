@@ -62,7 +62,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo -e "${BLUE}🚀 C++ REST Server Remote Control${NC}"
+echo -e "${BLUE}C++ REST Server Remote Control${NC}"
 echo -e "${BLUE}=================================${NC}"
 
 # Get the script directory and project root
