@@ -7,4 +7,12 @@ functions:
     lang: node20
     handler: ./hello-simple
     image: local/hello-simple:latest
+  users-api:
+    lang: node20
+    handler: ./users-api
+    image: local/users-api:latest
+  orders-api:
+    lang: node20
+    handler: ./orders-api
+    image: local/orders-api:latest
 

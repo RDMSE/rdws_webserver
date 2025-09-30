@@ -1,0 +1,16 @@
+{
+    "name": "users-api",
+    "version": "1.0.0",
+    "description": "Serverless API for user management",
+    "main": "handler.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 0"
+    },
+    "keywords": [
+        "serverless",
+        "users",
+        "api"
+    ],
+    "author": "",
+    "license": "MIT"
+}

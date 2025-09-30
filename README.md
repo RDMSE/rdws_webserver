@@ -52,9 +52,22 @@ curl http://fedora-server.local:9080/
 # Test serverless proxy endpoint
 curl http://fedora-server.local:9080/hello
 
-# Test serverless function directly
-curl http://fedora-server.local:8082/
+# Test new C++ endpoint
+curl http://fedora-server.local:9080/users
+
+# Test serverless functions directly
+curl http://fedora-server.local:8082/  # hello function
+curl http://fedora-server.local:8083/  # users function (if deployed)
 ```
+
+### Available Endpoints
+
+| Endpoint | Type | Port | Description |
+|----------|------|------|-------------|
+| `/` | C++ Server | 9080 | Main fallback endpoint |
+| `/hello` | Serverless Proxy | 9080→8082 | Proxies to serverless function |
+| `/users` | C++ Server | 9080 | Users API (direct C++ handler) |
+| *Direct Functions* | *Serverless* | *8082+* | *Direct access to functions* |
 
 The `/hello` endpoint now returns JSON from the serverless function:
 ```json

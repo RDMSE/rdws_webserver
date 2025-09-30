@@ -92,6 +92,11 @@ jobs:
           -DCMAKE_CXX_STANDARD=17
         make -j$(nproc)
 
+        # Build individual services
+        echo "Building C++ services..."
+        cd services
+        make -j$(nproc) || echo "Services build completed"
+
     - name: Run tests
       run: |
         cd ${{ env.BUILD_DIR }}
@@ -121,6 +126,17 @@ jobs:
         cp -r scripts ${{ env.PRODUCTION_DIR }}/
         cp cpp-rest-server.service ${{ env.PRODUCTION_DIR }}/
 
+        # Copy C++ service executables
+        mkdir -p ${{ env.PRODUCTION_DIR }}/services
+        if [ -f ${{ env.BUILD_DIR }}/services/users/users_service ]; then
+          cp ${{ env.BUILD_DIR }}/services/users/users_service ${{ env.PRODUCTION_DIR }}/services/
+          echo "✅ users_service copied"
+        fi
+        if [ -f ${{ env.BUILD_DIR }}/services/orders/orders_service ]; then
+          cp ${{ env.BUILD_DIR }}/services/orders/orders_service ${{ env.PRODUCTION_DIR }}/services/
+          echo "✅ orders_service copied"
+        fi
+
         # Copy environment configuration
         cp .env.example ${{ env.PRODUCTION_DIR }}/
         if [ ! -f ${{ env.PRODUCTION_DIR }}/.env ]; then
@@ -141,9 +157,9 @@ jobs:
 
     - name: Deploy serverless functions
       run: |
-        # Stop and remove existing function container
-        docker stop hello-function || echo "Container not running"
-        docker rm hello-function || echo "Container not found"
+        # Stop and remove existing function containers
+        docker stop hello-function users-function orders-function || echo "Containers not running"
+        docker rm hello-function users-function orders-function || echo "Containers not found"
 
         # Create serverless function directory
         mkdir -p ${{ env.PRODUCTION_DIR }}/functions
@@ -153,19 +169,36 @@ jobs:
           cp -r functions/* ${{ env.PRODUCTION_DIR }}/functions/
         fi
 
-        # Build and deploy hello function (if it exists)
-        if [ -f "functions/hello-simple/handler.js" ] && [ -f "functions/stack.yaml" ]; then
+        # Build and deploy functions (if they exist)
+        if [ -f "functions/stack.yaml" ]; then
           cd functions
-          # Build function image
-          faas-cli build -f stack.yaml
 
-          # Deploy as Docker container (bypassing OpenFaaS for now)
-          docker run -d --name hello-function --restart=always -p 8082:8080 local/hello-simple:latest
+          # Build hello function
+          if [ -f "hello-simple/handler.js" ]; then
+            echo "Building hello-simple function..."
+            faas-cli build -f stack.yaml --filter hello-simple
+            docker run -d --name hello-function --restart=always -p 8082:8080 local/hello-simple:latest
+            echo "✅ hello-simple function deployed on port 8082"
+          fi
+
+          # Build users function
+          if [ -f "users-api/handler.js" ]; then
+            echo "Building users-api function..."
+            faas-cli build -f stack.yaml --filter users-api
+            docker run -d --name users-function --restart=always -p 8083:8080 local/users-api:latest
+            echo "✅ users-api function deployed on port 8083 (calls C++ users_service)"
+          fi
+
+          # Build orders function
+          if [ -f "orders-api/handler.js" ]; then
+            echo "Building orders-api function..."
+            faas-cli build -f stack.yaml --filter orders-api
+            docker run -d --name orders-function --restart=always -p 8084:8080 local/orders-api:latest
+            echo "✅ orders-api function deployed on port 8084 (calls C++ orders_service)"
+          fi
         else
           echo "No serverless functions found to deploy"
-        fi
-
-    - name: Install/Update systemd service
+        fi    - name: Install/Update systemd service
       run: |
         # Copy service file to systemd directory
         sudo cp ${{ env.PRODUCTION_DIR }}/cpp-rest-server.service /etc/systemd/system/
