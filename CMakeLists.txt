@@ -35,18 +35,18 @@ add_library(hello_server_lib
 )
 
 # Link libraries to the library
-target_link_libraries(hello_server_lib 
+target_link_libraries(hello_server_lib
     ${PISTACHE_LIBRARIES}
     pthread
 )
 
 # Add include directories for Pistache to the library
-target_include_directories(hello_server_lib PRIVATE 
+target_include_directories(hello_server_lib PRIVATE
     ${PISTACHE_INCLUDE_DIRS}
 )
 
 # Add compile flags for Pistache to the library
-target_compile_options(hello_server_lib PRIVATE 
+target_compile_options(hello_server_lib PRIVATE
     ${PISTACHE_CFLAGS_OTHER}
 )
 
@@ -56,12 +56,15 @@ add_executable(rest_server
 )
 
 # Link the server library to the executable
-target_link_libraries(rest_server 
+target_link_libraries(rest_server
     hello_server_lib
 )
 
 # Add tests subdirectory
 add_subdirectory(tests)
+
+# Add services subdirectory
+add_subdirectory(services)
 
 # Install target (optional)
 install(TARGETS rest_server DESTINATION bin)

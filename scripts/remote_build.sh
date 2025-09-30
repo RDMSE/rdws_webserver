@@ -75,11 +75,11 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-print_success "✅ Build completed successfully!"
+print_success "Build completed successfully!"
 echo ""
 echo -e "${YELLOW}Built artifacts:${NC}"
 echo "- Server executable: build/rest_server"
-echo "- Unit tests: build/tests/unit_tests" 
+echo "- Unit tests: build/tests/unit_tests"
 echo "- Integration tests: build/tests/integration_tests"
 echo ""
 echo -e "${YELLOW}Next steps:${NC}"
