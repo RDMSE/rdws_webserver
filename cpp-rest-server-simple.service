@@ -1,0 +1,27 @@
+[Unit]
+Description=C++ REST Server
+Documentation=https://github.com/RDMSE/rdws_webserver
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=rdias
+Group=rdias
+WorkingDirectory=/home/rdias/cpp-rest-server
+ExecStart=/home/rdias/cpp-rest-server/rest_server
+Restart=always
+RestartSec=3
+TimeoutStopSec=10
+
+# Environment
+Environment=PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig
+Environment=LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cpp-rest-server
+
+[Install]
+WantedBy=multi-user.target

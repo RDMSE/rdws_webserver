@@ -10,7 +10,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_FLAGS "-O2 -Wall -Wextra")
 
 # Add executable
+# Create standalone users service executable
 add_executable(users_service main.cpp)
+
+# Link with static libgcc to reduce dependencies
+set_target_properties(users_service PROPERTIES
+    LINK_FLAGS "-static-libgcc"
+)
 
 # Install target
 install(TARGETS users_service DESTINATION bin)
