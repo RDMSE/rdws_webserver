@@ -191,7 +191,7 @@ pm2 logs api-gateway
    groups
    ```
 
-## 📈 Future Improvements
+## Future Improvements
 
 - [ ] **Matrix builds** for different Node.js versions
 - [ ] **Caching** for npm dependencies and C++ builds
