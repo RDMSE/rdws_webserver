@@ -1,18 +1,18 @@
 #!/bin/bash
 
-# 🚀 Script de Deploy Automatizado para Fedora Server
-# Deploy do API Gateway + Microserviços C++
+# Deploy script for Fedora Server
+# API Gateway + C++ Microservices deploy
 
 set -e
 
-# Cores para output
+# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Funções helper
+# Helper functions
 print_status() {
     echo -e "${BLUE}[INFO]${NC} $1"
 }
@@ -29,14 +29,14 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Configurações
+# configurations
 PROJECT_DIR="/opt/rdws_webserver"
 SERVICE_NAME="api-gateway"
 PORT=8080
 
-print_status "🚀 Starting deployment on Fedora Server..."
+print_status "Starting deployment on Fedora Server..."
 
-# Verificar se está executando como root para algumas operações
+# Check if running as root for some operations
 if [[ $EUID -eq 0 ]]; then
     print_warning "Running as root. Some operations will be adjusted."
     IS_ROOT=true
@@ -44,7 +44,7 @@ else
     IS_ROOT=false
 fi
 
-# 1. Verificar dependências
+# 1. Check dependencies
 print_status "📋 Checking dependencies..."
 
 # Node.js
@@ -74,8 +74,8 @@ else
     print_success "CMake found: $(cmake --version | head -1)"
 fi
 
-# 2. Preparar diretório do projeto
-print_status "📁 Preparing project directory..."
+# 2. Prepare project directory
+print_status "Preparing project directory..."
 
 if [ ! -d "$PROJECT_DIR" ]; then
     print_status "Creating project directory: $PROJECT_DIR"
@@ -89,12 +89,12 @@ fi
 
 cd "$PROJECT_DIR"
 
-# 3. Atualizar código (se já existe) ou clonar
+# 3. Update code (if it already exists) or clone
 if [ -d ".git" ]; then
-    print_status "📥 Updating existing repository..."
+    print_status "Updating existing repository..."
     git pull origin 14-featureserverinfra-enable-servless-archtecture
 else
-    print_status "📥 Cloning repository..."
+    print_status "Cloning repository..."
     if [ "$(ls -A)" ]; then
         print_warning "Directory not empty. Backing up to ${PROJECT_DIR}.backup"
         if [ "$IS_ROOT" = true ]; then
@@ -113,16 +113,16 @@ else
     git checkout 14-featureserverinfra-enable-servless-archtecture
 fi
 
-# 4. Instalar dependências Node.js
-print_status "📦 Installing Node.js dependencies..."
+# 4. Install Node.js dependencies
+print_status "Installing Node.js dependencies..."
 npm install --production
 
-# 5. Compilar microserviços C++
-print_status "🔨 Building C++ microservices..."
+# 5. Build C++ microservices
+print_status "Building C++ microservices..."
 mkdir -p build
 cd build
 
-# Limpar build anterior se existe
+# Clean previous build if exists
 if [ -f "Makefile" ]; then
     make clean || true
 fi
@@ -130,7 +130,7 @@ fi
 cmake ..
 make -j$(nproc)
 
-# Verificar se executáveis foram criados
+# Check if executables were created
 if [ ! -f "services/users/users_service" ] || [ ! -f "services/orders/orders_service" ]; then
     print_error "Failed to build microservices!"
     exit 1
@@ -139,7 +139,7 @@ fi
 print_success "Microservices built successfully!"
 cd ..
 
-# 6. Configurar firewall
+# 6. Configure firewall
 print_status "🔥 Configuring firewall..."
 if command -v firewall-cmd &> /dev/null; then
     if [ "$IS_ROOT" = true ]; then
@@ -153,14 +153,15 @@ else
     print_warning "firewalld not found. Please configure firewall manually."
 fi
 
-# 7. Configurar e iniciar serviço
-print_status "⚙️ Configuring service..."
+# 7. Configure and start service
 
-# Escolher método de deploy baseado no que está disponível
+print_status "Configuring service..."
+
+# Choose deployment method based on what's available
 if command -v pm2 &> /dev/null; then
     print_status "Using PM2 for process management..."
-    
-    # Criar configuração PM2
+
+    # Create PM2 configuration
     cat > ecosystem.config.js << EOF
 module.exports = {
   apps: [{
@@ -183,7 +184,7 @@ module.exports = {
 };
 EOF
 
-    # Criar diretório de logs
+    # Create log directory
     if [ "$IS_ROOT" = true ]; then
         mkdir -p "/var/log/${SERVICE_NAME}"
         chown $USER:$USER "/var/log/${SERVICE_NAME}"
@@ -192,15 +193,15 @@ EOF
         sudo chown $USER:$USER "/var/log/${SERVICE_NAME}"
     fi
 
-    # Parar instância anterior se existe
+    # Stop previous instance if exists
     pm2 stop ${SERVICE_NAME} || true
     pm2 delete ${SERVICE_NAME} || true
 
-    # Iniciar nova instância
+    # Start new instance
     pm2 start ecosystem.config.js
     pm2 save
 
-    # Configurar PM2 startup se necessário
+    # Configure PM2 startup if necessary
     if [ "$IS_ROOT" = false ]; then
         print_status "Setting up PM2 startup..."
         pm2 startup | grep "sudo" | bash || print_warning "Failed to setup PM2 startup"
@@ -208,12 +209,12 @@ EOF
 
 elif command -v docker &> /dev/null; then
     print_status "Using Docker for deployment..."
-    
-    # Parar container anterior se existe
+
+    # Stop previous container if exists
     docker stop ${SERVICE_NAME} || true
     docker rm ${SERVICE_NAME} || true
 
-    # Construir e executar
+    # Build and run
     docker build -f Dockerfile.gateway -t ${SERVICE_NAME} .
     docker run -d \
         --name ${SERVICE_NAME} \
@@ -227,8 +228,8 @@ elif command -v docker &> /dev/null; then
 
 else
     print_status "Using systemd for service management..."
-    
-    # Criar arquivo de serviço systemd
+
+    # Create systemd service file
     SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
     
     if [ "$IS_ROOT" = true ]; then
@@ -273,12 +274,12 @@ EOF
     fi
 fi
 
-# 8. Aguardar serviço iniciar
-print_status "⏳ Waiting for service to start..."
+# 8. Wait for service to start
+print_status "Waiting for service to start..."
 sleep 5
 
-# 9. Verificar saúde do serviço
-print_status "🏥 Performing health check..."
+# 9. Check service health
+print_status "Performing health check..."
 
 HEALTH_URL="http://localhost:${PORT}/health"
 MAX_RETRIES=10
@@ -286,7 +287,7 @@ RETRY_COUNT=0
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     if curl -f -s $HEALTH_URL > /dev/null; then
-        print_success "✅ Service is healthy!"
+        print_success "Service is healthy!"
         break
     else
         RETRY_COUNT=$((RETRY_COUNT + 1))
@@ -296,20 +297,20 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
 done
 
 if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-    print_error "❌ Service health check failed after $MAX_RETRIES attempts!"
+    print_error "Service health check failed after $MAX_RETRIES attempts!"
     print_error "Please check logs and troubleshoot manually."
     exit 1
 fi
 
-# 10. Mostrar informações finais
-print_success "🎉 Deployment completed successfully!"
+# 10. Show final information
+print_success "Deployment completed successfully!"
 echo ""
-print_status "📊 Service Information:"
-echo "  🌐 URL: http://$(hostname -I | awk '{print $1}'):${PORT}"
-echo "  🏥 Health: ${HEALTH_URL}"
-echo "  📁 Project: ${PROJECT_DIR}"
+print_status "Service Information:"
+echo "  URL: http://$(hostname -I | awk '{print $1}'):${PORT}"
+echo "  Health: ${HEALTH_URL}"
+echo "  Project: ${PROJECT_DIR}"
 echo ""
-print_status "📋 Available endpoints:"
+print_status "Available endpoints:"
 echo "  GET  /health      - Service health check"
 echo "  GET  /users       - List all users"
 echo "  GET  /users/:id   - Get user by ID"
@@ -318,23 +319,23 @@ echo "  GET  /orders/:id  - Get order by ID"
 echo "  GET  /api-docs    - API documentation"
 echo ""
 
-# Mostrar comandos úteis baseado no método usado
+# Show useful commands based on the method used
 if command -v pm2 &> /dev/null; then
-    print_status "🔧 Useful PM2 commands:"
+    print_status "Useful PM2 commands:"
     echo "  pm2 status                - Show service status"
     echo "  pm2 logs ${SERVICE_NAME}  - View logs"
     echo "  pm2 restart ${SERVICE_NAME} - Restart service"
     echo "  pm2 monit                 - Monitor dashboard"
 elif command -v docker &> /dev/null; then
-    print_status "🔧 Useful Docker commands:"
+    print_status "Useful Docker commands:"
     echo "  docker ps                 - Show running containers"
     echo "  docker logs ${SERVICE_NAME} - View logs"
     echo "  docker restart ${SERVICE_NAME} - Restart service"
 else
-    print_status "🔧 Useful systemd commands:"
+    print_status "Useful systemd commands:"
     echo "  sudo systemctl status ${SERVICE_NAME}  - Show service status"
     echo "  sudo journalctl -u ${SERVICE_NAME} -f  - View logs"
     echo "  sudo systemctl restart ${SERVICE_NAME} - Restart service"
 fi
 
-print_success "🚀 Your C++ microservices API Gateway is now running!"
+print_success "C++ microservices API Gateway is now running!"
