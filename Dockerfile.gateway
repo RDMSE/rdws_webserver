@@ -1,0 +1,58 @@
+# Multi-stage Dockerfile for API Gateway
+FROM node:20-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# ============================================
+# Production stage
+FROM node:20-alpine AS production
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# Create app user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S apigateway -u 1001
+
+# Set working directory
+WORKDIR /app
+
+# Copy dependencies from builder stage
+COPY --from=builder --chown=apigateway:nodejs /app/node_modules ./node_modules
+
+# Copy application code
+COPY --chown=apigateway:nodejs api-gateway.js ./
+COPY --chown=apigateway:nodejs package*.json ./
+
+# Create directory for build files (microservices will be mounted here)
+RUN mkdir -p build/services && chown -R apigateway:nodejs build
+
+# Switch to non-root user
+USER apigateway
+
+# Expose port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:8080/health', (res) => { \
+        if (res.statusCode === 200 || res.statusCode === 503) process.exit(0); \
+        else process.exit(1); \
+    }).on('error', () => process.exit(1))"
+
+# Environment variables
+ENV NODE_ENV=production
+ENV PORT=8080
+ENV BUILD_PATH=./build
+ENV SERVICE_TIMEOUT=5000
+
+# Start application with dumb-init
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "api-gateway.js"]

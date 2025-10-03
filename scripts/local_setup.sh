@@ -1,3 +1,4 @@
+# DEPRECATED: This script was designed for Pistache server - needs update for microservices architecture
 #!/bin/bash
 
 # Local development setup script

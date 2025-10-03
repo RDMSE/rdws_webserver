@@ -1,19 +1,20 @@
-name: CI - Build and Test
+name: CI - Build and Test Microservices
 
 on:
   push:
     branches: [ main, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
 
 env:
   BUILD_TYPE: Debug
-  PKG_CONFIG_PATH: /usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig
   BUILD_DIR: ${{ github.workspace }}/build
+  NODE_VERSION: '20'
 
 jobs:
-  build-and-test:
-    name: Build & Test on Fedora
+  # Job 1: Build and test C++ microservices
+  build-cpp-microservices:
+    name: Build C++ Microservices
     runs-on: [self-hosted, Linux, X64, webserver, fedora]
 
     steps:
@@ -29,67 +30,220 @@ jobs:
       run: |
         echo "Running on self-hosted Fedora runner"
         echo "Build directory: ${{ env.BUILD_DIR }}"
-        echo "Production directory: /opt/cpp-rest-server"
         whoami
         pwd
-        which cmake
-        which g++
-        pkg-config --exists libpistache && echo "Pistache available" || echo "Pistache not found"
+        which cmake || echo "CMake not found"
+        which g++ || echo "g++ not found"
+        which node || echo "Node.js not found"
+        which npm || echo "npm not found"
+
+    - name: Install dependencies if needed
+      run: |
+        # Check and install CMake if needed
+        if ! command -v cmake &> /dev/null; then
+          echo "Installing CMake..."
+          sudo dnf install -y cmake
+        fi
+        
+        # Check and install build tools if needed
+        if ! command -v g++ &> /dev/null; then
+          echo "Installing build tools..."
+          sudo dnf groupinstall -y "Development Tools"
+          sudo dnf install -y gcc-c++
+        fi
+        
+        # Check and install Google Test if needed
+        if ! pkg-config --exists gtest; then
+          echo "Installing Google Test..."
+          sudo dnf install -y gtest-devel gmock-devel
+        fi
 
     - name: Configure CMake
       run: |
         cd ${{ env.BUILD_DIR }}
-        PKG_CONFIG_PATH=${{ env.PKG_CONFIG_PATH }} cmake .. \
+        cmake .. \
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
           -DCMAKE_CXX_STANDARD=17
 
-    - name: Build project
+    - name: Build C++ microservices
       run: |
         cd ${{ env.BUILD_DIR }}
         make -j$(nproc)
 
-    - name: Run unit tests
+    - name: Test microservices executables
       run: |
         cd ${{ env.BUILD_DIR }}
-        make unit_tests
-        ./tests/unit_tests --gtest_output=xml:unit_test_results.xml
+        
+        echo "Testing users_service..."
+        ./services/users/users_service "GET" "/users"
+        
+        echo "Testing orders_service..."
+        ./services/orders/orders_service "GET" "/orders"
 
-    - name: Run integration tests
+    - name: Run C++ tests
       run: |
         cd ${{ env.BUILD_DIR }}
-        make integration_tests
-        ./tests/integration_tests --gtest_output=xml:integration_test_results.xml
+        
+        # Run microservice tests
+        if [ -f "tests/microservice_tests" ]; then
+          ./tests/microservice_tests --gtest_output=xml:microservice_test_results.xml
+        else
+          echo "No microservice tests found"
+        fi
+        
+        # Run individual service tests
+        if [ -f "tests/users_service_tests" ]; then
+          ./tests/users_service_tests --gtest_output=xml:users_test_results.xml
+        fi
+        
+        if [ -f "tests/orders_service_tests" ]; then
+          ./tests/orders_service_tests --gtest_output=xml:orders_test_results.xml
+        fi
 
-    - name: Upload test results
+    - name: Upload C++ test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: test-results-${{ github.run_number }}
+        name: cpp-test-results-${{ github.run_number }}
         path: |
-          ${{ env.BUILD_DIR }}/unit_test_results.xml
-          ${{ env.BUILD_DIR }}/integration_test_results.xml
+          ${{ env.BUILD_DIR }}/*_test_results.xml
 
-    - name: Upload build artifacts
+    - name: Upload microservices binaries
       uses: actions/upload-artifact@v4
       with:
-        name: rest-server-binary-${{ github.run_number }}
+        name: microservices-binaries-${{ github.run_number }}
         path: |
-          ${{ env.BUILD_DIR }}/rest_server
-          ${{ env.BUILD_DIR }}/tests/unit_tests
-          ${{ env.BUILD_DIR }}/tests/integration_tests
+          ${{ env.BUILD_DIR }}/services/users/users_service
+          ${{ env.BUILD_DIR }}/services/orders/orders_service
 
-  code-quality:
-    name: Code Quality
+  # Job 2: Test API Gateway (Node.js)
+  test-api-gateway:
+    name: Test API Gateway
     runs-on: [self-hosted, Linux, X64, webserver, fedora]
+    needs: build-cpp-microservices
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Run clang-format check
+    - name: Setup Node.js
       run: |
-        if command -v clang-format >/dev/null 2>&1; then
-          find src include tests -name "*.cpp" -o -name "*.h" | xargs clang-format --dry-run --Werror || true
+        # Check if Node.js is installed
+        if ! command -v node &> /dev/null; then
+          echo "Installing Node.js..."
+          curl -fsSL https://rpm.nodesource.com/setup_lts.x | sudo bash -
+          sudo dnf install -y nodejs
+        fi
+        
+        echo "Node.js version: $(node --version)"
+        echo "npm version: $(npm --version)"
+
+    - name: Download microservices binaries
+      uses: actions/download-artifact@v4
+      with:
+        name: microservices-binaries-${{ github.run_number }}
+        path: ${{ env.BUILD_DIR }}
+
+    - name: Make binaries executable
+      run: |
+        chmod +x ${{ env.BUILD_DIR }}/services/users/users_service
+        chmod +x ${{ env.BUILD_DIR }}/services/orders/orders_service
+
+    - name: Install API Gateway dependencies
+      run: |
+        npm ci
+
+    - name: Run API Gateway tests
+      env:
+        BUILD_PATH: ${{ env.BUILD_DIR }}
+      run: |
+        npm test
+
+    - name: Upload API Gateway test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: api-gateway-test-results-${{ github.run_number }}
+        path: |
+          coverage/
+          junit.xml
+
+  # Job 3: Integration tests
+  integration-tests:
+    name: Integration Tests
+    runs-on: [self-hosted, Linux, X64, webserver, fedora]
+    needs: [build-cpp-microservices, test-api-gateway]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download microservices binaries
+      uses: actions/download-artifact@v4
+      with:
+        name: microservices-binaries-${{ github.run_number }}
+        path: ${{ env.BUILD_DIR }}
+
+    - name: Make binaries executable
+      run: |
+        chmod +x ${{ env.BUILD_DIR }}/services/users/users_service
+        chmod +x ${{ env.BUILD_DIR }}/services/orders/orders_service
+
+    - name: Install dependencies
+      run: |
+        npm ci
+
+    - name: Start API Gateway in background
+      env:
+        BUILD_PATH: ${{ env.BUILD_DIR }}
+        PORT: 8080
+      run: |
+        nohup node api-gateway.js > gateway.log 2>&1 &
+        echo $! > gateway.pid
+        sleep 5
+
+    - name: Run integration tests
+      run: |
+        chmod +x scripts/verify-deploy.sh
+        ./scripts/verify-deploy.sh
+
+    - name: Stop API Gateway
+      if: always()
+      run: |
+        if [ -f gateway.pid ]; then
+          kill $(cat gateway.pid) || true
+          rm gateway.pid
+        fi
+
+    - name: Upload integration test logs
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: integration-logs-${{ github.run_number }}
+        path: |
+          gateway.log
+
+  # Summary job that depends on all others
+  ci-summary:
+    name: CI Summary
+    runs-on: [self-hosted, Linux, X64, webserver, fedora]
+    needs: [build-cpp-microservices, test-api-gateway, integration-tests]
+    if: always()
+
+    steps:
+    - name: Check CI results
+      run: |
+        echo "CI Summary:"
+        echo "- C++ Microservices Build: ${{ needs.build-cpp-microservices.result }}"
+        echo "- API Gateway Tests: ${{ needs.test-api-gateway.result }}"
+        echo "- Integration Tests: ${{ needs.integration-tests.result }}"
+        
+        if [[ "${{ needs.build-cpp-microservices.result }}" == "success" && 
+              "${{ needs.test-api-gateway.result }}" == "success" && 
+              "${{ needs.integration-tests.result }}" == "success" ]]; then
+          echo "✅ All critical CI jobs passed!"
+          exit 0
         else
-          echo "clang-format not available, skipping format check"
+          echo "❌ Some CI jobs failed!"
+          exit 1
         fi
