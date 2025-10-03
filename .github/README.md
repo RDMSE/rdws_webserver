@@ -1,10 +1,10 @@
-# 🚀 GitHub Actions Workflows
+# GitHub Actions Workflows
 
 This repository uses GitHub Actions for automated CI/CD with three main workflows.
 
-## 📋 Available Workflows
+## Available Workflows
 
-### 1. 🧪 CI - Build and Test (`ci.yml`)
+### 1. CI - Build and Test (`ci.yml`)
 
 **Trigger:** Push to `main`/`develop` and Pull Requests to `main`/`develop`
 
@@ -16,15 +16,15 @@ This repository uses GitHub Actions for automated CI/CD with three main workflow
 
 **What it does:**
 ```
-✅ Installs dependencies (CMake, Node.js, Google Test)
-✅ Compiles C++ microservices (users_service, orders_service)
-✅ Tests C++ executables individually
-✅ Runs API Gateway tests (Jest)
-✅ Starts API Gateway and runs complete verification
-✅ Checks test coverage and code quality
+Installs dependencies (CMake, Node.js, Google Test)
+Compiles C++ microservices (users_service, orders_service)
+Tests C++ executables individually
+Runs API Gateway tests (Jest)
+Starts API Gateway and runs complete verification
+Checks test coverage and code quality
 ```
 
-### 2. 🚀 Deploy (`deploy.yml`)
+### 2. Deploy (`deploy.yml`)
 
 **Trigger:** Push to `main` + Manual
 
@@ -35,30 +35,30 @@ This repository uses GitHub Actions for automated CI/CD with three main workflow
 
 **What it does:**
 ```
-✅ Compiles microservices in Release mode
-✅ Installs Node.js dependencies
-✅ Stops existing services (PM2/Docker/systemd)
-✅ Deploys to /opt/rdws_webserver
-✅ Configures firewall (port 8080)
-✅ Starts API Gateway with PM2
-✅ Runs health checks and load tests
+Compiles microservices in Release mode
+Installs Node.js dependencies
+Stops existing services (PM2/Docker/systemd)
+Deploys to /opt/rdws_webserver
+Configures firewall (port 8080)
+Starts API Gateway with PM2
+Runs health checks and load tests
 ```
 
-### 3. 📦 Release (`release.yml`)
+### 3. Release (`release.yml`)
 
 **Trigger:** Tags `v*` (ex: v1.0.0) + Manual
 
 **What it does:**
 ```
-✅ Compiles release builds
-✅ Generates automatic changelog
-✅ Creates packages (.tar.gz, .zip)
-✅ Builds Docker image
-✅ Creates GitHub Release
-✅ Uploads all assets
+Compiles release builds
+Generates automatic changelog
+Creates packages (.tar.gz, .zip)
+Builds Docker image
+Creates GitHub Release
+Uploads all assets
 ```
 
-## 🔧 Runner Configuration
+## Runner Configuration
 
 The workflows use self-hosted runner on Fedora Server with labels:
 - `self-hosted`
@@ -76,18 +76,18 @@ The workflows use self-hosted runner on Fedora Server with labels:
 ## 📊 Workflow Status
 
 ### CI Status
-- ✅ C++ microservices compiling
-- ✅ API Gateway tested with Jest
-- ✅ Integration tests passing
-- ✅ Health checks working
+- C++ microservices compiling
+- API Gateway tested with Jest
+- Integration tests passing
+- Health checks working
 
 ### Deploy Status  
-- ✅ Automatic deployment working
-- ✅ PM2 managing the service
-- ✅ Firewall configured
-- ✅ Post-deploy health checks
+- Automatic deployment working
+- PM2 managing the service
+- Firewall configured
+- Post-deploy health checks
 
-## 🚀 How to Use
+## How to Use
 
 ### Development (CI)
 ```bash
@@ -117,7 +117,7 @@ git push origin v1.0.0
 # Or use GitHub Interface
 ```
 
-## 📝 Logs and Debugging
+## Logs and Debugging
 
 ### View Workflow Logs
 ```bash
@@ -136,7 +136,7 @@ pm2 logs api-gateway
 ./scripts/verify-deploy.sh
 ```
 
-## 🔍 Troubleshooting
+## Troubleshooting
 
 ### CI Failing?
 
@@ -201,7 +201,7 @@ pm2 logs api-gateway
 - [ ] **Security scanning** with CodeQL
 - [ ] **Docker multi-arch** builds
 
-## 🤝 Contributing
+## Contributing
 
 To contribute to the workflows:
 
@@ -212,4 +212,4 @@ To contribute to the workflows:
 
 ---
 
-**The workflows are optimized for microservices + API Gateway architecture!** 🎉
+**The workflows are optimized for microservices + API Gateway architecture!**

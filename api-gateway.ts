@@ -8,25 +8,38 @@
  * and response formatting.
  */
 
-const express = require('express');
-const { exec } = require('child_process');
-const util = require('util');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
+import express, { Request, Response, NextFunction, Application } from 'express';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
 
-const execAsync = util.promisify(exec);
+// Import modular routes and types
+import { 
+    UsersRouter, 
+    OrdersRouter, 
+    UserOrdersRouter,
+    Config,
+    ServiceResponse,
+    ErrorResponse,
+    HealthResponse,
+    ApiDocsResponse,
+    MicroserviceRouter
+} from './src/routes';
+
+const execAsync = promisify(exec);
 
 // Configuration
-const config = {
-    port: process.env.PORT || 8080,
+const config: Config = {
+    port: parseInt(process.env.PORT || '8080'),
     buildPath: process.env.BUILD_PATH || './build',
     environment: process.env.NODE_ENV || 'development',
-    timeout: parseInt(process.env.SERVICE_TIMEOUT) || 5000
+    timeout: parseInt(process.env.SERVICE_TIMEOUT || '5000')
 };
 
 // Initialize Express app
-const app = express();
+const app: Application = express();
 
 // Middleware stack
 app.use(helmet()); // Security headers
@@ -36,7 +49,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Request ID middleware for tracing
-app.use((req, res, next) => {
+app.use((req: Request, res: Response, next: NextFunction) => {
     req.requestId = Date.now().toString(36) + Math.random().toString(36);
     res.set('X-Request-ID', req.requestId);
     next();
@@ -45,7 +58,12 @@ app.use((req, res, next) => {
 /**
  * Helper function to execute microservice and handle errors
  */
-async function callMicroservice(serviceName, method, path, requestId) {
+async function callMicroservice(
+    serviceName: string, 
+    method: string, 
+    path: string, 
+    requestId: string
+): Promise<ServiceResponse> {
     const startTime = Date.now();
     
     try {
@@ -67,7 +85,7 @@ async function callMicroservice(serviceName, method, path, requestId) {
         console.log(`[${requestId}] ${serviceName} completed in ${duration}ms`);
         
         // Parse JSON response
-        const result = JSON.parse(stdout.trim());
+        const result: ServiceResponse = JSON.parse(stdout.trim());
         
         // Add gateway metadata
         result.gateway = {
@@ -79,7 +97,7 @@ async function callMicroservice(serviceName, method, path, requestId) {
         
         return result;
         
-    } catch (error) {
+    } catch (error: any) {
         const duration = Date.now() - startTime;
         console.error(`[${requestId}] Error calling ${serviceName} (${duration}ms):`, error.message);
         
@@ -103,7 +121,7 @@ async function callMicroservice(serviceName, method, path, requestId) {
 /**
  * Error handling middleware
  */
-function handleServiceError(error, req, res) {
+function handleServiceError(error: Error, req: Request, res: Response): void {
     console.error(`[${req.requestId}] Service error:`, error.message);
     
     // Determine appropriate HTTP status code
@@ -116,98 +134,36 @@ function handleServiceError(error, req, res) {
         statusCode = 502;
     }
     
-    res.status(statusCode).json({
+    const errorResponse: ErrorResponse = {
         error: true,
         message: error.message,
         requestId: req.requestId,
         timestamp: new Date().toISOString()
-    });
+    };
+    
+    res.status(statusCode).json(errorResponse);
 }
 
 // ============================================
-// ROUTES - Users Service
+// MICROSERVICES ROUTER CONFIGURATION
 // ============================================
 
-app.get('/users', async (req, res) => {
-    try {
-        const result = await callMicroservice('users', 'GET', '/users', req.requestId);
-        res.json(result);
-    } catch (error) {
-        handleServiceError(error, req, res);
-    }
-});
+// Initialize all microservice routers
+const microserviceRouters: MicroserviceRouter[] = [
+    new UsersRouter(),
+    new OrdersRouter(),
+    new UserOrdersRouter()
+];
 
-app.get('/users/:id', async (req, res) => {
-    try {
-        const userId = req.params.id;
-        
-        // Basic validation
-        if (!/^\d+$/.test(userId)) {
-            return res.status(400).json({
-                error: true,
-                message: 'User ID must be a number',
-                requestId: req.requestId
-            });
-        }
-        
-        const result = await callMicroservice('users', 'GET', `/users/${userId}`, req.requestId);
-        res.json(result);
-    } catch (error) {
-        handleServiceError(error, req, res);
-    }
-});
-
-// ============================================
-// ROUTES - Orders Service
-// ============================================
-
-app.get('/orders', async (req, res) => {
-    try {
-        const result = await callMicroservice('orders', 'GET', '/orders', req.requestId);
-        res.json(result);
-    } catch (error) {
-        handleServiceError(error, req, res);
-    }
-});
-
-app.get('/orders/:id', async (req, res) => {
-    try {
-        const orderId = req.params.id;
-        
-        // Basic validation
-        if (!/^\d+$/.test(orderId)) {
-            return res.status(400).json({
-                error: true,
-                message: 'Order ID must be a number',
-                requestId: req.requestId
-            });
-        }
-        
-        const result = await callMicroservice('orders', 'GET', `/orders/${orderId}`, req.requestId);
-        res.json(result);
-    } catch (error) {
-        handleServiceError(error, req, res);
-    }
-});
-
-// Get orders by user ID
-app.get('/users/:userId/orders', async (req, res) => {
-    try {
-        const userId = req.params.userId;
-        
-        if (!/^\d+$/.test(userId)) {
-            return res.status(400).json({
-                error: true,
-                message: 'User ID must be a number',
-                requestId: req.requestId
-            });
-        }
-        
-        const result = await callMicroservice('orders', 'GET', `/users/${userId}/orders`, req.requestId);
-        res.json(result);
-    } catch (error) {
-        handleServiceError(error, req, res);
-    }
+// Setup all microservice routes dynamically
+microserviceRouters.forEach(routerInstance => {
+    const router = routerInstance.setupRoutes(callMicroservice, handleServiceError);
+    app.use(routerInstance.routeConfig.basePath, router);
+    
+    console.log(`Registered routes for ${routerInstance.routeConfig.serviceName}:`);
+    routerInstance.getRouteInfo().endpoints.forEach(endpoint => {
+        console.log(`   ${endpoint}`);
+    });
 });
 
 // ============================================
@@ -215,8 +171,8 @@ app.get('/users/:userId/orders', async (req, res) => {
 // ============================================
 
 // Health check endpoint
-app.get('/health', async (req, res) => {
-    const healthData = {
+app.get('/health', async (req: Request, res: Response) => {
+    const healthData: HealthResponse = {
         status: 'ok',
         timestamp: new Date().toISOString(),
         requestId: req.requestId,
@@ -228,10 +184,13 @@ app.get('/health', async (req, res) => {
         services: {}
     };
     
-    // Test each service
-    const services = ['users', 'orders'];
+    // Get unique service names from all routers
+    const uniqueServices = Array.from(new Set(
+        microserviceRouters.map(router => router.routeConfig.serviceName)
+    ));
     
-    for (const service of services) {
+    // Test each service
+    for (const service of uniqueServices) {
         try {
             const startTime = Date.now();
             await callMicroservice(service, 'GET', `/${service}`, req.requestId);
@@ -242,7 +201,7 @@ app.get('/health', async (req, res) => {
         } catch (error) {
             healthData.services[service] = {
                 status: 'unhealthy',
-                error: error.message
+                error: (error as Error).message
             };
             healthData.status = 'degraded';
         }
@@ -253,42 +212,71 @@ app.get('/health', async (req, res) => {
 });
 
 // API documentation endpoint
-app.get('/api-docs', (req, res) => {
-    res.json({
+app.get('/api-docs', (req: Request, res: Response) => {
+    // Build endpoints dynamically from all routers
+    const endpoints: Record<string, string> = {
+        'GET /health': 'Health check and service status',
+        'GET /api-docs': 'This documentation'
+    };
+    
+    // Add endpoints from all routers
+    microserviceRouters.forEach(router => {
+        const routeInfo = router.getRouteInfo();
+        routeInfo.endpoints.forEach((endpoint: string) => {
+            // Generate description based on endpoint
+            const [method, path] = endpoint.split(' ');
+            let description = `${router.routeConfig.serviceName} service endpoint`;
+            
+            if (path.includes('/:')) {
+                description = `Get specific ${router.routeConfig.serviceName} by ID`;
+            } else if (path.endsWith(router.routeConfig.basePath)) {
+                description = `List all ${router.routeConfig.serviceName}`;
+            }
+            
+            endpoints[endpoint] = description;
+        });
+    });
+    
+    const docsResponse: ApiDocsResponse = {
         title: 'C++ Microservices API Gateway',
         version: '1.0.0',
         description: 'Gateway for C++ microservice executables',
-        endpoints: {
-            'GET /health': 'Health check and service status',
-            'GET /users': 'List all users',
-            'GET /users/:id': 'Get user by ID',
-            'GET /orders': 'List all orders',
-            'GET /orders/:id': 'Get order by ID',
-            'GET /users/:userId/orders': 'Get orders for a specific user',
-            'GET /api-docs': 'This documentation'
-        },
+        endpoints,
         requestId: req.requestId
-    });
+    };
+    
+    res.json(docsResponse);
 });
 
 // 404 handler
-app.use((req, res) => {
-    res.status(404).json({
+app.use((req: Request, res: Response) => {
+    // Generate available routes dynamically
+    const availableRoutes = ['/health', '/api-docs'];
+    microserviceRouters.forEach(router => {
+        availableRoutes.push(router.routeConfig.basePath);
+    });
+    
+    const errorResponse: ErrorResponse = {
         error: true,
         message: `Route ${req.method} ${req.path} not found`,
         requestId: req.requestId,
-        availableRoutes: ['/health', '/users', '/orders', '/api-docs']
-    });
+        availableRoutes
+    };
+    
+    res.status(404).json(errorResponse);
 });
 
 // Global error handler
-app.use((error, req, res, next) => {
+app.use((error: Error, req: Request, res: Response, next: NextFunction) => {
     console.error(`[${req.requestId || 'unknown'}] Unhandled error:`, error);
-    res.status(500).json({
+    
+    const errorResponse: ErrorResponse = {
         error: true,
         message: 'Internal server error',
         requestId: req.requestId
-    });
+    };
+    
+    res.status(500).json(errorResponse);
 });
 
 // ============================================
@@ -305,12 +293,19 @@ function startServer() {
         console.log('');
         console.log('Available endpoints:');
         console.log(`   GET  http://localhost:${config.port}/health`);
-        console.log(`   GET  http://localhost:${config.port}/users`);
-        console.log(`   GET  http://localhost:${config.port}/users/:id`);
-        console.log(`   GET  http://localhost:${config.port}/orders`);
-        console.log(`   GET  http://localhost:${config.port}/orders/:id`);
-        console.log(`   GET  http://localhost:${config.port}/users/:userId/orders`);
         console.log(`   GET  http://localhost:${config.port}/api-docs`);
+        
+        // Show all microservice endpoints
+        microserviceRouters.forEach(router => {
+            const routeInfo = router.getRouteInfo();
+            routeInfo.endpoints.forEach((endpoint: string) => {
+                const [method, path] = endpoint.split(' ');
+                console.log(`   ${method}  http://localhost:${config.port}${path}`);
+            });
+        });
+        
+        console.log('');
+        console.log(`Registered ${microserviceRouters.length} microservice router(s)`);
         console.log('');
     });
     
@@ -340,4 +335,4 @@ if (require.main === module) {
 }
 
 // Export for testing
-module.exports = { app, startServer, callMicroservice };
+export { app, startServer, callMicroservice };

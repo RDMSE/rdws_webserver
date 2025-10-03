@@ -5,13 +5,19 @@
  * error handling, and integration with microservices.
  */
 
-const request = require('supertest');
-const { app } = require('../api-gateway');
+import request from 'supertest';
+import { app } from '../api-gateway';
+
+interface ApiResponse {
+    body: any;
+    status: number;
+    headers: any;
+}
 
 describe('API Gateway', () => {
     describe('Health Check', () => {
         test('GET /health returns status information', async () => {
-            const response = await request(app)
+            const response: ApiResponse = await request(app)
                 .get('/health')
                 .expect('Content-Type', /json/);
             
@@ -28,7 +34,7 @@ describe('API Gateway', () => {
 
     describe('API Documentation', () => {
         test('GET /api-docs returns documentation', async () => {
-            const response = await request(app)
+            const response: ApiResponse = await request(app)
                 .get('/api-docs')
                 .expect(200)
                 .expect('Content-Type', /json/);
@@ -41,7 +47,7 @@ describe('API Gateway', () => {
 
     describe('Users Routes', () => {
         test('GET /users returns users list', async () => {
-            const response = await request(app)
+            const response: ApiResponse = await request(app)
                 .get('/users')
                 .expect('Content-Type', /json/);
             
@@ -59,7 +65,7 @@ describe('API Gateway', () => {
         });
 
         test('GET /users/:id with valid ID', async () => {
-            const response = await request(app)
+            const response: ApiResponse = await request(app)
                 .get('/users/1')
                 .expect('Content-Type', /json/);
             
@@ -72,7 +78,7 @@ describe('API Gateway', () => {
         });
 
         test('GET /users/:id with invalid ID returns 400', async () => {
-            const response = await request(app)
+            const response: ApiResponse = await request(app)
                 .get('/users/invalid')
                 .expect(400)
                 .expect('Content-Type', /json/);
@@ -85,7 +91,7 @@ describe('API Gateway', () => {
 
     describe('Orders Routes', () => {
         test('GET /orders returns orders list', async () => {
-            const response = await request(app)
+            const response: ApiResponse = await request(app)
                 .get('/orders')
                 .expect('Content-Type', /json/);
             
@@ -101,7 +107,7 @@ describe('API Gateway', () => {
         });
 
         test('GET /orders/:id with valid ID', async () => {
-            const response = await request(app)
+            const response: ApiResponse = await request(app)
                 .get('/orders/1')
                 .expect('Content-Type', /json/);
             
@@ -114,7 +120,7 @@ describe('API Gateway', () => {
         });
 
         test('GET /orders/:id with invalid ID returns 400', async () => {
-            const response = await request(app)
+            const response: ApiResponse = await request(app)
                 .get('/orders/invalid')
                 .expect(400)
                 .expect('Content-Type', /json/);
@@ -124,7 +130,7 @@ describe('API Gateway', () => {
         });
 
         test('GET /users/:userId/orders with valid user ID', async () => {
-            const response = await request(app)
+            const response: ApiResponse = await request(app)
                 .get('/users/1/orders')
                 .expect('Content-Type', /json/);
             
@@ -137,7 +143,7 @@ describe('API Gateway', () => {
         });
 
         test('GET /users/:userId/orders with invalid user ID returns 400', async () => {
-            const response = await request(app)
+            const response: ApiResponse = await request(app)
                 .get('/users/invalid/orders')
                 .expect(400)
                 .expect('Content-Type', /json/);
@@ -149,7 +155,7 @@ describe('API Gateway', () => {
 
     describe('Error Handling', () => {
         test('404 for non-existent routes', async () => {
-            const response = await request(app)
+            const response: ApiResponse = await request(app)
                 .get('/non-existent-route')
                 .expect(404)
                 .expect('Content-Type', /json/);
@@ -161,7 +167,7 @@ describe('API Gateway', () => {
         });
 
         test('Response includes request ID', async () => {
-            const response = await request(app)
+            const response: ApiResponse = await request(app)
                 .get('/api-docs')
                 .expect(200);
             
@@ -172,7 +178,7 @@ describe('API Gateway', () => {
 
     describe('CORS and Security', () => {
         test('CORS headers are present', async () => {
-            const response = await request(app)
+            const response: ApiResponse = await request(app)
                 .get('/health')
                 .expect(200);
             
@@ -180,7 +186,7 @@ describe('API Gateway', () => {
         });
 
         test('Security headers are present', async () => {
-            const response = await request(app)
+            const response: ApiResponse = await request(app)
                 .get('/health')
                 .expect(200);
             
