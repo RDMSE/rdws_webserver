@@ -140,12 +140,32 @@ jobs:
         path: |
           ${{ env.BUILD_DIR }}/*_test_results.xml
 
+    - name: Check microservices before upload
+      run: |
+        echo "Checking if microservices were built..."
+        if [ ! -f "${{ env.BUILD_DIR }}/services/users/users_service" ]; then
+          echo "ERROR: users_service not found"
+          exit 1
+        fi
+        if [ ! -f "${{ env.BUILD_DIR }}/services/orders/orders_service" ]; then
+          echo "ERROR: orders_service not found"
+          exit 1
+        fi
+        echo "Both microservices found, proceeding with upload"
+
     - name: Upload microservices binaries
       uses: actions/upload-artifact@v4
       with:
         name: microservices-binaries-${{ github.run_number }}
         path: |
-          ${{ env.BUILD_DIR }}/services/  # Job 2: Test API Gateway (Node.js)
+          ${{ env.BUILD_DIR }}/services/
+
+    - name: Verify uploaded artifacts
+      run: |
+        echo "Verifying artifacts that were uploaded..."
+        find ${{ env.BUILD_DIR }}/services/ -name "*_service" -type f -ls || echo "No service executables found"
+
+  # Job 2: Test API Gateway (Node.js)
   test-api-gateway:
     name: Test API Gateway
     runs-on: [self-hosted, Linux, X64, webserver, fedora]
@@ -172,6 +192,23 @@ jobs:
       with:
         name: microservices-binaries-${{ github.run_number }}
         path: ${{ env.BUILD_DIR }}
+      continue-on-error: true
+      id: download-artifacts
+      
+    - name: Handle missing artifacts
+      if: steps.download-artifacts.outcome == 'failure'
+      run: |
+        echo "Failed to download artifacts. This might be because:"
+        echo "1. The build job failed and didn't create artifacts"
+        echo "2. The artifact name is incorrect" 
+        echo "3. The artifacts expired"
+        echo ""
+        echo "Checking if we can build microservices locally instead..."
+        mkdir -p ${{ env.BUILD_DIR }}
+        cd ${{ env.BUILD_DIR }}
+        cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug
+        make -j$(nproc)
+        echo "Local build completed as fallback"
 
     - name: Make binaries executable
       run: |
@@ -234,6 +271,19 @@ jobs:
       with:
         name: microservices-binaries-${{ github.run_number }}
         path: ${{ env.BUILD_DIR }}
+      continue-on-error: true
+      id: download-artifacts-integration
+      
+    - name: Handle missing artifacts (Integration)
+      if: steps.download-artifacts-integration.outcome == 'failure'
+      run: |
+        echo "Failed to download artifacts for integration tests"
+        echo "Building microservices locally as fallback..."
+        mkdir -p ${{ env.BUILD_DIR }}
+        cd ${{ env.BUILD_DIR }}
+        cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug
+        make -j$(nproc)
+        echo "Local build completed for integration tests"
 
     - name: Make binaries executable
       run: |
