@@ -47,13 +47,13 @@ jobs:
           curl -fsSL https://rpm.nodesource.com/setup_lts.x | sudo bash -
           sudo dnf install -y nodejs
         fi
-        
+
         # Install build tools if needed
         if ! command -v cmake &> /dev/null; then
           echo "Installing build tools..."
           sudo dnf install -y cmake gcc-c++ make
         fi
-        
+
         # Install Google Test if needed
         if ! pkg-config --exists gtest; then
           echo "Installing Google Test..."
@@ -69,7 +69,7 @@ jobs:
         cd ${{ env.BUILD_DIR }}
         cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=17 -G "Unix Makefiles"
         make -j$(nproc)
-        
+
         # Verify microservices were built
         echo "Verifying built microservices..."
         ls -la services/*/
@@ -91,7 +91,7 @@ jobs:
         if [ -f "tests/orders_service_tests" ]; then
           ./tests/orders_service_tests
         fi
-        
+
         # Test API Gateway
         cd ..
         BUILD_PATH=${{ env.BUILD_DIR }} npm test
@@ -129,7 +129,7 @@ jobs:
     - name: Prepare production directory
       run: |
         echo "Preparing production directory: ${{ env.PRODUCTION_DIR }}"
-        
+
         # Create production directory if it doesn't exist
         sudo mkdir -p ${{ env.PRODUCTION_DIR }}
         sudo chown $USER:$USER ${{ env.PRODUCTION_DIR }}
@@ -143,32 +143,32 @@ jobs:
     - name: Stop existing services
       run: |
         echo "Stopping existing services..."
-        
+
         # Stop PM2 processes if running
         if command -v pm2 &> /dev/null; then
           pm2 stop api-gateway || echo "PM2 api-gateway not running"
           pm2 delete api-gateway || echo "PM2 api-gateway not found"
         fi
-        
+
         # Stop Docker containers if running
         if command -v docker &> /dev/null; then
           docker stop api-gateway || echo "Docker api-gateway not running"
           docker rm api-gateway || echo "Docker api-gateway not found"
         fi
-        
+
         # Stop systemd service if running
         sudo systemctl stop api-gateway || echo "Systemd api-gateway not running"
 
     - name: Deploy files
       run: |
         echo "Deploying files to production..."
-        
+
         # Copy all files to production directory
         cp -r . ${{ env.PRODUCTION_DIR }}/
-        
+
         # Copy build artifacts
         cp -r deployment/services ${{ env.PRODUCTION_DIR }}/build/ || true
-        
+
         # Set correct permissions
         cd ${{ env.PRODUCTION_DIR }}
         chmod +x scripts/*.sh
@@ -178,10 +178,10 @@ jobs:
     - name: Install production dependencies
       run: |
         cd ${{ env.PRODUCTION_DIR }}
-        
+
         # Install Node.js dependencies
         npm ci --production
-        
+
         # Install PM2 globally if not already installed
         if ! command -v pm2 &> /dev/null; then
           sudo npm install -g pm2
@@ -196,50 +196,50 @@ jobs:
     - name: Start API Gateway
       run: |
         cd ${{ env.PRODUCTION_DIR }}
-        
+
         echo "Starting API Gateway with PM2..."
-        
-        # Create PM2 ecosystem config
-        cat > ecosystem.config.js << 'EOF'
-        module.exports = {
+
+        # Create a simple PM2 config
+        echo 'module.exports = {
           apps: [{
-            name: 'api-gateway',
-            script: './api-gateway.js',
-            instances: 'max',
-            exec_mode: 'cluster',
+            name: "api-gateway",
+            script: "api-gateway.ts",
+            interpreter: "node",
+            interpreter_args: "--require ts-node/register",
+            instances: "max",
+            exec_mode: "cluster",
             env: {
-              NODE_ENV: 'production',
+              NODE_ENV: "production",
               PORT: 8080,
-              BUILD_PATH: '/opt/rdws_webserver/build',
+              BUILD_PATH: "/opt/rdws_webserver/build",
               SERVICE_TIMEOUT: 5000
             },
-            error_file: '/var/log/api-gateway/error.log',
-            out_file: '/var/log/api-gateway/out.log',
-            log_file: '/var/log/api-gateway/combined.log',
+            error_file: "/var/log/api-gateway/error.log",
+            out_file: "/var/log/api-gateway/out.log",
+            log_file: "/var/log/api-gateway/combined.log",
             time: true,
-            max_memory_restart: '500M'
+            max_memory_restart: "500M"
           }]
-        };
-        EOF
-        
+        };' > ecosystem.config.js
+
         # Create log directory
         sudo mkdir -p /var/log/api-gateway
         sudo chown $USER:$USER /var/log/api-gateway
-        
+
         # Start with PM2
         pm2 start ecosystem.config.js
         pm2 save
-        
+
         # Setup PM2 startup if not already done
-        pm2 startup | grep "sudo" | bash || echo "PM2 startup already configured"
+        pm2 startup --service-name rdws-api-gateway | grep "sudo" | bash || echo "PM2 startup already configured"
 
     - name: Health check
       run: |
         echo "Performing health check..."
-        
+
         # Wait for service to start
         sleep 10
-        
+
         # Use our verification script
         cd ${{ env.PRODUCTION_DIR }}
         chmod +x scripts/verify-deploy.sh
@@ -247,21 +247,21 @@ jobs:
 
     - name: Deploy summary
       run: |
-        echo "🎉 Deployment completed successfully!"
+        echo "Deployment completed successfully!"
         echo ""
-        echo "📊 Deployment Summary:"
+        echo "Deployment Summary:"
         echo "  Environment: ${{ github.event.inputs.environment || 'production' }}"
         echo "  Directory: ${{ env.PRODUCTION_DIR }}"
         echo "  API Gateway: http://$(hostname -I | awk '{print $1}'):8080"
         echo "  Health Check: http://$(hostname -I | awk '{print $1}'):8080/health"
         echo ""
-        echo "🔧 Management Commands:"
+        echo "Management Commands:"
         echo "  Status: pm2 status"
         echo "  Logs: pm2 logs api-gateway"
         echo "  Restart: pm2 restart api-gateway"
         echo "  Monitor: pm2 monit"
         echo ""
-        echo "📋 Endpoints:"
+        echo "Endpoints:"
         echo "  GET /health - Service health"
         echo "  GET /users - List users"
         echo "  GET /orders - List orders"
@@ -280,10 +280,10 @@ jobs:
     - name: Run comprehensive tests
       run: |
         echo "Running post-deployment tests..."
-        
+
         # Wait a bit more for service to stabilize
         sleep 15
-        
+
         # Run verification script
         chmod +x scripts/verify-deploy.sh
         ./scripts/verify-deploy.sh localhost 8080
@@ -291,12 +291,12 @@ jobs:
     - name: Performance baseline test
       run: |
         echo "Running performance baseline test..."
-        
+
         BASE_URL="http://localhost:8080"
-        
+
         # Test response times
         echo "Testing endpoint response times:"
-        
+
         for endpoint in "/health" "/users" "/orders"; do
           echo -n "$endpoint: "
           time_total=$(curl -s -w "%{time_total}" -o /dev/null "$BASE_URL$endpoint")
@@ -307,16 +307,16 @@ jobs:
     - name: Load test (basic)
       run: |
         echo "Running basic load test..."
-        
+
         # Simple concurrent requests test
         BASE_URL="http://localhost:8080"
-        
+
         echo "Testing 10 concurrent requests to /health..."
         seq 1 10 | xargs -n1 -P10 -I{} curl -s "$BASE_URL/health" > /dev/null
-        
+
         if [ $? -eq 0 ]; then
-          echo "✅ Load test passed"
+          echo "Load test passed"
         else
-          echo "❌ Load test failed"
+          echo "Load test failed"
           exit 1
         fi
