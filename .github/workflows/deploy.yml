@@ -101,7 +101,7 @@ jobs:
       with:
         name: deployment-package-${{ github.run_number }}
         path: |
-          ${{ env.BUILD_DIR }}/services/
+          ${{ env.BUILD_DIR }}/
           api-gateway.js
           package*.json
           scripts/
@@ -169,7 +169,7 @@ jobs:
         # Copy build artifacts from deployment directory
         if [ -d "deployment/services" ]; then
           mkdir -p ${{ env.PRODUCTION_DIR }}/build/
-          cp -r deployment/services ${{ env.PRODUCTION_DIR }}/build/
+          cp -r deployment/* ${{ env.PRODUCTION_DIR }}/build/
         fi
 
         # Set correct ownership and permissions
