@@ -44,14 +44,14 @@ jobs:
           echo "Installing CMake..."
           sudo dnf install -y cmake
         fi
-        
+
         # Check and install build tools if needed
         if ! command -v g++ &> /dev/null; then
           echo "Installing build tools..."
           sudo dnf groupinstall -y "Development Tools"
           sudo dnf install -y gcc-c++
         fi
-        
+
         # Check and install Google Test if needed
         if ! pkg-config --exists gtest; then
           echo "Installing Google Test..."
@@ -70,7 +70,7 @@ jobs:
       run: |
         cd ${{ env.BUILD_DIR }}
         make -j$(nproc)
-        
+
         # Verify that microservices were built
         echo "Verifying microservices..."
         ls -la services/*/
@@ -79,7 +79,7 @@ jobs:
     - name: Test microservices executables
       run: |
         cd ${{ env.BUILD_DIR }}
-        
+
         echo "Testing users_service..."
         if [ -f "./services/users/users_service" ]; then
           ./services/users/users_service "GET" "/users"
@@ -87,7 +87,7 @@ jobs:
           echo "ERROR: users_service not found"
           exit 1
         fi
-        
+
         echo "Testing orders_service..."
         if [ -f "./services/orders/orders_service" ]; then
           ./services/orders/orders_service "GET" "/orders"
@@ -99,7 +99,7 @@ jobs:
     - name: Run C++ tests
       run: |
         cd ${{ env.BUILD_DIR }}
-        
+
         # Debug: Show current directory structure
         echo "Current directory structure:"
         pwd
@@ -108,7 +108,7 @@ jobs:
         ls -la services/ || echo "No services directory"
         echo "Tests directory:"
         ls -la tests/ || echo "No tests directory"
-        
+
         # Run microservice tests
         if [ -f "tests/microservice_tests" ]; then
           echo "Running microservice_tests..."
@@ -116,7 +116,7 @@ jobs:
         else
           echo "microservice_tests not found"
         fi
-        
+
         # Run individual service tests
         if [ -f "tests/users_service_tests" ]; then
           echo "Running users_service_tests..."
@@ -124,7 +124,7 @@ jobs:
         else
           echo "users_service_tests not found"
         fi
-        
+
         if [ -f "tests/orders_service_tests" ]; then
           echo "Running orders_service_tests..."
           ./tests/orders_service_tests --gtest_output=xml:orders_test_results.xml
@@ -145,10 +145,7 @@ jobs:
       with:
         name: microservices-binaries-${{ github.run_number }}
         path: |
-          ${{ env.BUILD_DIR }}/services/users/users_service
-          ${{ env.BUILD_DIR }}/services/orders/orders_service
-
-  # Job 2: Test API Gateway (Node.js)
+          ${{ env.BUILD_DIR }}/services/  # Job 2: Test API Gateway (Node.js)
   test-api-gateway:
     name: Test API Gateway
     runs-on: [self-hosted, Linux, X64, webserver, fedora]
@@ -166,7 +163,7 @@ jobs:
           curl -fsSL https://rpm.nodesource.com/setup_lts.x | sudo bash -
           sudo dnf install -y nodejs
         fi
-        
+
         echo "Node.js version: $(node --version)"
         echo "npm version: $(npm --version)"
 
@@ -178,8 +175,30 @@ jobs:
 
     - name: Make binaries executable
       run: |
-        chmod +x ${{ env.BUILD_DIR }}/services/users/users_service
-        chmod +x ${{ env.BUILD_DIR }}/services/orders/orders_service
+        echo "Checking downloaded artifacts..."
+        find ${{ env.BUILD_DIR }} -name "*_service" -type f
+        ls -la ${{ env.BUILD_DIR }}/
+
+        # Make executable if they exist
+        if [ -f "${{ env.BUILD_DIR }}/services/users/users_service" ]; then
+          chmod +x ${{ env.BUILD_DIR }}/services/users/users_service
+          echo "users_service made executable"
+        else
+          echo "ERROR: users_service not found at expected location"
+          echo "Looking for users_service anywhere..."
+          find ${{ env.BUILD_DIR }} -name "users_service" -type f
+          exit 1
+        fi
+
+        if [ -f "${{ env.BUILD_DIR }}/services/orders/orders_service" ]; then
+          chmod +x ${{ env.BUILD_DIR }}/services/orders/orders_service
+          echo "orders_service made executable"
+        else
+          echo "ERROR: orders_service not found at expected location"
+          echo "Looking for orders_service anywhere..."
+          find ${{ env.BUILD_DIR }} -name "orders_service" -type f
+          exit 1
+        fi
 
     - name: Install API Gateway dependencies
       run: |
@@ -218,8 +237,28 @@ jobs:
 
     - name: Make binaries executable
       run: |
-        chmod +x ${{ env.BUILD_DIR }}/services/users/users_service
-        chmod +x ${{ env.BUILD_DIR }}/services/orders/orders_service
+        echo "Checking downloaded artifacts for integration tests..."
+        find ${{ env.BUILD_DIR }} -name "*_service" -type f
+        ls -la ${{ env.BUILD_DIR }}/
+
+        # Make executable if they exist
+        if [ -f "${{ env.BUILD_DIR }}/services/users/users_service" ]; then
+          chmod +x ${{ env.BUILD_DIR }}/services/users/users_service
+          echo "users_service made executable"
+        else
+          echo "ERROR: users_service not found"
+          find ${{ env.BUILD_DIR }} -name "users_service" -type f
+          exit 1
+        fi
+
+        if [ -f "${{ env.BUILD_DIR }}/services/orders/orders_service" ]; then
+          chmod +x ${{ env.BUILD_DIR }}/services/orders/orders_service
+          echo "orders_service made executable"
+        else
+          echo "ERROR: orders_service not found"
+          find ${{ env.BUILD_DIR }} -name "orders_service" -type f
+          exit 1
+        fi
 
     - name: Install dependencies
       run: |
@@ -269,9 +308,9 @@ jobs:
         echo "- C++ Microservices Build: ${{ needs.build-cpp-microservices.result }}"
         echo "- API Gateway Tests: ${{ needs.test-api-gateway.result }}"
         echo "- Integration Tests: ${{ needs.integration-tests.result }}"
-        
-        if [[ "${{ needs.build-cpp-microservices.result }}" == "success" && 
-              "${{ needs.test-api-gateway.result }}" == "success" && 
+
+        if [[ "${{ needs.build-cpp-microservices.result }}" == "success" &&
+              "${{ needs.test-api-gateway.result }}" == "success" &&
               "${{ needs.integration-tests.result }}" == "success" ]]; then
           echo "✅ All critical CI jobs passed!"
           exit 0
