@@ -228,7 +228,9 @@ jobs:
 
         pm2 save
 
-        echo "PM2 started successfully"    - name: Health check
+        echo "PM2 started successfully"
+
+    - name: Health check
       run: |
         echo "Performing health check..."
 
