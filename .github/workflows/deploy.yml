@@ -1,4 +1,4 @@
-name: Deploy to Server
+name: Deploy API Gateway + Microservices
 
 on:
   push:
@@ -15,16 +15,15 @@ on:
         - staging
 
 env:
-  PKG_CONFIG_PATH: /usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig
   BUILD_DIR: ${{ github.workspace }}/build
-  PRODUCTION_DIR: /home/rdias/cpp-rest-server
+  PRODUCTION_DIR: /opt/rdws_webserver
+  NODE_VERSION: '20'
 
 jobs:
-  deploy:
-    name: Deploy to Fedora Server
+  # Job 1: Build everything
+  build:
+    name: Build Microservices and API Gateway
     runs-on: [self-hosted, Linux, X64, webserver, fedora]
-    environment:
-      name: ${{ github.event.inputs.environment || 'production' }}
 
     steps:
     - name: Checkout code
@@ -32,452 +31,292 @@ jobs:
 
     - name: Clean and prepare
       run: |
-        # Clean previous builds
         rm -rf build
         mkdir -p build
 
-        # Create .deployignore if it doesn't exist
-        if [ ! -f .deployignore ]; then
-          cat > .deployignore << 'EOF'
-        # Build artifacts
-        build/
-        *.o
-        *.a
-        *.so
-        *.dylib
-        *.exe
+    - name: Verify environment and install dependencies
+      run: |
+        echo "Verifying deployment environment..."
+        echo "Target directory: ${{ env.PRODUCTION_DIR }}"
+        whoami
+        pwd
 
-        # IDE files
-        .vscode/settings.json
-        .vscode/launch.json
-        .idea/
-        *.swp
-        *.swo
-
-        # OS files
-        .DS_Store
-        Thumbs.db
-        desktop.ini
-
-        # Logs and temporary files
-        *.log
-        *.tmp
-        *.temp
-        *~
-        .#*
-
-        # Test results
-        test_results.xml
-        *.gcov
-        *.gcda
-        *.gcno
-
-        # Git
-        .git/
-
-        # GitHub Actions
-        .github/
-        EOF
+        # Install Node.js if needed
+        if ! command -v node &> /dev/null; then
+          echo "Installing Node.js..."
+          curl -fsSL https://rpm.nodesource.com/setup_lts.x | sudo bash -
+          sudo dnf install -y nodejs
         fi
 
-    - name: Set permissions
-      run: |
-        chmod +x scripts/*.sh
-
-    - name: Check sudo permissions
-      run: |
-        # Check if we can run sudo without password
-        if sudo -n true 2>/dev/null; then
-          echo "Sudo access available without password"
-        else
-          echo "Warning: Sudo requires password - some operations may fail"
-          echo "Current user: $(whoami)"
-          echo "Groups: $(groups)"
+        # Install build tools if needed
+        if ! command -v cmake &> /dev/null; then
+          echo "Installing build tools..."
+          sudo dnf install -y cmake gcc-c++ make
         fi
 
-    - name: Build project
-      run: |
-        cd build
-        PKG_CONFIG_PATH=${{ env.PKG_CONFIG_PATH }} cmake .. \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_CXX_STANDARD=17
-        make -j$(nproc)
+        # Install Google Test if needed
+        if ! pkg-config --exists gtest; then
+          echo "Installing Google Test..."
+          sudo dnf install -y gtest-devel gmock-devel
+        fi
 
-        # Build individual services
-        echo "Building C++ services..."
-        cd services
-        make -j$(nproc) || echo "Services build completed"
+        echo "Node.js version: $(node --version)"
+        echo "npm version: $(npm --version)"
+        echo "CMake version: $(cmake --version | head -1)"
 
-    - name: Run tests
+    - name: Build C++ microservices
       run: |
         cd ${{ env.BUILD_DIR }}
-        make unit_tests integration_tests
-        ./tests/unit_tests --gtest_output=xml:unit_test_results.xml
-        ./tests/integration_tests --gtest_output=xml:integration_test_results.xml
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=17 -G "Unix Makefiles"
+        make -j$(nproc)
 
-    - name: Upload test reports
+        # Verify microservices were built
+        echo "Verifying built microservices..."
+        ls -la services/*/
+        find . -name "*_service" -type f -executable
+        ./services/users/users_service "GET" "/users" | head -2
+        ./services/orders/orders_service "GET" "/orders" | head -2
+
+    - name: Install API Gateway dependencies
+      run: |
+        npm ci --production
+
+    - name: Run quick tests
+      run: |
+        # Test C++ microservices
+        cd ${{ env.BUILD_DIR }}
+        if [ -f "tests/users_service_tests" ]; then
+          ./tests/users_service_tests
+        fi
+        if [ -f "tests/orders_service_tests" ]; then
+          ./tests/orders_service_tests
+        fi
+
+        # Test API Gateway
+        cd ..
+        BUILD_PATH=${{ env.BUILD_DIR }} npm test
+
+    - name: Upload build artifacts
       uses: actions/upload-artifact@v4
-      if: always()
       with:
-        name: server-test-results-${{ github.run_number }}
-        path: ${{ env.BUILD_DIR }}/*test_results.xml
+        name: deployment-package-${{ github.run_number }}
+        path: |
+          ${{ env.BUILD_DIR }}/services/
+          api-gateway.js
+          package*.json
+          scripts/
+          API-GATEWAY.md
+          DEPLOY-*.md
 
-    - name: Stop existing server
+  # Job 2: Deploy to production
+  deploy:
+    name: Deploy to Production
+    runs-on: [self-hosted, Linux, X64, webserver, fedora]
+    needs: build
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: deployment-package-${{ github.run_number }}
+        path: ./deployment
+
+    - name: Prepare production directory
       run: |
-        # Stop systemd service if running
-        sudo systemctl stop cpp-rest-server || echo "Service not running"
+        echo "Preparing production directory: ${{ env.PRODUCTION_DIR }}"
 
-    - name: Stop existing service before deployment
-      run: |
-        # Stop services if they're running to avoid "Text file busy" error
-        if sudo systemctl is-active --quiet cpp-rest-server; then
-          echo "Stopping cpp-rest-server service..."
-          sudo systemctl stop cpp-rest-server
-          sleep 2
-        fi
-
-        if sudo systemctl is-active --quiet cpp-rest-server-simple; then
-          echo "Stopping cpp-rest-server-simple service..."
-          sudo systemctl stop cpp-rest-server-simple
-          sleep 2
-        fi
-
-        # Also kill any running processes using the executable
-        if pgrep -f "rest_server" > /dev/null; then
-          echo "Killing running rest_server processes..."
-          sudo pkill -f "rest_server" || true
-          sleep 1
-        fi
-
-    - name: Deploy to production directory
-      run: |
         # Create production directory if it doesn't exist
-        mkdir -p ${{ env.PRODUCTION_DIR }}
+        sudo mkdir -p ${{ env.PRODUCTION_DIR }}
+        sudo chown $USER:$USER ${{ env.PRODUCTION_DIR }}
 
-        # Copy executable and essential files to production
-        cp ${{ env.BUILD_DIR }}/rest_server ${{ env.PRODUCTION_DIR }}/
-        cp -r scripts ${{ env.PRODUCTION_DIR }}/
-        cp cpp-rest-server.service ${{ env.PRODUCTION_DIR }}/
-        cp cpp-rest-server-simple.service ${{ env.PRODUCTION_DIR }}/
-
-        # Copy C++ service executables
-        mkdir -p ${{ env.PRODUCTION_DIR }}/services
-        if [ -f ${{ env.BUILD_DIR }}/services/users/users_service ]; then
-          cp ${{ env.BUILD_DIR }}/services/users/users_service ${{ env.PRODUCTION_DIR }}/services/
-          echo "users_service copied"
-        fi
-        if [ -f ${{ env.BUILD_DIR }}/services/orders/orders_service ]; then
-          cp ${{ env.BUILD_DIR }}/services/orders/orders_service ${{ env.PRODUCTION_DIR }}/services/
-          echo "orders_service copied"
+        # Backup existing deployment if it exists
+        if [ -d "${{ env.PRODUCTION_DIR }}/api-gateway.js" ]; then
+          echo "Backing up existing deployment..."
+          sudo cp -r ${{ env.PRODUCTION_DIR }} ${{ env.PRODUCTION_DIR }}.backup.$(date +%Y%m%d_%H%M%S)
         fi
 
-        # Copy environment configuration
-        cp .env.example ${{ env.PRODUCTION_DIR }}/
-        if [ ! -f ${{ env.PRODUCTION_DIR }}/.env ]; then
-          # Create production .env if it doesn't exist
-          cat > ${{ env.PRODUCTION_DIR }}/.env << 'EOF'
-        # Production Configuration
-        SERVERLESS_FUNCTION_URL=http://localhost:8082/
-        ENVIRONMENT=production
-        EOF
-          echo "Created production .env file"
-        else
-          echo "Production .env file already exists, keeping current configuration"
-        fi
-
-        # Make executable
-        chmod +x ${{ env.PRODUCTION_DIR }}/rest_server
-        chmod +x ${{ env.PRODUCTION_DIR }}/scripts/*.sh
-
-    - name: Deploy serverless functions
+    - name: Stop existing services
       run: |
-        # Stop and remove existing function containers (ignore errors if they don't exist)
-        echo "Stopping existing containers..."
-        docker stop hello-function 2>/dev/null || echo "hello-function not running"
-        docker stop users-function 2>/dev/null || echo "users-function not running"
-        docker stop orders-function 2>/dev/null || echo "orders-function not running"
+        echo "Stopping existing services..."
 
-        docker rm hello-function 2>/dev/null || echo "hello-function not found"
-        docker rm users-function 2>/dev/null || echo "users-function not found"
-        docker rm orders-function 2>/dev/null || echo "orders-function not found"
-
-        # Force clean any containers using the same image names
-        echo "Cleaning up any containers using function images..."
-        docker ps -a --filter "ancestor=local/hello-simple:latest" -q | xargs -r docker rm -f || echo "No hello-simple containers"
-        docker ps -a --filter "ancestor=local/users-api:latest" -q | xargs -r docker rm -f || echo "No users-api containers"
-        docker ps -a --filter "ancestor=local/orders-api:latest" -q | xargs -r docker rm -f || echo "No orders-api containers"
-
-        # Check what's using the ports
-        echo "Checking port usage..."
-        echo "Port 8082:" && (lsof -i:8082 2>/dev/null || echo "Free")
-        echo "Port 8083:" && (lsof -i:8083 2>/dev/null || echo "Free")
-        echo "Port 8084:" && (lsof -i:8084 2>/dev/null || echo "Free")
-
-        # Only kill processes if ports are actually in use
-        echo "Freeing up ports if needed..."
-        if lsof -i:8082 >/dev/null 2>&1; then
-          echo "Killing process on port 8082"
-          lsof -ti:8082 | xargs -r kill -9 2>/dev/null || echo "Could not kill process on 8082"
-        fi
-        if lsof -i:8083 >/dev/null 2>&1; then
-          echo "Killing process on port 8083"
-          lsof -ti:8083 | xargs -r kill -9 2>/dev/null || echo "Could not kill process on 8083"
-        fi
-        if lsof -i:8084 >/dev/null 2>&1; then
-          echo "Killing process on port 8084"
-          lsof -ti:8084 | xargs -r kill -9 2>/dev/null || echo "Could not kill process on 8084"
-        fi
-        echo "Port cleanup completed"
-
-        # Wait a moment for ports to be freed
-        sleep 2
-
-        # Create serverless function directory
-        mkdir -p ${{ env.PRODUCTION_DIR }}/functions
-
-        # Copy function files
-        if [ -d "functions" ]; then
-          cp -r functions/* ${{ env.PRODUCTION_DIR }}/functions/
+        # Stop PM2 processes if running
+        if command -v pm2 &> /dev/null; then
+          pm2 stop api-gateway || echo "PM2 api-gateway not running"
+          pm2 delete api-gateway || echo "PM2 api-gateway not found"
         fi
 
-        # Build and deploy functions (if they exist)
-        if [ -f "functions/stack.yaml" ]; then
-          cd functions
-
-          # Build hello function
-          if [ -f "hello-simple/handler.js" ]; then
-            echo "Building hello-simple function..."
-            faas-cli build -f stack.yaml --filter hello-simple
-
-            # Final port check before running
-            if lsof -i:8082 >/dev/null 2>&1; then
-              echo "Port 8082 still in use, waiting 5 seconds..."
-              sleep 5
-              lsof -ti:8082 | xargs -r kill -9 2>/dev/null || echo "Could not free port 8082"
-              sleep 2
-            fi
-
-            docker run -d --name hello-function --restart=always -p 8082:8080 local/hello-simple:latest
-            echo "hello-simple function deployed on port 8082"
-          fi
-
-          # Build users function
-          if [ -f "users-api/handler.js" ]; then
-            echo "Building users-api function..."
-            faas-cli build -f stack.yaml --filter users-api
-
-            # Final port check before running
-            if lsof -i:8083 >/dev/null 2>&1; then
-              echo "Port 8083 still in use, waiting 5 seconds..."
-              sleep 5
-              lsof -ti:8083 | xargs -r kill -9 2>/dev/null || echo "Could not free port 8083"
-              sleep 2
-            fi
-
-            docker run -d --name users-function --restart=always -p 8083:8080 \
-              -v ${{ env.PRODUCTION_DIR }}/services:/home/rdias/cpp-rest-server/services \
-              local/users-api:latest
-            echo "users-api function deployed on port 8083 (calls C++ users_service)"
-          fi
-
-          # Build orders function
-          if [ -f "orders-api/handler.js" ]; then
-            echo "Building orders-api function..."
-            faas-cli build -f stack.yaml --filter orders-api
-
-            # Final port check before running
-            if lsof -i:8084 >/dev/null 2>&1; then
-              echo "Port 8084 still in use, waiting 5 seconds..."
-              sleep 5
-              lsof -ti:8084 | xargs -r kill -9 2>/dev/null || echo "Could not free port 8084"
-              sleep 2
-            fi
-
-            docker run -d --name orders-function --restart=always -p 8084:8080 \
-              -v ${{ env.PRODUCTION_DIR }}/services:/home/rdias/cpp-rest-server/services \
-              local/orders-api:latest
-            echo "orders-api function deployed on port 8084 (calls C++ orders_service)"
-          fi
-        else
-          echo "No serverless functions found to deploy"
+        # Stop Docker containers if running
+        if command -v docker &> /dev/null; then
+          docker stop api-gateway || echo "Docker api-gateway not running"
+          docker rm api-gateway || echo "Docker api-gateway not found"
         fi
 
-    - name: Install/Update systemd service
+        # Stop systemd service if running
+        sudo systemctl stop api-gateway || echo "Systemd api-gateway not running"
+
+    - name: Deploy files
       run: |
-        # Verify executable exists and has proper permissions
-        echo "Verifying executable..."
-        if [ ! -f "${{ env.PRODUCTION_DIR }}/rest_server" ]; then
-          echo "ERROR: rest_server executable not found at ${{ env.PRODUCTION_DIR }}/rest_server"
-          ls -la ${{ env.PRODUCTION_DIR }}/
-          exit 1
-        fi
+        echo "Deploying files to production..."
 
-        # Ensure executable has correct permissions
-        chmod +x ${{ env.PRODUCTION_DIR }}/rest_server
-        echo "Executable permissions set"
+        # Copy all files to production directory
+        cp -r . ${{ env.PRODUCTION_DIR }}/
 
-        # Verify executable can run (with timeout to avoid blocking)
-        echo "Testing executable..."
+        # Copy build artifacts
+        cp -r deployment/services ${{ env.PRODUCTION_DIR }}/build/ || true
+
+        # Set correct permissions
         cd ${{ env.PRODUCTION_DIR }}
-        timeout 3s ./rest_server &
-        SERVER_PID=$!
-        sleep 2
-        if kill -0 $SERVER_PID 2>/dev/null; then
-          echo "Executable test successful - server started properly"
-          kill $SERVER_PID 2>/dev/null || true
-          wait $SERVER_PID 2>/dev/null || true
-        else
-          echo "Warning: Executable test failed, checking dependencies..."
-          ldd ${{ env.PRODUCTION_DIR }}/rest_server || echo "Could not check dependencies"
-        fi
+        chmod +x scripts/*.sh
+        chmod +x build/services/*/users_service || true
+        chmod +x build/services/*/orders_service || true
 
-        # Copy simplified service file to systemd directory (without restrictive security settings)
-        sudo cp ${{ env.PRODUCTION_DIR }}/cpp-rest-server-simple.service /etc/systemd/system/
-
-        # Temporary SELinux solution - set to permissive mode
-        echo "=== Applying temporary SELinux fix ==="
-        echo "Current SELinux status:"
-        getenforce
-
-        if [ "$(getenforce)" = "Enforcing" ]; then
-          echo "Setting SELinux to permissive mode temporarily to allow deployment..."
-          sudo setenforce 0
-          echo "New SELinux status:"
-          getenforce
-          echo "Note: This is temporary and will revert on reboot"
-        fi
-
-        # Reload systemd and enable simplified service
-        sudo systemctl daemon-reload
-        sudo systemctl enable cpp-rest-server-simple
-
-    - name: Start server
+    - name: Install production dependencies
       run: |
-        # Start the simplified systemd service
-        echo "Starting cpp-rest-server-simple service..."
-        sudo systemctl start cpp-rest-server-simple
-        echo "Service start command completed"
+        cd ${{ env.PRODUCTION_DIR }}
 
-    - name: Wait for server startup
-      run: |
-        sleep 5
+        # Install Node.js dependencies
+        npm ci --production
 
-    - name: Verify deployment
-      run: |
-        # Check which service is running
-        SERVICE_NAME=""
-        if sudo systemctl is-active --quiet cpp-rest-server; then
-          SERVICE_NAME="cpp-rest-server"
-        elif sudo systemctl is-active --quiet cpp-rest-server-simple; then
-          SERVICE_NAME="cpp-rest-server-simple"
+        # Install PM2 globally if not already installed
+        if ! command -v pm2 &> /dev/null; then
+          sudo npm install -g pm2
         fi
 
-        if [ ! -z "$SERVICE_NAME" ]; then
-          echo "Service $SERVICE_NAME is running"
-          sudo systemctl status $SERVICE_NAME --no-pager
-        else
-          echo "Both services failed to start"
-          echo "=== Main Service Status ==="
-          sudo systemctl status cpp-rest-server --no-pager || true
-          echo ""
-          echo "=== Simple Service Status ==="
-          sudo systemctl status cpp-rest-server-simple --no-pager || true
-          echo ""
-          echo "=== Recent Logs (Main) ==="
-          sudo journalctl -u cpp-rest-server --no-pager -n 10 || true
-          echo ""
-          echo "=== Recent Logs (Simple) ==="
-          sudo journalctl -u cpp-rest-server-simple --no-pager -n 10 || true
-          echo ""
-          echo "=== Recent Logs ==="
-          sudo journalctl -u cpp-rest-server --no-pager -n 20
-          echo ""
-          echo "=== File Permissions ==="
-          ls -la ${{ env.PRODUCTION_DIR }}/rest_server
-          echo ""
-          echo "=== File Dependencies ==="
-          ldd ${{ env.PRODUCTION_DIR }}/rest_server || echo "Could not check dependencies"
-          echo ""
-          echo "=== Working Directory ==="
-          ls -la ${{ env.PRODUCTION_DIR }}/
-          echo ""
-          echo "=== Manual execution test ==="
-          cd ${{ env.PRODUCTION_DIR }} && timeout 3s ./rest_server || echo "Manual execution failed with exit code: $?"
-          echo ""
-          echo "=== Systemd user test ==="
-          sudo -u rdias bash -c "cd ${{ env.PRODUCTION_DIR }} && timeout 3s ./rest_server" || echo "Systemd user execution failed with exit code: $?"
-          echo ""
-          echo "=== Environment test ==="
-          sudo -u rdias bash -c "cd ${{ env.PRODUCTION_DIR }} && env PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig LD_LIBRARY_PATH=/usr/local/lib64:/usr/local/lib timeout 3s ./rest_server" || echo "Environment test failed with exit code: $?"
-          echo ""
-          echo "=== Directory permissions ==="
-          ls -la /home/rdias/ | grep cpp-rest-server
-          echo ""
-          echo "=== SELinux status ==="
-          getenforce 2>/dev/null || echo "SELinux not available"
-          exit 1
-        fi
+    - name: Configure firewall
+      run: |
+        echo "Configuring firewall..."
+        sudo firewall-cmd --permanent --add-port=8080/tcp || echo "Port 8080 already open"
+        sudo firewall-cmd --reload || echo "Firewall reload failed"
+
+    - name: Start API Gateway
+      run: |
+        cd ${{ env.PRODUCTION_DIR }}
+
+        echo "Starting API Gateway with PM2..."
+
+        # Create PM2 ecosystem config
+        cat > ecosystem.config.js << 'EOF'
+        module.exports = {
+          apps: [{
+            name: 'api-gateway',
+            script: './api-gateway.js',
+            instances: 'max',
+            exec_mode: 'cluster',
+            env: {
+              NODE_ENV: 'production',
+              PORT: 8080,
+              BUILD_PATH: '/opt/rdws_webserver/build',
+              SERVICE_TIMEOUT: 5000
+            },
+            error_file: '/var/log/api-gateway/error.log',
+            out_file: '/var/log/api-gateway/out.log',
+            log_file: '/var/log/api-gateway/combined.log',
+            time: true,
+            max_memory_restart: '500M'
+          }]
+        };
+        EOF
+
+        # Create log directory
+        sudo mkdir -p /var/log/api-gateway
+        sudo chown $USER:$USER /var/log/api-gateway
+
+        # Start with PM2
+        pm2 start ecosystem.config.js
+        pm2 save
+
+        # Setup PM2 startup if not already done
+        pm2 startup | grep "sudo" | bash || echo "PM2 startup already configured"
 
     - name: Health check
       run: |
-        # Try to reach the server endpoint
-        MAX_RETRIES=5
-        RETRY_COUNT=0
+        echo "Performing health check..."
 
-        echo "Testing main C++ server..."
-        while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-          if curl -f http://localhost:9080/hello --max-time 10; then
-            echo "Main server is responding"
-            break
-          else
-            echo "Attempt $((RETRY_COUNT + 1))/$MAX_RETRIES failed, retrying..."
-            RETRY_COUNT=$((RETRY_COUNT + 1))
-            sleep 5
-          fi
-        done
+        # Wait for service to start
+        sleep 10
 
-        if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-          echo "Main server health check failed after $MAX_RETRIES attempts"
-          exit 1
-        fi
+        # Use our verification script
+        cd ${{ env.PRODUCTION_DIR }}
+        chmod +x scripts/verify-deploy.sh
+        ./scripts/verify-deploy.sh localhost 8080
 
-        # Test serverless function if it exists
-        RETRY_COUNT=0
-        echo "Testing serverless function..."
-        while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-          if curl -f http://localhost:8082/ --max-time 10; then
-            echo "Serverless function is responding"
-            break
-          else
-            echo "Serverless function attempt $((RETRY_COUNT + 1))/$MAX_RETRIES failed, retrying..."
-            RETRY_COUNT=$((RETRY_COUNT + 1))
-            sleep 5
-          fi
-        done
+    - name: Deploy summary
+      run: |
+        echo "🎉 Deployment completed successfully!"
+        echo ""
+        echo "📊 Deployment Summary:"
+        echo "  Environment: ${{ github.event.inputs.environment || 'production' }}"
+        echo "  Directory: ${{ env.PRODUCTION_DIR }}"
+        echo "  API Gateway: http://$(hostname -I | awk '{print $1}'):8080"
+        echo "  Health Check: http://$(hostname -I | awk '{print $1}'):8080/health"
+        echo ""
+        echo "🔧 Management Commands:"
+        echo "  Status: pm2 status"
+        echo "  Logs: pm2 logs api-gateway"
+        echo "  Restart: pm2 restart api-gateway"
+        echo "  Monitor: pm2 monit"
+        echo ""
+        echo "📋 Endpoints:"
+        echo "  GET /health - Service health"
+        echo "  GET /users - List users"
+        echo "  GET /orders - List orders"
+        echo "  GET /api-docs - API documentation"
 
-        if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-          echo "Serverless function health check failed, but continuing deployment"
-        fi
-
-        echo "Health checks completed"
-
-  notify:
-    name: Notify deployment status
-    runs-on: self-hosted
+  # Job 3: Post-deployment tests
+  post-deploy-tests:
+    name: Post-Deployment Tests
+    runs-on: [self-hosted, Linux, X64, webserver, fedora]
     needs: deploy
-    if: always()
 
     steps:
-    - name: Deployment Success
-      if: needs.deploy.result == 'success'
-      run: |
-        echo "Deployment to ${{ github.event.inputs.environment || 'production' }} successful!"
-        echo "Server is available at http://localhost:9080"
-        echo "Health check: curl http://localhost:9080/hello"
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-    - name: Deployment Failed
-      if: needs.deploy.result == 'failure'
+    - name: Run comprehensive tests
       run: |
-        echo "Deployment to ${{ github.event.inputs.environment || 'production' }} failed!"
-        echo "Check the logs above for details"
-        exit 1
+        echo "Running post-deployment tests..."
+
+        # Wait a bit more for service to stabilize
+        sleep 15
+
+        # Run verification script
+        chmod +x scripts/verify-deploy.sh
+        ./scripts/verify-deploy.sh localhost 8080
+
+    - name: Performance baseline test
+      run: |
+        echo "Running performance baseline test..."
+
+        BASE_URL="http://localhost:8080"
+
+        # Test response times
+        echo "Testing endpoint response times:"
+
+        for endpoint in "/health" "/users" "/orders"; do
+          echo -n "$endpoint: "
+          time_total=$(curl -s -w "%{time_total}" -o /dev/null "$BASE_URL$endpoint")
+          time_ms=$(echo "$time_total * 1000 / 1" | bc)
+          echo "${time_ms}ms"
+        done
+
+    - name: Load test (basic)
+      run: |
+        echo "Running basic load test..."
+
+        # Simple concurrent requests test
+        BASE_URL="http://localhost:8080"
+
+        echo "Testing 10 concurrent requests to /health..."
+        seq 1 10 | xargs -n1 -P10 -I{} curl -s "$BASE_URL/health" > /dev/null
+
+        if [ $? -eq 0 ]; then
+          echo "✅ Load test passed"
+        else
+          echo "❌ Load test failed"
+          exit 1
+        fi
