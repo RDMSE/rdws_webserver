@@ -272,6 +272,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Clean up previous processes
+      run: |
+        echo "Cleaning up any previous processes..."
+        pkill -f "api-gateway" || echo "No api-gateway processes to kill"
+        pkill -f "node.*api-gateway" || echo "No node api-gateway processes to kill"
+        lsof -ti:8080 | xargs -r kill -9 || echo "No processes on port 8080"
+        sleep 2
+        echo "Cleanup completed"
+
     - name: Download microservices binaries
       uses: actions/download-artifact@v4
       with:
@@ -347,6 +356,23 @@ jobs:
         ${{ env.BUILD_DIR }}/services/users/users_service "GET" "/users" || echo "Users service failed"
         ${{ env.BUILD_DIR }}/services/orders/orders_service "GET" "/orders" || echo "Orders service failed"
 
+        echo "Checking for existing processes on port 8080..."
+        netstat -tlnp | grep :8080 || echo "Port 8080 is free"
+
+        # Kill any processes using port 8080
+        echo "Cleaning up any existing processes on port 8080..."
+        lsof -ti:8080 | xargs -r kill -9 || echo "No processes to kill on port 8080"
+
+        # Also kill any existing API Gateway processes
+        pkill -f "api-gateway" || echo "No api-gateway processes to kill"
+        pkill -f "node.*api-gateway" || echo "No node api-gateway processes to kill"
+
+        # Wait a moment for cleanup
+        sleep 2
+
+        echo "Port status after cleanup:"
+        netstat -tlnp | grep :8080 || echo "Port 8080 is now free"
+
         echo "Starting API Gateway..."
         if [ -f "dist/api-gateway.js" ]; then
           echo "Using compiled TypeScript"
@@ -410,10 +436,26 @@ jobs:
     - name: Stop API Gateway
       if: always()
       run: |
+        echo "Stopping API Gateway and cleaning up..."
+
+        # Kill by PID file if exists
         if [ -f gateway.pid ]; then
-          kill $(cat gateway.pid) || true
+          PID=$(cat gateway.pid)
+          echo "Killing process $PID"
+          kill $PID || true
           rm gateway.pid
         fi
+
+        # Kill any remaining API Gateway processes
+        pkill -f "api-gateway" || echo "No api-gateway processes to kill"
+        pkill -f "node.*api-gateway" || echo "No node api-gateway processes to kill"
+
+        # Force kill any processes on port 8080
+        lsof -ti:8080 | xargs -r kill -9 || echo "No processes on port 8080"
+
+        # Final port check
+        sleep 2
+        netstat -tlnp | grep :8080 || echo "Port 8080 is now free"
 
     - name: Upload integration test logs
       uses: actions/upload-artifact@v4
