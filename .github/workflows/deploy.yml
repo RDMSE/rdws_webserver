@@ -205,7 +205,7 @@ jobs:
     - name: Configure firewall
       run: |
         echo "Configuring firewall..."
-        sudo firewall-cmd --permanent --add-port=8080/tcp || echo "Port 8080 already open"
+        sudo firewall-cmd --permanent --add-port=3000/tcp || echo "Port 3000 already open"
         sudo firewall-cmd --reload || echo "Firewall reload failed"
 
     - name: Start API Gateway
@@ -220,10 +220,10 @@ jobs:
         # Use JavaScript if available, otherwise TypeScript with ts-node
         if [ -f "api-gateway.js" ]; then
           echo "Using compiled JavaScript"
-          NODE_ENV=production PORT=8080 BUILD_PATH=/opt/rdws_webserver/build SERVICE_TIMEOUT=5000 pm2 start api-gateway.js --name api-gateway --instances 1
+          NODE_ENV=production PORT=3000 BUILD_PATH=/opt/rdws_webserver/build SERVICE_TIMEOUT=5000 pm2 start api-gateway.js --name api-gateway --instances 1
         else
           echo "Using TypeScript with ts-node"
-          NODE_ENV=production PORT=8080 BUILD_PATH=/opt/rdws_webserver/build SERVICE_TIMEOUT=5000 pm2 start api-gateway.ts --name api-gateway --instances 1 --interpreter node --interpreter-args "--require ts-node/register"
+          NODE_ENV=production PORT=3000 BUILD_PATH=/opt/rdws_webserver/build SERVICE_TIMEOUT=5000 pm2 start api-gateway.ts --name api-gateway --instances 1 --interpreter node --interpreter-args "--require ts-node/register"
         fi
 
         pm2 save
@@ -257,7 +257,7 @@ jobs:
         # Use our verification script with correct parameter order
         echo "=== Running verification script ==="
         chmod +x scripts/verify-deploy.sh
-        ./scripts/verify-deploy.sh 8080 localhost || echo "Verification failed but continuing..."
+        ./scripts/verify-deploy.sh 3000 localhost || echo "Verification failed but continuing..."
 
     - name: Deploy summary
       run: |
@@ -266,8 +266,8 @@ jobs:
         echo "Deployment Summary:"
         echo "  Environment: ${{ github.event.inputs.environment || 'production' }}"
         echo "  Directory: ${{ env.PRODUCTION_DIR }}"
-        echo "  API Gateway: http://$(hostname -I | awk '{print $1}'):8080"
-        echo "  Health Check: http://$(hostname -I | awk '{print $1}'):8080/health"
+        echo "  API Gateway: http://$(hostname -I | awk '{print $1}'):3000"
+        echo "  Health Check: http://$(hostname -I | awk '{print $1}'):3000/health"
         echo ""
         echo "Management Commands:"
         echo "  Status: pm2 status"
@@ -311,12 +311,12 @@ jobs:
         head -20 api-gateway.ts || echo "File not found"
 
         echo "=== Debug: Try manual curl ==="
-        curl -v http://localhost:8080/ || echo "Root endpoint failed"
-        curl -v http://localhost:8080/health || echo "Health endpoint failed"
+        curl -v http://localhost:3000/ || echo "Root endpoint failed"
+        curl -v http://localhost:3000/health || echo "Health endpoint failed"
 
         # Run verification script with correct parameter order (but don't fail on error)
         chmod +x scripts/verify-deploy.sh
-        ./scripts/verify-deploy.sh 8080 localhost || echo "Verification failed but continuing for debugging..."
+        ./scripts/verify-deploy.sh 3000 localhost || echo "Verification failed but continuing for debugging..."
 
     - name: Performance baseline test
       run: |
@@ -339,7 +339,7 @@ jobs:
         echo "Running basic load test..."
 
         # Simple concurrent requests test
-        BASE_URL="http://localhost:8080"
+        BASE_URL="http://localhost:3000"
 
         echo "Testing 10 concurrent requests to /health..."
         seq 1 10 | xargs -n1 -P10 -I{} curl -s "$BASE_URL/health" > /dev/null
