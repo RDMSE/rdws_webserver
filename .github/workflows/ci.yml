@@ -272,15 +272,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Clean up previous processes
-      run: |
-        echo "Cleaning up any previous processes..."
-        pkill -f "api-gateway" || echo "No api-gateway processes to kill"
-        pkill -f "node.*api-gateway" || echo "No node api-gateway processes to kill"
-        lsof -ti:8080 | xargs -r kill -9 || echo "No processes on port 8080"
-        sleep 2
-        echo "Cleanup completed"
-
     - name: Download microservices binaries
       uses: actions/download-artifact@v4
       with:
@@ -345,8 +336,13 @@ jobs:
     - name: Start API Gateway in background
       env:
         BUILD_PATH: ${{ env.BUILD_DIR }}
-        PORT: 8080
       run: |
+        # Find a free port instead of using fixed 8080
+        echo "Finding a free port..."
+        FREE_PORT=$(python3 -c "import socket; s = socket.socket(); s.bind(('', 0)); print(s.getsockname()[1]); s.close()")
+        echo "Using port: $FREE_PORT"
+        export PORT=$FREE_PORT
+
         echo "Starting API Gateway with BUILD_PATH=$BUILD_PATH and PORT=$PORT"
         echo "Verifying microservices are available..."
         ls -la ${{ env.BUILD_DIR }}/services/*/
@@ -356,24 +352,7 @@ jobs:
         ${{ env.BUILD_DIR }}/services/users/users_service "GET" "/users" || echo "Users service failed"
         ${{ env.BUILD_DIR }}/services/orders/orders_service "GET" "/orders" || echo "Orders service failed"
 
-        echo "Checking for existing processes on port 8080..."
-        netstat -tlnp | grep :8080 || echo "Port 8080 is free"
-
-        # Kill any processes using port 8080
-        echo "Cleaning up any existing processes on port 8080..."
-        lsof -ti:8080 | xargs -r kill -9 || echo "No processes to kill on port 8080"
-
-        # Also kill any existing API Gateway processes
-        pkill -f "api-gateway" || echo "No api-gateway processes to kill"
-        pkill -f "node.*api-gateway" || echo "No node api-gateway processes to kill"
-
-        # Wait a moment for cleanup
-        sleep 2
-
-        echo "Port status after cleanup:"
-        netstat -tlnp | grep :8080 || echo "Port 8080 is now free"
-
-        echo "Starting API Gateway..."
+        echo "Starting API Gateway on port $FREE_PORT..."
         if [ -f "dist/api-gateway.js" ]; then
           echo "Using compiled TypeScript"
           nohup node dist/api-gateway.js > gateway.log 2>&1 &
@@ -396,10 +375,10 @@ jobs:
         fi
 
         # Check if port is listening
-        if netstat -tlnp | grep :8080; then
-          echo "Port 8080 is listening"
+        if netstat -tlnp | grep :$FREE_PORT; then
+          echo "Port $FREE_PORT is listening"
         else
-          echo "Port 8080 is NOT listening. Available ports:"
+          echo "Port $FREE_PORT is NOT listening. Available ports:"
           netstat -tlnp
           echo "Gateway logs:"
           cat gateway.log
@@ -408,7 +387,7 @@ jobs:
 
         # Quick health check
         echo "Testing basic connectivity..."
-        if curl -f http://localhost:8080/health; then
+        if curl -f http://localhost:$FREE_PORT/health; then
           echo "Health check passed"
         else
           echo "Health check failed. Gateway logs:"
@@ -416,16 +395,29 @@ jobs:
           exit 1
         fi
 
+        # Save port for next step
+        echo $FREE_PORT > gateway.port
+        echo "API Gateway successfully started on port $FREE_PORT"
+
     - name: Run integration tests
       run: |
+        # Read the port used by API Gateway
+        if [ -f gateway.port ]; then
+          GATEWAY_PORT=$(cat gateway.port)
+          echo "Using API Gateway port: $GATEWAY_PORT"
+        else
+          echo "ERROR: Gateway port file not found"
+          exit 1
+        fi
+
         echo "Running integration tests..."
         echo "Current processes:"
         ps aux | grep -E "(node|api-gateway)" || echo "No node processes found"
         echo "Listening ports:"
-        netstat -tlnp | grep :8080 || echo "Port 8080 not listening"
+        netstat -tlnp | grep :$GATEWAY_PORT || echo "Port $GATEWAY_PORT not listening"
 
         chmod +x scripts/verify-deploy.sh
-        if ./scripts/verify-deploy.sh; then
+        if ./scripts/verify-deploy.sh localhost $GATEWAY_PORT; then
           echo "Integration tests passed"
         else
           echo "Integration tests failed. Gateway logs:"
@@ -436,7 +428,7 @@ jobs:
     - name: Stop API Gateway
       if: always()
       run: |
-        echo "Stopping API Gateway and cleaning up..."
+        echo "Stopping API Gateway..."
 
         # Kill by PID file if exists
         if [ -f gateway.pid ]; then
@@ -444,18 +436,13 @@ jobs:
           echo "Killing process $PID"
           kill $PID || true
           rm gateway.pid
+          echo "Gateway process stopped"
+        else
+          echo "No gateway.pid file found"
         fi
 
-        # Kill any remaining API Gateway processes
-        pkill -f "api-gateway" || echo "No api-gateway processes to kill"
-        pkill -f "node.*api-gateway" || echo "No node api-gateway processes to kill"
-
-        # Force kill any processes on port 8080
-        lsof -ti:8080 | xargs -r kill -9 || echo "No processes on port 8080"
-
-        # Final port check
-        sleep 2
-        netstat -tlnp | grep :8080 || echo "Port 8080 is now free"
+        # Clean up port file
+        rm -f gateway.port
 
     - name: Upload integration test logs
       uses: actions/upload-artifact@v4
