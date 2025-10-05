@@ -220,23 +220,15 @@ jobs:
         # Use JavaScript if available, otherwise TypeScript with ts-node
         if [ -f "api-gateway.js" ]; then
           echo "Using compiled JavaScript"
-          pm2 start api-gateway.js --name api-gateway --instances 1 --env production
+          NODE_ENV=production PORT=8080 BUILD_PATH=/opt/rdws_webserver/build SERVICE_TIMEOUT=5000 pm2 start api-gateway.js --name api-gateway --instances 1
         else
           echo "Using TypeScript with ts-node"
-          pm2 start api-gateway.ts --name api-gateway --instances 1 --interpreter node --interpreter-args "--require ts-node/register" --env production
+          NODE_ENV=production PORT=8080 BUILD_PATH=/opt/rdws_webserver/build SERVICE_TIMEOUT=5000 pm2 start api-gateway.ts --name api-gateway --instances 1 --interpreter node --interpreter-args "--require ts-node/register"
         fi
-
-        # Set environment variables
-        pm2 env set NODE_ENV production
-        pm2 env set PORT 8080
-        pm2 env set BUILD_PATH /opt/rdws_webserver/build
-        pm2 env set SERVICE_TIMEOUT 5000
 
         pm2 save
 
-        echo "PM2 started successfully"
-
-    - name: Health check
+        echo "PM2 started successfully"    - name: Health check
       run: |
         echo "Performing health check..."
 
