@@ -4,59 +4,53 @@ cmake_minimum_required(VERSION 3.10)
 # Include Google Test
 include(GoogleTest)
 
-# Unit tests executable
-add_executable(unit_tests
-    test_hello_server.cpp
+# Criar biblioteca de helpers comuns
+add_library(test_helpers
+    common/test_helpers.cpp
+)
+
+target_include_directories(test_helpers PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/common
+)
+
+# Teste básico (placeholder)
+add_executable(microservice_tests
     test_main.cpp
 )
 
-# Integration tests executable
-add_executable(integration_tests
-    test_integration.cpp
-    test_main.cpp
-)
-
-# Link unit test executable against gtest & gtest_main libraries
-target_link_libraries(unit_tests
-    hello_server_lib
-    ${PISTACHE_LIBRARIES}
+target_link_libraries(microservice_tests
     GTest::gtest
     GTest::gtest_main
     pthread
 )
 
-# Link integration test executable with additional CURL dependency
-target_link_libraries(integration_tests
-    hello_server_lib
-    ${PISTACHE_LIBRARIES}
+# Testes do microserviço de usuários
+add_executable(users_service_tests
+    users/test_users_service.cpp
+    test_main.cpp
+)
+
+target_link_libraries(users_service_tests
+    test_helpers
     GTest::gtest
     GTest::gtest_main
-    curl
     pthread
 )
 
-# Add include directories for unit tests
-target_include_directories(unit_tests PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include
-    ${PISTACHE_INCLUDE_DIRS}
+# Testes do microserviço de pedidos
+add_executable(orders_service_tests
+    orders/test_orders_service.cpp
+    test_main.cpp
 )
 
-# Add include directories for integration tests
-target_include_directories(integration_tests PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include
-    ${PISTACHE_INCLUDE_DIRS}
+target_link_libraries(orders_service_tests
+    test_helpers
+    GTest::gtest
+    GTest::gtest_main
+    pthread
 )
 
-# Add compile flags for unit tests
-target_compile_options(unit_tests PRIVATE 
-    ${PISTACHE_CFLAGS_OTHER}
-)
-
-# Add compile flags for integration tests
-target_compile_options(integration_tests PRIVATE 
-    ${PISTACHE_CFLAGS_OTHER}
-)
-
-# Register tests with CMake
-gtest_discover_tests(unit_tests)
-gtest_discover_tests(integration_tests)
+# Registrar todos os testes com CTest
+gtest_discover_tests(microservice_tests)
+gtest_discover_tests(users_service_tests)
+gtest_discover_tests(orders_service_tests)
