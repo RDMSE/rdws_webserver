@@ -67,12 +67,13 @@ jobs:
     - name: Build C++ microservices
       run: |
         cd ${{ env.BUILD_DIR }}
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=17
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=17 -G "Unix Makefiles"
         make -j$(nproc)
         
         # Verify microservices were built
         echo "Verifying built microservices..."
         ls -la services/*/
+        find . -name "*_service" -type f -executable
         ./services/users/users_service "GET" "/users" | head -2
         ./services/orders/orders_service "GET" "/orders" | head -2
 

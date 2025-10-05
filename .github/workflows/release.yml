@@ -71,7 +71,7 @@ jobs:
     - name: Build C++ microservices
       run: |
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_CXX_STANDARD=17
+        cmake .. -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_CXX_STANDARD=17 -G "Unix Makefiles"
         make -j$(nproc)
         
         echo "Verifying microservices..."
