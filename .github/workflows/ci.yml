@@ -296,11 +296,11 @@ jobs:
         echo "Checking downloaded artifacts for integration tests..."
         find ${{ env.BUILD_DIR }} -name "*_service" -type f
         ls -la ${{ env.BUILD_DIR }}/
-        
+
         # Find the actual location of executables
         USERS_SERVICE=$(find ${{ env.BUILD_DIR }} -name "users_service" -type f | head -1)
         ORDERS_SERVICE=$(find ${{ env.BUILD_DIR }} -name "orders_service" -type f | head -1)
-        
+
         if [ -n "$USERS_SERVICE" ] && [ -f "$USERS_SERVICE" ]; then
           chmod +x "$USERS_SERVICE"
           echo "users_service made executable at: $USERS_SERVICE"
@@ -308,7 +308,7 @@ jobs:
           echo "ERROR: users_service not found anywhere"
           exit 1
         fi
-        
+
         if [ -n "$ORDERS_SERVICE" ] && [ -f "$ORDERS_SERVICE" ]; then
           chmod +x "$ORDERS_SERVICE"
           echo "orders_service made executable at: $ORDERS_SERVICE"
@@ -316,7 +316,7 @@ jobs:
           echo "ERROR: orders_service not found anywhere"
           exit 1
         fi
-        
+
         # Create symlinks in expected locations for API Gateway
         mkdir -p ${{ env.BUILD_DIR }}/services/users
         mkdir -p ${{ env.BUILD_DIR }}/services/orders
@@ -328,19 +328,84 @@ jobs:
       run: |
         npm ci
 
+    - name: Build TypeScript
+      run: |
+        echo "Building TypeScript..."
+        npm run build:ts || echo "TypeScript build failed, trying to run directly"
+
     - name: Start API Gateway in background
       env:
         BUILD_PATH: ${{ env.BUILD_DIR }}
         PORT: 8080
       run: |
-        nohup node api-gateway.js > gateway.log 2>&1 &
+        echo "Starting API Gateway with BUILD_PATH=$BUILD_PATH and PORT=$PORT"
+        echo "Verifying microservices are available..."
+        ls -la ${{ env.BUILD_DIR }}/services/*/
+
+        # Test microservices directly first
+        echo "Testing microservices directly..."
+        ${{ env.BUILD_DIR }}/services/users/users_service "GET" "/users" || echo "Users service failed"
+        ${{ env.BUILD_DIR }}/services/orders/orders_service "GET" "/orders" || echo "Orders service failed"
+
+        echo "Starting API Gateway..."
+        if [ -f "dist/api-gateway.js" ]; then
+          echo "Using compiled TypeScript"
+          nohup node dist/api-gateway.js > gateway.log 2>&1 &
+        else
+          echo "Using ts-node directly"
+          nohup npx ts-node api-gateway.ts > gateway.log 2>&1 &
+        fi
         echo $! > gateway.pid
-        sleep 5
+
+        echo "Waiting for API Gateway to start..."
+        sleep 10
+
+        # Check if process is still running
+        if kill -0 $(cat gateway.pid) 2>/dev/null; then
+          echo "API Gateway process is running (PID: $(cat gateway.pid))"
+        else
+          echo "API Gateway process died. Check logs:"
+          cat gateway.log
+          exit 1
+        fi
+
+        # Check if port is listening
+        if netstat -tlnp | grep :8080; then
+          echo "Port 8080 is listening"
+        else
+          echo "Port 8080 is NOT listening. Available ports:"
+          netstat -tlnp
+          echo "Gateway logs:"
+          cat gateway.log
+          exit 1
+        fi
+
+        # Quick health check
+        echo "Testing basic connectivity..."
+        if curl -f http://localhost:8080/health; then
+          echo "Health check passed"
+        else
+          echo "Health check failed. Gateway logs:"
+          cat gateway.log
+          exit 1
+        fi
 
     - name: Run integration tests
       run: |
+        echo "Running integration tests..."
+        echo "Current processes:"
+        ps aux | grep -E "(node|api-gateway)" || echo "No node processes found"
+        echo "Listening ports:"
+        netstat -tlnp | grep :8080 || echo "Port 8080 not listening"
+
         chmod +x scripts/verify-deploy.sh
-        ./scripts/verify-deploy.sh
+        if ./scripts/verify-deploy.sh; then
+          echo "Integration tests passed"
+        else
+          echo "Integration tests failed. Gateway logs:"
+          cat gateway.log || echo "No gateway.log found"
+          exit 1
+        fi
 
     - name: Stop API Gateway
       if: always()
