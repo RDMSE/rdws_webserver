@@ -251,10 +251,10 @@ jobs:
         # Wait for service to start
         sleep 10
 
-        # Use our verification script
+        # Use our verification script with correct parameter order
         cd ${{ env.PRODUCTION_DIR }}
         chmod +x scripts/verify-deploy.sh
-        ./scripts/verify-deploy.sh localhost 8080
+        ./scripts/verify-deploy.sh 8080 localhost
 
     - name: Deploy summary
       run: |
@@ -295,9 +295,9 @@ jobs:
         # Wait a bit more for service to stabilize
         sleep 15
 
-        # Run verification script
+        # Run verification script with correct parameter order
         chmod +x scripts/verify-deploy.sh
-        ./scripts/verify-deploy.sh localhost 8080
+        ./scripts/verify-deploy.sh 8080 localhost
 
     - name: Performance baseline test
       run: |
