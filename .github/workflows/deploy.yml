@@ -199,28 +199,28 @@ jobs:
 
         echo "Starting API Gateway with PM2..."
 
-        # Create PM2 ecosystem config
-        cat > ecosystem.config.js << 'EOF'
-        module.exports = {
+        # Create a simple PM2 config
+        echo 'module.exports = {
           apps: [{
-            name: 'api-gateway',
-            script: './api-gateway.js',
-            instances: 'max',
-            exec_mode: 'cluster',
+            name: "api-gateway",
+            script: "api-gateway.ts",
+            interpreter: "node",
+            interpreter_args: "--require ts-node/register",
+            instances: "max",
+            exec_mode: "cluster",
             env: {
-              NODE_ENV: 'production',
+              NODE_ENV: "production",
               PORT: 8080,
-              BUILD_PATH: '/opt/rdws_webserver/build',
+              BUILD_PATH: "/opt/rdws_webserver/build",
               SERVICE_TIMEOUT: 5000
             },
-            error_file: '/var/log/api-gateway/error.log',
-            out_file: '/var/log/api-gateway/out.log',
-            log_file: '/var/log/api-gateway/combined.log',
+            error_file: "/var/log/api-gateway/error.log",
+            out_file: "/var/log/api-gateway/out.log",
+            log_file: "/var/log/api-gateway/combined.log",
             time: true,
-            max_memory_restart: '500M'
+            max_memory_restart: "500M"
           }]
-        };
-        EOF
+        };' > ecosystem.config.js
 
         # Create log directory
         sudo mkdir -p /var/log/api-gateway
@@ -231,7 +231,7 @@ jobs:
         pm2 save
 
         # Setup PM2 startup if not already done
-        pm2 startup | grep "sudo" | bash || echo "PM2 startup already configured"
+        pm2 startup --service-name rdws-api-gateway | grep "sudo" | bash || echo "PM2 startup already configured"
 
     - name: Health check
       run: |
@@ -247,21 +247,21 @@ jobs:
 
     - name: Deploy summary
       run: |
-        echo "🎉 Deployment completed successfully!"
+        echo "Deployment completed successfully!"
         echo ""
-        echo "📊 Deployment Summary:"
+        echo "Deployment Summary:"
         echo "  Environment: ${{ github.event.inputs.environment || 'production' }}"
         echo "  Directory: ${{ env.PRODUCTION_DIR }}"
         echo "  API Gateway: http://$(hostname -I | awk '{print $1}'):8080"
         echo "  Health Check: http://$(hostname -I | awk '{print $1}'):8080/health"
         echo ""
-        echo "🔧 Management Commands:"
+        echo "Management Commands:"
         echo "  Status: pm2 status"
         echo "  Logs: pm2 logs api-gateway"
         echo "  Restart: pm2 restart api-gateway"
         echo "  Monitor: pm2 monit"
         echo ""
-        echo "📋 Endpoints:"
+        echo "Endpoints:"
         echo "  GET /health - Service health"
         echo "  GET /users - List users"
         echo "  GET /orders - List orders"
@@ -315,8 +315,8 @@ jobs:
         seq 1 10 | xargs -n1 -P10 -I{} curl -s "$BASE_URL/health" > /dev/null
 
         if [ $? -eq 0 ]; then
-          echo "✅ Load test passed"
+          echo "Load test passed"
         else
-          echo "❌ Load test failed"
+          echo "Load test failed"
           exit 1
         fi
