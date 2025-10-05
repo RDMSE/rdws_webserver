@@ -79,7 +79,7 @@ jobs:
 
     - name: Install API Gateway dependencies
       run: |
-        npm ci --production
+        npm ci
 
     - name: Run quick tests
       run: |
