@@ -7,11 +7,14 @@ project(CppMicroservices VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# Enable debug symbols for development
-set(CMAKE_BUILD_TYPE Debug)
+# Set default build type if not specified
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug)
+endif()
 
 # Add compile flags for better debugging and warnings
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wextra")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -Wall -Wextra")
 
 # Enable testing
 enable_testing()

@@ -4,6 +4,9 @@
 #include <string>
 #include <memory>
 #include <cstdio>
+#include <vector>
+#include <cstdlib>
+#include <iostream>
 
 class ExecutableTestHelper {
 public:

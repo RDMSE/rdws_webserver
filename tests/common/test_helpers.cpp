@@ -64,7 +64,27 @@ std::string ExecutableTestHelper::extractJsonValue(const std::string& json, cons
 }
 
 std::string ExecutableTestHelper::getServiceExecutablePath(const std::string& serviceName) {
-    // Assuming we are running from the build/tests directory
-    // and need to go up to build/ and then into services/
+    // Check multiple possible paths for the executable
+    std::vector<std::string> possiblePaths = {
+        "../services/" + serviceName + "/" + serviceName + "_service",  // From tests/ dir
+        "./services/" + serviceName + "/" + serviceName + "_service",   // From build/ dir
+        "../../services/" + serviceName + "/" + serviceName + "_service" // Alternative
+    };
+    
+    for (const auto& path : possiblePaths) {
+        if (std::system(("test -f " + path + " 2>/dev/null").c_str()) == 0) {
+            std::cout << "Found executable at: " << path << std::endl;
+            return path;
+        }
+    }
+    
+    // If not found, print debug info
+    std::cout << "Executable not found for service: " << serviceName << std::endl;
+    std::cout << "Searched paths:" << std::endl;
+    for (const auto& path : possiblePaths) {
+        std::cout << "  " << path << std::endl;
+    }
+    
+    // Default fallback
     return "../services/" + serviceName + "/" + serviceName + "_service";
 }

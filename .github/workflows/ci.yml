@@ -63,41 +63,73 @@ jobs:
         cd ${{ env.BUILD_DIR }}
         cmake .. \
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-          -DCMAKE_CXX_STANDARD=17
+          -DCMAKE_CXX_STANDARD=17 \
+          -G "Unix Makefiles"
 
     - name: Build C++ microservices
       run: |
         cd ${{ env.BUILD_DIR }}
         make -j$(nproc)
+        
+        # Verify that microservices were built
+        echo "Verifying microservices..."
+        ls -la services/*/
+        find . -name "*_service" -type f -executable
 
     - name: Test microservices executables
       run: |
         cd ${{ env.BUILD_DIR }}
         
         echo "Testing users_service..."
-        ./services/users/users_service "GET" "/users"
+        if [ -f "./services/users/users_service" ]; then
+          ./services/users/users_service "GET" "/users"
+        else
+          echo "ERROR: users_service not found"
+          exit 1
+        fi
         
         echo "Testing orders_service..."
-        ./services/orders/orders_service "GET" "/orders"
+        if [ -f "./services/orders/orders_service" ]; then
+          ./services/orders/orders_service "GET" "/orders"
+        else
+          echo "ERROR: orders_service not found"
+          exit 1
+        fi
 
     - name: Run C++ tests
       run: |
         cd ${{ env.BUILD_DIR }}
         
+        # Debug: Show current directory structure
+        echo "Current directory structure:"
+        pwd
+        ls -la
+        echo "Services directory:"
+        ls -la services/ || echo "No services directory"
+        echo "Tests directory:"
+        ls -la tests/ || echo "No tests directory"
+        
         # Run microservice tests
         if [ -f "tests/microservice_tests" ]; then
+          echo "Running microservice_tests..."
           ./tests/microservice_tests --gtest_output=xml:microservice_test_results.xml
         else
-          echo "No microservice tests found"
+          echo "microservice_tests not found"
         fi
         
         # Run individual service tests
         if [ -f "tests/users_service_tests" ]; then
+          echo "Running users_service_tests..."
           ./tests/users_service_tests --gtest_output=xml:users_test_results.xml
+        else
+          echo "users_service_tests not found"
         fi
         
         if [ -f "tests/orders_service_tests" ]; then
+          echo "Running orders_service_tests..."
           ./tests/orders_service_tests --gtest_output=xml:orders_test_results.xml
+        else
+          echo "orders_service_tests not found"
         fi
 
     - name: Upload C++ test results
