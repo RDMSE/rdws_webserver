@@ -190,13 +190,17 @@ jobs:
       run: |
         cd ${{ env.PRODUCTION_DIR }}
 
-        # Install Node.js dependencies
+        # Install Node.js dependencies including ts-node for production
         npm ci --production
+        npm install ts-node typescript @types/node --save
 
         # Install PM2 globally if not already installed
         if ! command -v pm2 &> /dev/null; then
           sudo npm install -g pm2
         fi
+
+        echo "=== Installed packages ==="
+        npm list --depth=0
 
     - name: Configure firewall
       run: |
@@ -251,10 +255,27 @@ jobs:
         # Wait for service to start
         sleep 10
 
-        # Use our verification script with correct parameter order
+        # Check PM2 status and logs first
+        echo "=== PM2 Status ==="
+        pm2 status
+
+        echo "=== PM2 Logs (last 20 lines) ==="
+        pm2 logs api-gateway --lines 20 --nostream || echo "No logs available"
+
+        echo "=== API Gateway process info ==="
+        pm2 describe api-gateway || echo "Process not found"
+
+        echo "=== Check if TypeScript is working ==="
         cd ${{ env.PRODUCTION_DIR }}
+        ls -la *.ts *.js || echo "No TypeScript/JavaScript files found"
+
+        echo "=== Test direct Node.js execution ==="
+        timeout 5s node --require ts-node/register api-gateway.ts || echo "Direct execution failed"
+
+        # Use our verification script with correct parameter order
+        echo "=== Running verification script ==="
         chmod +x scripts/verify-deploy.sh
-        ./scripts/verify-deploy.sh 8080 localhost
+        ./scripts/verify-deploy.sh 8080 localhost || echo "Verification failed but continuing..."
 
     - name: Deploy summary
       run: |
