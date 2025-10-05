@@ -417,7 +417,7 @@ jobs:
         netstat -tlnp | grep :$GATEWAY_PORT || echo "Port $GATEWAY_PORT not listening"
 
         chmod +x scripts/verify-deploy.sh
-        if ./scripts/verify-deploy.sh localhost $GATEWAY_PORT; then
+        if ./scripts/verify-deploy.sh $GATEWAY_PORT localhost; then
           echo "Integration tests passed"
         else
           echo "Integration tests failed. Gateway logs:"
