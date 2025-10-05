@@ -194,13 +194,13 @@ jobs:
         path: ${{ env.BUILD_DIR }}
       continue-on-error: true
       id: download-artifacts
-      
+
     - name: Handle missing artifacts
       if: steps.download-artifacts.outcome == 'failure'
       run: |
         echo "Failed to download artifacts. This might be because:"
         echo "1. The build job failed and didn't create artifacts"
-        echo "2. The artifact name is incorrect" 
+        echo "2. The artifact name is incorrect"
         echo "3. The artifacts expired"
         echo ""
         echo "Checking if we can build microservices locally instead..."
@@ -216,26 +216,32 @@ jobs:
         find ${{ env.BUILD_DIR }} -name "*_service" -type f
         ls -la ${{ env.BUILD_DIR }}/
 
-        # Make executable if they exist
-        if [ -f "${{ env.BUILD_DIR }}/services/users/users_service" ]; then
-          chmod +x ${{ env.BUILD_DIR }}/services/users/users_service
-          echo "users_service made executable"
+        # Find the actual location of executables
+        USERS_SERVICE=$(find ${{ env.BUILD_DIR }} -name "users_service" -type f | head -1)
+        ORDERS_SERVICE=$(find ${{ env.BUILD_DIR }} -name "orders_service" -type f | head -1)
+
+        if [ -n "$USERS_SERVICE" ] && [ -f "$USERS_SERVICE" ]; then
+          chmod +x "$USERS_SERVICE"
+          echo "users_service made executable at: $USERS_SERVICE"
         else
-          echo "ERROR: users_service not found at expected location"
-          echo "Looking for users_service anywhere..."
-          find ${{ env.BUILD_DIR }} -name "users_service" -type f
+          echo "ERROR: users_service not found anywhere"
           exit 1
         fi
 
-        if [ -f "${{ env.BUILD_DIR }}/services/orders/orders_service" ]; then
-          chmod +x ${{ env.BUILD_DIR }}/services/orders/orders_service
-          echo "orders_service made executable"
+        if [ -n "$ORDERS_SERVICE" ] && [ -f "$ORDERS_SERVICE" ]; then
+          chmod +x "$ORDERS_SERVICE"
+          echo "orders_service made executable at: $ORDERS_SERVICE"
         else
-          echo "ERROR: orders_service not found at expected location"
-          echo "Looking for orders_service anywhere..."
-          find ${{ env.BUILD_DIR }} -name "orders_service" -type f
+          echo "ERROR: orders_service not found anywhere"
           exit 1
         fi
+
+        # Create symlinks in expected locations for API Gateway
+        mkdir -p ${{ env.BUILD_DIR }}/services/users
+        mkdir -p ${{ env.BUILD_DIR }}/services/orders
+        ln -sf "$USERS_SERVICE" ${{ env.BUILD_DIR }}/services/users/users_service
+        ln -sf "$ORDERS_SERVICE" ${{ env.BUILD_DIR }}/services/orders/orders_service
+        echo "Created symlinks in expected locations"
 
     - name: Install API Gateway dependencies
       run: |
@@ -273,7 +279,7 @@ jobs:
         path: ${{ env.BUILD_DIR }}
       continue-on-error: true
       id: download-artifacts-integration
-      
+
     - name: Handle missing artifacts (Integration)
       if: steps.download-artifacts-integration.outcome == 'failure'
       run: |
@@ -290,25 +296,33 @@ jobs:
         echo "Checking downloaded artifacts for integration tests..."
         find ${{ env.BUILD_DIR }} -name "*_service" -type f
         ls -la ${{ env.BUILD_DIR }}/
-
-        # Make executable if they exist
-        if [ -f "${{ env.BUILD_DIR }}/services/users/users_service" ]; then
-          chmod +x ${{ env.BUILD_DIR }}/services/users/users_service
-          echo "users_service made executable"
+        
+        # Find the actual location of executables
+        USERS_SERVICE=$(find ${{ env.BUILD_DIR }} -name "users_service" -type f | head -1)
+        ORDERS_SERVICE=$(find ${{ env.BUILD_DIR }} -name "orders_service" -type f | head -1)
+        
+        if [ -n "$USERS_SERVICE" ] && [ -f "$USERS_SERVICE" ]; then
+          chmod +x "$USERS_SERVICE"
+          echo "users_service made executable at: $USERS_SERVICE"
         else
-          echo "ERROR: users_service not found"
-          find ${{ env.BUILD_DIR }} -name "users_service" -type f
+          echo "ERROR: users_service not found anywhere"
           exit 1
         fi
-
-        if [ -f "${{ env.BUILD_DIR }}/services/orders/orders_service" ]; then
-          chmod +x ${{ env.BUILD_DIR }}/services/orders/orders_service
-          echo "orders_service made executable"
+        
+        if [ -n "$ORDERS_SERVICE" ] && [ -f "$ORDERS_SERVICE" ]; then
+          chmod +x "$ORDERS_SERVICE"
+          echo "orders_service made executable at: $ORDERS_SERVICE"
         else
-          echo "ERROR: orders_service not found"
-          find ${{ env.BUILD_DIR }} -name "orders_service" -type f
+          echo "ERROR: orders_service not found anywhere"
           exit 1
         fi
+        
+        # Create symlinks in expected locations for API Gateway
+        mkdir -p ${{ env.BUILD_DIR }}/services/users
+        mkdir -p ${{ env.BUILD_DIR }}/services/orders
+        ln -sf "$USERS_SERVICE" ${{ env.BUILD_DIR }}/services/users/users_service
+        ln -sf "$ORDERS_SERVICE" ${{ env.BUILD_DIR }}/services/orders/orders_service
+        echo "Created symlinks in expected locations"
 
     - name: Install dependencies
       run: |
