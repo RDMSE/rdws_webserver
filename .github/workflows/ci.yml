@@ -188,7 +188,7 @@ jobs:
         echo "npm version: $(npm --version)"
 
     - name: Download microservices binaries
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         name: microservices-binaries-${{ github.run_number }}
         path: ${{ env.BUILD_DIR }}
@@ -273,7 +273,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Download microservices binaries
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         name: microservices-binaries-${{ github.run_number }}
         path: ${{ env.BUILD_DIR }}
