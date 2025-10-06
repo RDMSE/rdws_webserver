@@ -121,6 +121,67 @@ int main(int argc, char *argv[])
                 return 1;
             }
         }
+        else if (path.find("/users/") == 0 && path.find("/orders") != std::string::npos)
+        {
+            // Handle /users/{userId}/orders - Get orders for a specific user
+            try
+            {
+                // Extract userId from path like "/users/123/orders"
+                size_t userIdStart = path.find("/users/") + 7; // Skip "/users/"
+                size_t userIdEnd = path.find("/", userIdStart);
+
+                if (userIdEnd == std::string::npos)
+                {
+                    throw std::invalid_argument("Invalid path format");
+                }
+
+                int userId = std::stoi(path.substr(userIdStart, userIdEnd - userIdStart));
+
+                // Filter orders by userId
+                std::vector<Order> userOrders;
+                for (const auto &order : orders)
+                {
+                    if (order.userId == userId)
+                    {
+                        userOrders.push_back(order);
+                    }
+                }
+
+                // Return user orders in a specific format
+                std::ostringstream oss;
+                oss << "{"
+                    << "\"userId\":" << userId << ","
+                    << "\"orders\":[";
+
+                for (size_t i = 0; i < userOrders.size(); ++i)
+                {
+                    oss << orderToJson(userOrders[i]);
+                    if (i < userOrders.size() - 1)
+                    {
+                        oss << ",";
+                    }
+                }
+
+                oss << "],"
+                    << "\"total\":" << userOrders.size() << ","
+                    << "\"source\":\"orders_service C++ executable\","
+                    << "\"endpoint\":\"" << path << "\","
+                    << "\"timestamp\":" << std::time(nullptr)
+                    << "}";
+
+                std::cout << oss.str() << std::endl;
+                return 0;
+            }
+            catch (const std::exception &e)
+            {
+                std::cout << "{"
+                          << "\"error\":\"Invalid user ID or path format\","
+                          << "\"path\":\"" << path << "\","
+                          << "\"source\":\"orders_service C++ executable\""
+                          << "}" << std::endl;
+                return 1;
+            }
+        }
     }
 
     // MMethod not supported

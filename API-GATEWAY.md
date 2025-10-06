@@ -1,33 +1,34 @@
+````markdown
 # 🚀 API Gateway - C++ Microservices
 
-Um gateway unificado para acessar microserviços C++ através de uma interface HTTP simples e robusta.
+A unified gateway to access C++ microservices through a simple and robust HTTP interface.
 
-## 📋 Índice
+## 📋 Table of Contents
 
-- [Visão Geral](#visão-geral)
-- [Funcionalidades](#funcionalidades)
-- [Instalação e Execução](#instalação-e-execução)
+- [Overview](#overview)
+- [Features](#features)
+- [Installation and Execution](#installation-and-execution)
 - [API Endpoints](#api-endpoints)
-- [Exemplos de Uso](#exemplos-de-uso)
-- [Configuração](#configuração)
+- [Usage Examples](#usage-examples)
+- [Configuration](#configuration)
 - [Docker](#docker)
-- [Testes](#testes)
-- [Monitoramento](#monitoramento)
+- [Testing](#testing)
+- [Monitoring](#monitoring)
 
-## 🎯 Visão Geral
+## 🎯 Overview
 
-O API Gateway fornece uma interface HTTP unificada para acessar múltiplos microserviços C++ executáveis. Ele centraliza:
+The API Gateway provides a unified HTTP interface to access multiple C++ executable microservices. It centralizes:
 
-- **Roteamento** de requisições para microserviços apropriados
-- **Tratamento de erros** padronizado
-- **Logging** e rastreamento de requisições
-- **Validação** de parâmetros
-- **Monitoramento** de saúde dos serviços
+- **Routing** requests to appropriate microservices
+- **Error handling** standardization
+- **Logging** and request tracing
+- **Parameter validation**
+- **Service health monitoring**
 
-### Arquitetura
+### Architecture
 
 ```
-Client → API Gateway (porta 8080) → C++ Executáveis
+Client → API Gateway (port 8080) → C++ Executables
                 ↓
     ┌─────────────────┬─────────────────┐
     │ users_service   │ orders_service  │
@@ -35,46 +36,46 @@ Client → API Gateway (porta 8080) → C++ Executáveis
     └─────────────────┴─────────────────┘
 ```
 
-## ✨ Funcionalidades
+## ✨ Features
 
-- ✅ **Proxy transparente** para microserviços C++
-- ✅ **Tratamento de erros** robusto com códigos HTTP apropriados
-- ✅ **Request ID** para rastreamento de requisições
-- ✅ **Health checks** automáticos dos serviços
-- ✅ **Validação** de parâmetros de entrada
-- ✅ **Timeout** configurável para evitar travamentos
-- ✅ **CORS** e headers de segurança
-- ✅ **Logging** detalhado com timestamps
-- ✅ **Graceful shutdown** para deploy sem downtime
+- ✅ **Transparent proxy** for C++ microservices
+- ✅ **Robust error handling** with appropriate HTTP codes
+- ✅ **Request ID** for request tracing
+- ✅ **Automatic health checks** for services
+- ✅ **Input parameter validation**
+- ✅ **Configurable timeout** to prevent freezes
+- ✅ **CORS** and security headers
+- ✅ **Detailed logging** with timestamps
+- ✅ **Graceful shutdown** for zero-downtime deployments
 
-## 🚀 Instalação e Execução
+## 🚀 Installation and Execution
 
-### Requisitos
+### Requirements
 
 - Node.js 18+
-- C++ microserviços compilados em `./build/services/`
+- C++ microservices compiled in `./build/services/`
 
-### Instalação Local
+### Local Installation
 
 ```bash
-# 1. Instalar dependências
+# 1. Install dependencies
 npm install
 
-# 2. Compilar microserviços C++
+# 2. Compile C++ microservices
 mkdir -p build && cd build
 cmake .. && make
 
-# 3. Executar API Gateway
+# 3. Run API Gateway
 npm start
 
-# Ou para desenvolvimento (com auto-reload)
+# Or for development (with auto-reload)
 npm run dev
 ```
 
-### Verificação
+### Verification
 
 ```bash
-# Testar se está funcionando
+# Test if it's working
 curl http://localhost:8080/health
 ```
 
@@ -82,19 +83,19 @@ curl http://localhost:8080/health
 
 ### Base URL: `http://localhost:8080`
 
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| `GET` | `/health` | Status dos serviços e saúde do gateway |
-| `GET` | `/api-docs` | Documentação da API |
-| `GET` | `/users` | Listar todos os usuários |
-| `GET` | `/users/:id` | Obter usuário por ID |
-| `GET` | `/orders` | Listar todos os pedidos |
-| `GET` | `/orders/:id` | Obter pedido por ID |
-| `GET` | `/users/:userId/orders` | Obter pedidos de um usuário |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | Service status and gateway health |
+| `GET` | `/api-docs` | API documentation |
+| `GET` | `/users` | List all users |
+| `GET` | `/users/:id` | Get user by ID |
+| `GET` | `/orders` | List all orders |
+| `GET` | `/orders/:id` | Get order by ID |
+| `GET` | `/users/:userId/orders` | Get orders for a user |
 
-### Respostas
+### Responses
 
-Todas as respostas incluem metadados do gateway:
+All responses include gateway metadata:
 
 ```json
 {
@@ -110,7 +111,7 @@ Todas as respostas incluem metadados do gateway:
 }
 ```
 
-### Tratamento de Erros
+### Error Handling
 
 ```json
 {
@@ -121,9 +122,9 @@ Todas as respostas incluem metadados do gateway:
 }
 ```
 
-## 🧪 Exemplos de Uso
+## 🧪 Usage Examples
 
-### 1. Listar Usuários
+### 1. List Users
 
 ```bash
 curl -X GET http://localhost:8080/users
@@ -151,13 +152,13 @@ curl -X GET http://localhost:8080/users
 }
 ```
 
-### 2. Obter Usuário por ID
+### 2. Get User by ID
 
 ```bash
 curl -X GET http://localhost:8080/users/1
 ```
 
-### 3. Verificar Saúde dos Serviços
+### 3. Check Service Health
 
 ```bash
 curl -X GET http://localhost:8080/health
@@ -189,14 +190,14 @@ curl -X GET http://localhost:8080/health
 ### 4. JavaScript/Frontend
 
 ```javascript
-// Usando fetch
+// Using fetch
 const response = await fetch('http://localhost:8080/users');
 const data = await response.json();
 
 if (data.error) {
-    console.error('Erro:', data.message);
+    console.error('Error:', data.message);
 } else {
-    console.log('Usuários:', data.users);
+    console.log('Users:', data.users);
     console.log('Request ID:', data.gateway.requestId);
 }
 ```
@@ -210,23 +211,23 @@ response = requests.get('http://localhost:8080/orders')
 data = response.json()
 
 if data.get('error'):
-    print(f"Erro: {data['message']}")
+    print(f"Error: {data['message']}")
 else:
-    print(f"Pedidos: {len(data['orders'])}")
+    print(f"Orders: {len(data['orders'])}")
 ```
 
-## ⚙️ Configuração
+## ⚙️ Configuration
 
-### Variáveis de Ambiente
+### Environment Variables
 
-| Variável | Padrão | Descrição |
-|----------|--------|-----------|
-| `PORT` | `8080` | Porta do servidor |
-| `BUILD_PATH` | `./build` | Caminho para executáveis compilados |
-| `NODE_ENV` | `development` | Ambiente (development/production) |
-| `SERVICE_TIMEOUT` | `5000` | Timeout em ms para microserviços |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `8080` | Server port |
+| `BUILD_PATH` | `./build` | Path to compiled executables |
+| `NODE_ENV` | `development` | Environment (development/production) |
+| `SERVICE_TIMEOUT` | `5000` | Timeout in ms for microservices |
 
-### Exemplo
+### Example
 
 ```bash
 export PORT=3000
@@ -237,13 +238,13 @@ npm start
 
 ## 🐳 Docker
 
-### Construir Imagem
+### Build Image
 
 ```bash
 docker build -f Dockerfile.gateway -t api-gateway .
 ```
 
-### Executar Container
+### Run Container
 
 ```bash
 docker run -d \
@@ -256,84 +257,84 @@ docker run -d \
 ### Docker Compose
 
 ```bash
-# Executar apenas o gateway
+# Run gateway only
 docker-compose up api-gateway
 
-# Executar com funções serverless opcionais
+# Run with optional serverless functions
 docker-compose --profile serverless up
 ```
 
 ### Health Check
 
-O container inclui health check automático:
+The container includes automatic health check:
 
 ```bash
-docker ps  # Ver status de saúde
-docker logs api-gateway  # Ver logs
+docker ps  # View health status
+docker logs api-gateway  # View logs
 ```
 
-## 🧪 Testes
+## 🧪 Testing
 
-### Executar Testes
+### Run Tests
 
 ```bash
-# Todos os testes
+# All tests
 npm test
 
-# Testes em modo watch
+# Tests in watch mode
 npm run test:watch
 
-# Com coverage
+# With coverage
 npm test -- --coverage
 ```
 
-### Testes Incluídos
+### Included Tests
 
-- ✅ Validação de rotas
-- ✅ Tratamento de erros
-- ✅ Headers de segurança
+- ✅ Route validation
+- ✅ Error handling
+- ✅ Security headers
 - ✅ Request IDs
-- ✅ Integração com microserviços
+- ✅ Microservice integration
 - ✅ Health checks
 
-## 📊 Monitoramento
+## 📊 Monitoring
 
 ### Logs
 
-O gateway produz logs estruturados:
+The gateway produces structured logs:
 
 ```
 [abc123] Calling: "./build/services/users/users_service" "GET" "/users"
 [abc123] users completed in 23ms
 ```
 
-### Métricas via Health Endpoint
+### Metrics via Health Endpoint
 
-O endpoint `/health` fornece métricas em tempo real:
+The `/health` endpoint provides real-time metrics:
 
-- Status individual de cada serviço
-- Tempo de resposta dos serviços
-- Configuração atual do gateway
+- Individual service status
+- Service response times
+- Current gateway configuration
 
-### Rastreamento de Requisições
+### Request Tracing
 
-Cada requisição recebe um ID único que pode ser usado para rastreamento:
+Each request receives a unique ID that can be used for tracing:
 
-- Header `X-Request-ID` na resposta
-- Campo `requestId` no JSON de resposta
-- Logs com o Request ID
+- `X-Request-ID` header in response
+- `requestId` field in JSON response
+- Logs with Request ID
 
-## 🔧 Desenvolvimento
+## 🔧 Development
 
-### Estrutura do Projeto
+### Project Structure
 
 ```
-├── api-gateway.js          # Código principal do gateway
-├── package.json           # Dependências e scripts
-├── Dockerfile.gateway     # Container do gateway
-├── __tests__/            # Testes automatizados
+├── api-gateway.js          # Main gateway code
+├── package.json           # Dependencies and scripts
+├── Dockerfile.gateway     # Gateway container
+├── __tests__/            # Automated tests
 │   └── api-gateway.test.js
-└── build/                # Microserviços compilados
+└── build/                # Compiled microservices
     └── services/
         ├── users/
         │   └── users_service
@@ -341,37 +342,38 @@ Cada requisição recebe um ID único que pode ser usado para rastreamento:
             └── orders_service
 ```
 
-### Adicionando Novos Microserviços
+### Adding New Microservices
 
-1. **Compilar** o executável C++ em `build/services/nome/`
-2. **Adicionar rotas** no `api-gateway.js`
-3. **Incluir** no health check
-4. **Adicionar testes** em `__tests__/`
+1. **Compile** the C++ executable in `build/services/name/`
+2. **Add routes** in `api-gateway.js`
+3. **Include** in health check
+4. **Add tests** in `__tests__/`
 
 ### Debug
 
 ```bash
-# Executar com logs detalhados
+# Run with detailed logs
 DEBUG=* npm start
 
-# Executar em modo desenvolvimento
+# Run in development mode
 npm run dev
 ```
 
-## 🤝 Contribuição
+## 🤝 Contributing
 
-1. Faça fork do projeto
-2. Crie uma branch para sua feature
-3. Adicione testes para novas funcionalidades
-4. Execute `npm test` para verificar
-5. Envie um pull request
+1. Fork the project
+2. Create a branch for your feature
+3. Add tests for new functionality
+4. Run `npm test` to verify
+5. Submit a pull request
 
-## 📝 Licença
+## 📝 License
 
-MIT License - veja arquivo LICENSE para detalhes.
+MIT License - see LICENSE file for details.
 
 ---
 
-**🚀 API Gateway está pronto para produção!**
+**🚀 API Gateway is production ready!**
 
-Para suporte ou dúvidas, verifique os logs do container e o endpoint `/health` para diagnóstico.
+For support or questions, check container logs and the `/health` endpoint for diagnostics.
+````
