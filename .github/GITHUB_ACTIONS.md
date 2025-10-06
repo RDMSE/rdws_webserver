@@ -9,55 +9,30 @@ This project uses **self-hosted runners** running directly on your Fedora server
 - Faster builds - Local dependencies and caching
 - Resource efficiency - Uses your server directly
 - Same environment - Development = CI = Production
+- Sequential execution - Jobs run one at a time on the same runner
 
-## Runner Tags Strategy
+## Current Runner Configuration
 
-### Current Setup:
-Your runner should have these tags:
+### Runner Tags:
 ```
-self-hosted Linux X64 firmware fedora webserver
+self-hosted Linux X64 webserver fedora
 ```
 
 ### Workflow Targeting:
-- **Firmware builds**: `[self-hosted, Linux, X64, firmware, fedora]`
-- **Webserver builds**: `[self-hosted, Linux, X64, webserver, fedora]`
-
-This allows both projects to use the same runner but target specific tags.
+All workflows target: `[self-hosted, Linux, X64, webserver, fedora]`
 
 ## Required Configuration
 
-### 1. Add Webserver Tag to Your Runner
+### 1. Configure Runner with Webserver Tag
 
-If you need to add the `webserver` tag to your existing runner:
+Ensure your runner has the `webserver` tag:
 
-#### Option A: Re-configure runner
 ```bash
-# Navigate to your runner directory
-cd /path/to/your/runner
+# Configure runner with required tags
+./config.sh --url https://github.com/RDMSE/rdws_webserver --token YOUR_TOKEN --labels self-hosted,Linux,X64,webserver,fedora
 
-# Remove current configuration
-sudo ./svc.sh stop
-sudo ./svc.sh uninstall
-./config.sh remove --token YOUR_REMOVAL_TOKEN
-
-# Re-configure with additional tag
-./config.sh --url https://github.com/rdmeneze/rdws_webserver --token YOUR_NEW_TOKEN --labels self-hosted,Linux,X64,firmware,fedora,webserver
-
-# Reinstall service
+# Install as service
 sudo ./svc.sh install
-sudo ./svc.sh start
-```
-
-#### Option B: Edit runner configuration
-```bash
-# Navigate to runner directory
-cd /path/to/your/runner
-
-# Stop service
-sudo ./svc.sh stop
-
-# Edit .runner file and add webserver to labels
-# Restart service
 sudo ./svc.sh start
 ```
 
@@ -65,92 +40,145 @@ sudo ./svc.sh start
 
 Ensure your Fedora server has all dependencies:
 ```bash
-# Development tools (probably already installed)
-sudo dnf groupinstall -y "Development Tools" "Development Libraries"
-
-# Webserver specific dependencies
+# Development tools (auto-installed by workflows if missing)
+sudo dnf groupinstall -y "Development Tools"
 sudo dnf install -y cmake gcc-c++ make git curl
-sudo dnf install -y curl-devel rapidjson-devel gtest-devel gmock-devel
 
-# Pistache (if not already installed)
-sudo dnf install -y pistache-devel
+# Testing framework
+sudo dnf install -y gtest-devel gmock-devel
 
-# Optional: Code quality tools
-sudo dnf install -y clang-tools-extra  # for clang-format
+# Node.js (auto-installed by workflows if missing)
+sudo dnf install -y nodejs npm
+
+# PM2 for production deployment
+sudo npm install -g pm2
+
+# Firewall configuration
+sudo firewall-cmd --permanent --add-port=8080/tcp
+sudo firewall-cmd --reload
 ```
 
-## 🔄 Workflow Behaviors
+## Workflow Behaviors
 
 ### CI Workflow (`ci.yml`)
 **Triggers:** Push/PR to main/develop
 **Runner:** `[self-hosted, Linux, X64, webserver, fedora]`
+**Jobs:**
+1. **Build C++ Microservices** - Compiles users_service and orders_service
+2. **Test API Gateway** - Tests Node.js/TypeScript API Gateway with mocked microservices
+3. **Integration Tests** - End-to-end testing with real microservices
+4. **CI Summary** - Reports overall status
+
 **Actions:**
-- ✅ Builds natively on your Fedora server
-- ✅ Runs unit and integration tests
-- ✅ Code quality checks (if clang-format available)
-- ✅ Uploads artifacts
+- Auto-installs dependencies if missing (CMake, Node.js, Google Test)
+- Builds natively on your Fedora server
+- Runs comprehensive unit and integration tests
+- Uploads artifacts (binaries, test results)
+- Uses dynamic port allocation for testing
 
 ### Deploy Workflow (`deploy.yml`)
-**Triggers:** Push to main or manual
+**Triggers:** Push to main or manual dispatch
 **Runner:** `[self-hosted, Linux, X64, webserver, fedora]`
+**Jobs:**
+1. **Build** - Builds everything for production
+2. **Deploy** - Deploys to `/opt/rdws_webserver`
+3. **Post-Deploy Tests** - Validates deployment
+
 **Actions:**
-- ✅ Builds project locally
-- ✅ Runs tests locally
-- ✅ Deploys locally (no SSH needed!)
-- ✅ Restarts server locally
-- ✅ Health checks
+- Builds with Release configuration
+- Deploys directly to `/opt/rdws_webserver`
+- Uses PM2 for process management
+- Configures firewall (port 8080)
+- Performs health checks and load testing
+- No SSH needed - runs locally on server
 
 ### Release Workflow (`release.yml`)
-**Triggers:** Version tags or manual
+**Triggers:** Version tags (v*) or manual dispatch
 **Runner:** `[self-hosted, Linux, X64, webserver, fedora]`
 **Actions:**
-- ✅ Creates release builds
-- ✅ Packages with installation scripts
-- ✅ Creates GitHub releases
-- ✅ Optionally installs locally
+- Creates release builds
+- Generates changelog from git history
+- Packages with installation scripts
+- Creates Docker images
+- Creates GitHub releases with assets
+- Uploads .tar.gz, .zip, and Docker image
 
-## 🎯 How to Use
+## How to Use
 
 ### Running CI
-Push or create PR - CI runs automatically on your server.
+**Automatic:** Push or create PR - CI runs automatically
+```bash
+git push origin develop  # Triggers CI
+# or
+git push origin main     # Triggers CI + Deploy
+```
 
 ### Deploying
-**Automatic:** Push to main → Builds and deploys locally
-**Manual:** Actions → Deploy to Server → Run workflow
+**Automatic:** Push to main → Builds and deploys to `/opt/rdws_webserver`
+```bash
+git push origin main
+```
+
+**Manual:** Actions → Deploy API Gateway + Microservices → Run workflow
+- Can choose environment (production/staging)
+- Deploys using PM2 with health checks
 
 ### Creating Releases
+**Method 1: Tag-based (Recommended)**
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-## 💡 Advantages of Self-Hosted
+**Method 2: Manual**
+- Go to Actions → Release Microservices API Gateway
+- Enter version and prerelease status
+- Creates packages with installation scripts
+
+## Advantages of Self-Hosted
 
 ### vs. GitHub Hosted Runners:
-✅ **No dependency installation** - Everything already on server
-✅ **Faster builds** - No container startup time
-✅ **Local deployment** - No SSH/network overhead
-✅ **Resource control** - Use your server's full power
-✅ **Persistent state** - Cache between builds
-✅ **Same environment** - Dev = CI = Prod
+**No dependency installation** - Everything already on server
+**Faster builds** - No container startup time
+**Local deployment** - No SSH/network overhead
+**Resource control** - Use your server's full power
+**Persistent state** - Cache between builds
+**Same environment** - Dev = CI = Prod
 
 ### Concurrent Job Handling:
 - **Sequential execution** - One job at a time (default)
 - **Isolated workspaces** - Each repo gets separate `_work` directory
 - **Resource sharing** - Firmware and webserver builds queue up
 
-## 🔍 Monitoring
+## Monitoring
 
 ### Check Runner Status:
 ```bash
 # On your server, in runner directory
 ./run.sh --once  # Test run
 sudo systemctl status actions.runner.*  # If installed as service
+journalctl -u actions.runner.* -f  # Follow logs
 ```
 
 ### View Running Jobs:
 - GitHub repo → Actions tab
 - See which jobs are running/queued
+- Download artifacts (test results, binaries)
+
+### Check Deployment Status:
+```bash
+# PM2 status
+pm2 status
+pm2 logs api-gateway
+pm2 monit
+
+# Service health
+curl http://localhost:8080/health
+curl http://localhost:8080/users
+
+# Production directory
+ls -la /opt/rdws_webserver
+```
 
 ### Logs Location:
 ```bash
@@ -159,9 +187,14 @@ tail -f _diag/Runner_*.log
 
 # Job logs
 ls -la _work/
+
+# PM2 logs
+pm2 logs --lines 100
 ```
 
-## 🛠️ Troubleshooting
+## Troubleshooting
+
+## Troubleshooting
 
 ### Runner Not Picking Up Jobs
 ```bash
@@ -173,221 +206,111 @@ curl -I https://api.github.com
 
 # Check labels match
 cat .runner  # Should include webserver tag
+
+# Restart runner service
+sudo ./svc.sh stop
+sudo ./svc.sh start
 ```
 
 ### Build Failures
 ```bash
 # Check dependencies
-which cmake g++ pkg-config
-pkg-config --exists libpistache
+which cmake g++ node npm
+pkg-config --exists gtest
 
 # Check workspace
 ls -la _work/rdws_webserver/
+
+# View specific job logs in GitHub Actions tab
 ```
 
-### Conflicts with Firmware Builds
-- Jobs run sequentially by default
-- Check `_work/` directory for multiple workspaces
-- Monitor with `ps aux | grep cmake`
-
-## 🔄 Job Queue Management
-
-When both firmware and webserver jobs trigger:
-1. **First job runs** (e.g., firmware)
-2. **Second job queues** (e.g., webserver)
-3. **Automatic execution** when first completes
-4. **Clean isolation** - separate workspaces
-
-## 🚀 Next Steps
-
-1. ✅ **Add webserver tag** to existing runner
-2. ✅ **Test CI** by pushing to repo
-3. ✅ **Test deploy** by merging to main
-4. ✅ **Create first release** with version tag
-5. ✅ **Monitor performance** and adjust as needed
-
-## 📚 Benefits Summary
-
-**Simplified Setup** - No SSH keys or remote connections needed
-⚡ **Faster Execution** - Native builds without containers
-🔒 **Better Security** - No external SSH access required
-📈 **Resource Efficiency** - Direct use of server resources
-**Consistent Environment** - Same setup from dev to prod
-
-Your GitHub Actions now run directly on your server with the same environment as your development setup! 🚀
-
-## Workflow Triggers
-
-### CI Workflow (`ci.yml`)
-**Triggers:**
-- Push to `main` or `develop` branches
-- Pull requests to `main` branch
-
-**Actions:**
-- Builds project in Fedora container
-- Runs unit and integration tests
-- Performs security scan with CodeQL
-- Checks code formatting
-- Uploads test results and build artifacts
-
-### Deploy Workflow (`deploy.yml`)
-**Triggers:**
-- Push to `main` branch (automatic)
-- Manual trigger via GitHub Actions UI
-
-**Actions:**
-- Deploys code to server via rsync
-- Builds project on server
-- Runs tests on server
-- Restarts server
-- Performs health check
-- Notifies deployment status
-
-### Release Workflow (`release.yml`)
-**Triggers:**
-- Push of version tags (e.g., `v1.0.0`, `v2.1.0-beta`)
-- Manual trigger via GitHub Actions UI
-
-**Actions:**
-- Builds release version
-- Creates release package with binaries
-- Generates changelog from git commits
-- Creates GitHub release with assets
-- Optionally deploys to production (stable releases only)
-
-## 🏃 How to Use
-
-### Running CI
-CI runs automatically on pushes and PRs. No action needed.
-
-### Deploying to Server
-**Automatic:** Push to `main` branch
+### Deploy Failures
 ```bash
-git push origin main
+# Check PM2 status
+pm2 status
+pm2 logs api-gateway --err
+
+# Check port availability
+sudo netstat -tlnp | grep :8080
+
+# Check production directory
+ls -la /opt/rdws_webserver
+sudo chown -R $USER:$USER /opt/rdws_webserver
+
+# Manual health check
+curl -v http://localhost:8080/health
 ```
 
-**Manual:** Go to Actions → Deploy to Server → Run workflow
-
-### Creating Releases
-
-**Method 1: Tag-based (Recommended)**
+### TypeScript/Node.js Issues
 ```bash
-# Create and push a version tag
-git tag v1.0.0
-git push origin v1.0.0
+# Check TypeScript compilation
+cd /opt/rdws_webserver
+npx tsc api-gateway.ts --target es2020 --module commonjs
+
+# Test direct execution
+node --require ts-node/register api-gateway.ts
+
+# Check dependencies
+npm list ts-node typescript
 ```
 
-**Method 2: Manual**
-1. Go to Actions → Release → Run workflow
-2. Enter version (e.g., `v1.0.0`)
-3. Choose if pre-release or not
+## Job Queue Management
 
-### Version Naming Convention
-- `v1.0.0` - Stable release
-- `v1.0.0-beta` - Pre-release (beta)
-- `v1.0.0-alpha` - Pre-release (alpha)
-- `v1.0.0-rc.1` - Release candidate
+Since this uses a self-hosted runner:
+1. **Sequential execution** - Jobs run one at a time
+2. **Automatic queuing** - Multiple triggers queue up
+3. **Clean isolation** - Each job gets separate workspace
+4. **Resource sharing** - All workflows share the same runner
 
-## 📦 Release Packages
+## Project Structure
 
-Each release creates a package containing:
-- `rest_server` - Main server binary
-- `scripts/` - Management scripts
-- `install.sh` - Installation script
-- `start_server.sh` - Quick start script
-- `cpp-rest-server.service` - Systemd service file
-- `README.md` & `DEVELOPMENT.md` - Documentation
+### Artifacts Created:
+- **C++ microservices** (`users_service`, `orders_service`)
+- **Test results** (XML format, uploaded to GitHub)
+- **Release packages** (.tar.gz, .zip, Docker images)
+- **PM2 deployment** (production-ready process management)
 
-### Installing a Release
-```bash
-# Download from GitHub Releases
-wget https://github.com/rdmeneze/rdws_webserver/releases/latest/download/cpp-rest-server-1.0.0.tar.gz
-
-# Extract and install
-tar xzf cpp-rest-server-1.0.0.tar.gz
-cd cpp-rest-server-1.0.0
-./install.sh
-
-# Or with systemd service
-./install.sh --systemd
-sudo systemctl start cpp-rest-server
+### Deployment Structure:
+```
+/opt/rdws_webserver/
+├── api-gateway.ts          # Main API Gateway
+├── build/                  # C++ binaries
+│   └── services/
+│       ├── users/users_service
+│       └── orders/orders_service
+├── scripts/                # Management scripts
+├── package.json           # Node.js dependencies
+└── *.md                   # Documentation
 ```
 
-## 🔍 Monitoring
+## Next Steps
 
-### Check Workflow Status
-- Go to Actions tab in GitHub
-- View logs of each workflow run
-- Download artifacts (test results, binaries)
-
-### View Deployment Status
-- Check deploy workflow logs
-- Monitor server status via SSH
-- Check health endpoint: `curl http://your-server:9080/hello`
-
-## 🛠️ Troubleshooting
-
-### Common Issues
-
-#### SSH Connection Failed
-- Check `DEPLOY_SSH_KEY` secret is correct
-- Verify SSH key is added to server
-- Check `SERVER_HOST` and `SERVER_USER` secrets
-
-#### Build Failed
-- Check Fedora container compatibility
-- Verify all dependencies are installed
-- Review CMake configuration
-
-#### Deploy Failed
-- Check server disk space
-- Verify server is accessible
-- Check script permissions
-
-#### Tests Failed
-- Review test logs in workflow
-- Check if server environment matches CI
-- Verify test dependencies
-
-### Debug Tips
-
-#### Enable SSH Debug
-Temporarily add to deploy workflow:
-```yaml
-- name: Debug SSH
-  run: ssh -v ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "echo 'Debug connection'"
-```
-
-#### View Server Logs
-```bash
-ssh rdias@fedora-server.local "cd /home/rdias/sources/lab/rdws_webserver && tail -f server.log"
-```
-
-#### Manual Deploy Test
-```bash
-# Test rsync manually
-rsync -avz --exclude-from=.deployignore ./ rdias@fedora-server.local:/home/rdias/sources/lab/rdws_webserver/
-```
-
-## 🔒 Security Notes
-
-- SSH keys are stored as encrypted secrets
-- Only authorized contributors can trigger deploys
-- Production environment can have additional protection rules
-- CodeQL security scanning runs on every build
-- Dependencies are cached but verified each run
-
-## 🚀 Next Steps
-
-1. **Set up secrets** in GitHub repository settings
+1. **Verify runner configuration** with webserver tag
 2. **Test CI** by creating a pull request
 3. **Test deploy** by pushing to main branch
 4. **Create first release** by tagging a version
 5. **Monitor workflows** in GitHub Actions tab
+6. **Set up PM2 monitoring** for production
 
-## 📚 Additional Resources
+## Benefits Summary
+
+✅ **Simplified Setup** - No SSH keys or remote connections needed
+✅ **Faster Execution** - Native builds without containers
+✅ **Better Security** - No external SSH access required
+✅ **Resource Efficiency** - Direct use of server resources
+✅ **Consistent Environment** - Same setup from dev to prod
+✅ **Comprehensive Testing** - Unit, integration, and load tests
+✅ **Production Ready** - PM2 deployment with health checks
+
+Your GitHub Actions now run directly on your server with complete CI/CD pipeline!
+
+## Additional Resources
 
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
-- [GitHub Environments](https://docs.github.com/en/actions/deployment/targeting-different-environments)
-- [SSH Agent Action](https://github.com/webfactory/ssh-agent)
-- [CodeQL Analysis](https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors)
+- [Self-hosted Runners](https://docs.github.com/en/actions/hosting-your-own-runners)
+- [PM2 Documentation](https://pm2.keymetrics.io/docs/)
+- [TypeScript Node.js Guide](https://nodejs.org/en/docs/guides/nodejs-typescript/)
+
+---
+
+**Note:** This configuration is optimized for the RDWS microservices project with TypeScript API Gateway and C++ microservices running on a self-hosted Fedora server.
