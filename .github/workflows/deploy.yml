@@ -208,6 +208,37 @@ jobs:
         sudo firewall-cmd --permanent --add-port=8080/tcp || echo "Port 8080 already open"
         sudo firewall-cmd --reload || echo "Firewall reload failed"
 
+    - name: Setup PostgreSQL Database
+      run: |
+        cd ${{ env.PRODUCTION_DIR }}
+
+        echo "Setting up PostgreSQL database..."
+
+        # Make scripts executable
+        chmod +x scripts/setup-postgresql.sh
+        chmod +x scripts/migrate-database.sh
+
+        # Install PostgreSQL if not already installed
+        if ! command -v psql &> /dev/null; then
+          echo "Installing PostgreSQL..."
+          ./scripts/setup-postgresql.sh
+        else
+          echo "PostgreSQL already installed"
+          sudo systemctl start postgresql || echo "PostgreSQL already running"
+        fi
+
+        # Run database migrations for production
+        echo "Running database migrations..."
+        ./scripts/migrate-database.sh production migrate
+
+        # Run production seeds (minimal)
+        echo "Running production seeds..."
+        ./scripts/migrate-database.sh production seed || echo "Seeds failed (may be expected)"
+
+        # Show database status
+        echo "Database status:"
+        ./scripts/migrate-database.sh production status || echo "Status check failed"
+
     - name: Start API Gateway
       run: |
         cd ${{ env.PRODUCTION_DIR }}
