@@ -106,8 +106,6 @@ CREATE TABLE products (
 ### **Environments**
 - `rdws_development` - Local development
 - `rdws_production` - Production server
-- `rdws_test` - Testing
-
 ### **Connection Details**
 ```
 Host: localhost

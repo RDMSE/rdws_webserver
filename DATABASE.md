@@ -33,8 +33,6 @@ npm run db:setup:prod
 ### **Environments**
 - **Development**: `rdws_development`
 - **Production**: `rdws_production`
-- **Test**: `rdws_test`
-
 ### **Tables**
 - `users` - User accounts
 - `orders` - Order transactions

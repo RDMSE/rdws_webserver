@@ -22,16 +22,6 @@ const config = {
         password: process.env.DB_PASS || 'rdws_pass123',
         dialect: 'postgresql',
         logging: false
-    },
-
-    test: {
-        host: process.env.DB_HOST || 'localhost',
-        port: process.env.DB_PORT || 5432,
-        database: process.env.DB_NAME || 'rdws_test',
-        username: process.env.DB_USER || 'rdws_user',
-        password: process.env.DB_PASS || 'rdws_pass123',
-        dialect: 'postgresql',
-        logging: false
     }
 };
 

@@ -19,12 +19,9 @@ case $ENVIRONMENT in
     "development")
         DB_NAME="rdws_development"
         ;;
-    "test")
-        DB_NAME="rdws_test"
-        ;;
     *)
         echo "Invalid environment: $ENVIRONMENT"
-        echo "Usage: $0 [development|production|test] [migrate|seed|reset]"
+        echo "Usage: $0 [development|production] [migrate|seed|reset]"
         exit 1
         ;;
 esac
