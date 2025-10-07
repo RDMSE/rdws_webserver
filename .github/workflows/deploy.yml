@@ -232,6 +232,11 @@ jobs:
           sudo sed -i "s/peer$/md5/" /var/lib/pgsql/data/pg_hba.conf
           sudo systemctl restart postgresql
           sleep 3
+
+          # Fix permissions for existing installation
+          echo "Fixing database permissions..."
+          chmod +x scripts/fix-postgresql-permissions.sh
+          ./scripts/fix-postgresql-permissions.sh
         fi
 
         # Test connection before proceeding

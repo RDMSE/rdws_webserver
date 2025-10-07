@@ -32,7 +32,7 @@ sudo sed -i "s/ident$/md5/" /var/lib/pgsql/data/pg_hba.conf
 sudo sed -i "s/peer$/md5/" /var/lib/pgsql/data/pg_hba.conf
 
 # Restart PostgreSQL to apply configuration changes
-echo "🔄 Restarting PostgreSQL..."
+echo "Restarting PostgreSQL..."
 sudo systemctl restart postgresql
 
 # Wait a moment for restart
@@ -48,6 +48,20 @@ echo "Creating application user..."
 sudo -u postgres psql -c "CREATE USER rdws_user WITH PASSWORD 'rdws_pass123';" 2>/dev/null || echo "User already exists"
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE rdws_development TO rdws_user;"
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE rdws_production TO rdws_user;"
+
+# Grant schema permissions (PostgreSQL 15+ requirement)
+echo "Granting schema permissions..."
+sudo -u postgres psql -d rdws_development -c "GRANT ALL ON SCHEMA public TO rdws_user;"
+sudo -u postgres psql -d rdws_development -c "GRANT CREATE ON SCHEMA public TO rdws_user;"
+sudo -u postgres psql -d rdws_production -c "GRANT ALL ON SCHEMA public TO rdws_user;"
+sudo -u postgres psql -d rdws_production -c "GRANT CREATE ON SCHEMA public TO rdws_user;"
+
+# Set default privileges for future objects
+echo "🛡️ Setting default privileges..."
+sudo -u postgres psql -d rdws_development -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO rdws_user;"
+sudo -u postgres psql -d rdws_development -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO rdws_user;"
+sudo -u postgres psql -d rdws_production -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO rdws_user;"
+sudo -u postgres psql -d rdws_production -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO rdws_user;"
 
 # Show status
 echo "PostgreSQL setup complete!"
