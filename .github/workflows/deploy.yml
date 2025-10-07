@@ -220,22 +220,28 @@ jobs:
 
                 # Install PostgreSQL if not already installed
         if ! command -v psql &> /dev/null; then
-          echo "📦 Installing PostgreSQL..."
+          echo "Installing PostgreSQL..."
           ./scripts/setup-postgresql.sh
         else
-          echo "✅ PostgreSQL already installed"
+          echo "PostgreSQL already installed"
 
           # Ensure configuration is correct for existing installation
-          echo "🔧 Updating PostgreSQL configuration..."
-          sudo sed -i "s/ident$/md5/" /var/lib/pgsql/data/pg_hba.conf
-          sudo sed -i "s/peer$/md5/" /var/lib/pgsql/data/pg_hba.conf
-          sudo systemctl restart postgresql
-          sleep 3
+          echo "Updating PostgreSQL configuration..."
 
-          # Run quick setup (creates DBs, user, permissions)
-          echo "⚡ Running quick PostgreSQL setup..."
-          chmod +x scripts/quick-postgresql-setup.sh
-          timeout 120 ./scripts/quick-postgresql-setup.sh
+          # Fix authentication for local connections
+          echo "Configuring authentication..."
+          sudo sed -i "s/local   all             postgres                                peer/local   all             postgres                                trust/" /var/lib/pgsql/data/pg_hba.conf
+          sudo sed -i "s/local   all             all                                     peer/local   all             all                                     md5/" /var/lib/pgsql/data/pg_hba.conf
+          sudo sed -i "s/host    all             all             127.0.0.1\/32            ident/host    all             all             127.0.0.1\/32            md5/" /var/lib/pgsql/data/pg_hba.conf
+          sudo sed -i "s/host    all             all             ::1\/128                 ident/host    all             all             ::1\/128                 md5/" /var/lib/pgsql/data/pg_hba.conf
+
+          sudo systemctl restart postgresql
+          sleep 5
+
+          # Run simple setup (creates DBs, user, permissions)
+          echo "Running simple PostgreSQL setup..."
+          chmod +x scripts/simple-postgresql-setup.sh
+          timeout 180 ./scripts/simple-postgresql-setup.sh
         fi
 
         # Test connection before proceeding
@@ -243,17 +249,29 @@ jobs:
         chmod +x scripts/test-postgresql.sh
         ./scripts/test-postgresql.sh || echo "Connection test completed with warnings"
 
-        # Run database migrations for production
+        # Run database migrations for both environments
         echo "Running database migrations..."
+        echo "Production environment:"
         ./scripts/migrate-database.sh production migrate
 
-        # Run production seeds (minimal)
-        echo "Running production seeds..."
-        ./scripts/migrate-database.sh production seed || echo "Seeds failed (may be expected)"
+        echo "Development environment:"
+        ./scripts/migrate-database.sh development migrate
 
-        # Show database status
+        # Run seeds for both environments
+        echo "Running database seeds..."
+        echo "Production seeds (minimal):"
+        ./scripts/migrate-database.sh production seed || echo "Production seeds failed (may be expected)"
+
+        echo "Development seeds (rich data):"
+        ./scripts/migrate-database.sh development seed || echo "Development seeds failed (may be expected)"
+
+        # Show database status for both
         echo "Database status:"
-        ./scripts/migrate-database.sh production status || echo "Status check failed"
+        echo "Production database:"
+        ./scripts/migrate-database.sh production status || echo "Production status check failed"
+
+        echo "Development database:"
+        ./scripts/migrate-database.sh development status || echo "Development status check failed"
 
     - name: Start API Gateway
       run: |
