@@ -1,128 +1,129 @@
-# 🚀 Deploy Rápido no Fedora Server
+````markdown
+# Quick Fedora Server Deployment
 
-Este guia apresenta a forma mais rápida de fazer deploy do API Gateway no Fedora Server.
+This guide presents the fastest way to deploy the API Gateway on Fedora Server.
 
-## ⚡ Deploy em 1 Comando
+## 1-Command Deployment
 
 ```bash
-# Download e execução do script automatizado
+# Download and execute automated script
 curl -fsSL https://raw.githubusercontent.com/RDMSE/rdws_webserver/14-featureserverinfra-enable-servless-archtecture/scripts/deploy-fedora.sh | bash
 ```
 
-## 📋 O que o script faz automaticamente:
+## What the script does automatically:
 
-1. ✅ **Verifica dependências** (Node.js, CMake, build tools)
-2. ✅ **Instala dependências faltantes** (se executado como root)
-3. ✅ **Clona/atualiza o repositório** em `/opt/rdws_webserver`
-4. ✅ **Compila os microserviços C++**
-5. ✅ **Configura o firewall** (porta 8080)
-6. ✅ **Inicia o serviço** (PM2, Docker ou systemd)
-7. ✅ **Verifica saúde** do serviço
+1. **Checks dependencies** (Node.js, CMake, build tools)
+2. **Installs missing dependencies** (if run as root)
+3. **Clones/updates repository** to `/opt/rdws_webserver`
+4. **Compiles C++ microservices**
+5. **Configures firewall** (port 8080)
+6. **Starts service** (PM2, Docker or systemd)
+7. **Verifies service health**
 
-## 🔧 Deploy Manual Passo a Passo
+## Manual Step-by-Step Deployment
 
-Se preferir fazer manualmente:
+If you prefer to do it manually:
 
-### 1. Preparar Sistema
+### 1. Prepare System
 ```bash
-# Atualizar sistema
+# Update system
 sudo dnf update -y
 
-# Instalar dependências
+# Install dependencies
 sudo dnf groupinstall -y "Development Tools"
 sudo dnf install -y cmake gcc-c++ git nodejs npm
 
-# Instalar PM2 (recomendado)
+# Install PM2 (recommended)
 sudo npm install -g pm2
 ```
 
-### 2. Fazer Deploy
+### 2. Deploy
 ```bash
-# Clonar projeto
+# Clone project
 sudo git clone https://github.com/RDMSE/rdws_webserver.git /opt/rdws_webserver
 sudo chown -R $USER:$USER /opt/rdws_webserver
 cd /opt/rdws_webserver
 
-# Checkout da branch
+# Checkout branch
 git checkout 14-featureserverinfra-enable-servless-archtecture
 
-# Instalar dependências Node.js
+# Install Node.js dependencies
 npm install --production
 
-# Compilar microserviços
+# Compile microservices
 mkdir -p build && cd build
 cmake .. && make -j$(nproc)
 cd ..
 
-# Configurar firewall
+# Configure firewall
 sudo firewall-cmd --permanent --add-port=8080/tcp
 sudo firewall-cmd --reload
 
-# Iniciar com PM2
+# Start with PM2
 pm2 start api-gateway.js --name api-gateway
 pm2 save && pm2 startup
 ```
 
-### 3. Verificar Deploy
+### 3. Verify Deployment
 ```bash
-# Executar verificação completa
+# Run complete verification
 ./scripts/verify-deploy.sh
 
-# Ou teste manual
+# Or manual test
 curl http://localhost:8080/health
 ```
 
-## 🌐 Acessar de Outras Máquinas
+## Access from Other Machines
 
 ```bash
-# Substituir SEU_IP pelo IP do servidor
-curl http://SEU_IP:8080/health
-curl http://SEU_IP:8080/users
-curl http://SEU_IP:8080/orders
+# Replace YOUR_IP with server IP
+curl http://YOUR_IP:8080/health
+curl http://YOUR_IP:8080/users
+curl http://YOUR_IP:8080/orders
 ```
 
-## 🔧 Gerenciamento do Serviço
+## Service Management
 
-### PM2 (Recomendado)
+### PM2 (Recommended)
 ```bash
 pm2 status                # Status
 pm2 logs api-gateway      # Logs
-pm2 restart api-gateway   # Reiniciar
-pm2 stop api-gateway      # Parar
+pm2 restart api-gateway   # Restart
+pm2 stop api-gateway      # Stop
 pm2 monit                 # Monitor
 ```
 
 ### Docker
 ```bash
 docker ps                      # Status
-docker logs api-gateway        # Logs  
-docker restart api-gateway     # Reiniciar
-docker stop api-gateway        # Parar
+docker logs api-gateway        # Logs
+docker restart api-gateway     # Restart
+docker stop api-gateway        # Stop
 ```
 
 ### Systemd
 ```bash
 sudo systemctl status api-gateway     # Status
 sudo journalctl -u api-gateway -f     # Logs
-sudo systemctl restart api-gateway    # Reiniciar
-sudo systemctl stop api-gateway       # Parar
+sudo systemctl restart api-gateway    # Restart
+sudo systemctl stop api-gateway       # Stop
 ```
 
-## 🆘 Solução de Problemas
+## Troubleshooting
 
-### Verificar se está rodando
+### Check if running
 ```bash
-# Verificar processos
+# Check processes
 ps aux | grep api-gateway
 
-# Verificar porta
+# Check port
 sudo netstat -tlnp | grep :8080
 
-# Teste básico
+# Basic test
 curl http://localhost:8080/health
 ```
 
-### Logs de Debug
+### Debug Logs
 ```bash
 # PM2
 pm2 logs api-gateway --err
@@ -134,40 +135,40 @@ docker logs api-gateway
 sudo journalctl -u api-gateway --since "5 minutes ago"
 ```
 
-### Recompilar Microserviços
+### Recompile Microservices
 ```bash
 cd /opt/rdws_webserver/build
 make clean && make -j$(nproc)
 
-# Reiniciar serviço após recompilação
+# Restart service after recompilation
 pm2 restart api-gateway
 ```
 
 ### Firewall
 ```bash
-# Verificar se porta está aberta
+# Check if port is open
 sudo firewall-cmd --list-ports
 
-# Abrir porta se necessário
+# Open port if needed
 sudo firewall-cmd --permanent --add-port=8080/tcp
 sudo firewall-cmd --reload
 ```
 
-## 📊 Endpoints Disponíveis
+## Available Endpoints
 
-| Endpoint | Descrição |
-|----------|-----------|
-| `GET /health` | Status dos serviços |
-| `GET /users` | Lista usuários |
-| `GET /users/:id` | Usuário por ID |
-| `GET /orders` | Lista pedidos |
-| `GET /orders/:id` | Pedido por ID |
-| `GET /users/:userId/orders` | Pedidos de um usuário |
-| `GET /api-docs` | Documentação da API |
+| Endpoint | Description |
+|----------|-------------|
+| `GET /health` | Service status |
+| `GET /users` | List users |
+| `GET /users/:id` | User by ID |
+| `GET /orders` | List orders |
+| `GET /orders/:id` | Order by ID |
+| `GET /users/:userId/orders` | Orders for a user |
+| `GET /api-docs` | API documentation |
 
-## 🔄 Atualização
+## Updates
 
-Para atualizar o código:
+To update the code:
 
 ```bash
 cd /opt/rdws_webserver
@@ -177,12 +178,12 @@ cd build && make -j$(nproc) && cd ..
 pm2 restart api-gateway
 ```
 
-## ✅ Verificação de Sucesso
+## Success Verification
 
-Se tudo deu certo, você deve ver:
+If everything worked correctly, you should see:
 
 ```bash
-$ curl http://SEU_IP:8080/health
+$ curl http://YOUR_IP:8080/health
 {
   "status": "ok",
   "timestamp": "2025-10-03T10:00:00.000Z",
@@ -193,13 +194,15 @@ $ curl http://SEU_IP:8080/health
 }
 ```
 
-## 🎉 Pronto!
+## Done!
 
-Seu API Gateway está rodando! Acesse:
-- **API:** http://SEU_IP:8080
-- **Health:** http://SEU_IP:8080/health  
-- **Docs:** http://SEU_IP:8080/api-docs
+Your API Gateway is running! Access:
+- **API:** http://YOUR_IP:8080
+- **Health:** http://YOUR_IP:8080/health
+- **Docs:** http://YOUR_IP:8080/api-docs
 
 ---
 
-**Para suporte detalhado, consulte: [DEPLOY-FEDORA.md](DEPLOY-FEDORA.md)**
+**For detailed support, see: [DEPLOY-FEDORA.md](DEPLOY-FEDORA.md)**
+
+````

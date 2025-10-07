@@ -10,7 +10,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_FLAGS "-O2 -Wall -Wextra")
 
 # Add executable
+# Create standalone orders service executable
 add_executable(orders_service main.cpp)
+
+# Link with static libgcc to reduce dependencies
+set_target_properties(orders_service PROPERTIES
+    LINK_FLAGS "-static-libgcc"
+)
 
 # Install target
 install(TARGETS orders_service DESTINATION bin)

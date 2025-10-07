@@ -27,7 +27,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         fetch-depth: 0  # Need full history for changelog
 
@@ -51,20 +51,20 @@ jobs:
     - name: Verify and install dependencies
       run: |
         echo "Verifying environment for release build..."
-        
+
         # Install Node.js if needed
         if ! command -v node &> /dev/null; then
           echo "Installing Node.js..."
           curl -fsSL https://rpm.nodesource.com/setup_lts.x | sudo bash -
           sudo dnf install -y nodejs
         fi
-        
+
         # Install build tools if needed
         if ! command -v cmake &> /dev/null; then
           echo "Installing build tools..."
           sudo dnf install -y cmake gcc-c++ make
         fi
-        
+
         echo "Node.js version: $(node --version)"
         echo "CMake version: $(cmake --version | head -1)"
 
@@ -73,7 +73,7 @@ jobs:
         cd build
         cmake .. -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DCMAKE_CXX_STANDARD=17 -G "Unix Makefiles"
         make -j$(nproc)
-        
+
         echo "Verifying microservices..."
         ./services/users/users_service "GET" "/users" | head -2
         ./services/orders/orders_service "GET" "/orders" | head -2
@@ -87,10 +87,10 @@ jobs:
       id: changelog
       run: |
         echo "Generating changelog..."
-        
+
         # Get previous tag for changelog
         PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-        
+
         if [ -n "$PREV_TAG" ]; then
           echo "Changes since $PREV_TAG:" > CHANGELOG.md
           git log --pretty=format:"- %s (%h)" $PREV_TAG..HEAD >> CHANGELOG.md
@@ -98,7 +98,7 @@ jobs:
           echo "Initial release" > CHANGELOG.md
           git log --pretty=format:"- %s (%h)" >> CHANGELOG.md
         fi
-        
+
         echo "changelog<<EOF" >> $GITHUB_OUTPUT
         cat CHANGELOG.md >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
@@ -106,74 +106,74 @@ jobs:
     - name: Create release packages
       run: |
         VERSION="${{ steps.version.outputs.version }}"
-        
+
         echo "Creating release packages for $VERSION..."
-        
+
         # Create binary package
         mkdir -p packages/rdws-microservices-$VERSION
-        
+
         # Copy microservices binaries
         cp -r build/services packages/rdws-microservices-$VERSION/
-        
+
         # Copy API Gateway and dependencies
         cp api-gateway.js packages/rdws-microservices-$VERSION/
         cp package*.json packages/rdws-microservices-$VERSION/
-        
+
         # Copy documentation and scripts
         cp -r scripts packages/rdws-microservices-$VERSION/
         cp README.md API-GATEWAY.md DEPLOY-*.md packages/rdws-microservices-$VERSION/
-        
+
         # Copy Docker files
         cp Dockerfile.gateway docker-compose.yml packages/rdws-microservices-$VERSION/
-        
+
         # Create installation script
         cat > packages/rdws-microservices-$VERSION/install.sh << 'EOF'
         #!/bin/bash
         echo "Installing RDWS Microservices API Gateway..."
-        
+
         # Install to /opt if run as root, otherwise to ~/rdws_webserver
         if [ "$EUID" -eq 0 ]; then
           INSTALL_DIR="/opt/rdws_webserver"
         else
           INSTALL_DIR="$HOME/rdws_webserver"
         fi
-        
+
         echo "Installing to: $INSTALL_DIR"
         mkdir -p "$INSTALL_DIR"
         cp -r * "$INSTALL_DIR/"
         chmod +x "$INSTALL_DIR/scripts/"*.sh
-        
+
         echo "Installation completed!"
         echo "To start: cd $INSTALL_DIR && npm install && npm start"
         EOF
-        
+
         chmod +x packages/rdws-microservices-$VERSION/install.sh
-        
+
         # Create tarball
         cd packages
         tar -czf rdws-microservices-$VERSION.tar.gz rdws-microservices-$VERSION/
-        
+
         # Create zip
         zip -r rdws-microservices-$VERSION.zip rdws-microservices-$VERSION/
-        
+
         cd ..
-        
+
         echo "Release packages created:"
         ls -la packages/
 
     - name: Create Docker image
       run: |
         VERSION="${{ steps.version.outputs.version_number }}"
-        
+
         echo "Building Docker image for version $VERSION..."
-        
+
         # Build the API Gateway image
         docker build -f Dockerfile.gateway -t rdws-api-gateway:$VERSION .
         docker tag rdws-api-gateway:$VERSION rdws-api-gateway:latest
-        
+
         # Save Docker image as file
         docker save rdws-api-gateway:$VERSION | gzip > packages/rdws-api-gateway-$VERSION.tar.gz
-        
+
         echo "Docker image created and saved"
 
     - name: Create GitHub Release
@@ -186,55 +186,55 @@ jobs:
         release_name: ${{ steps.version.outputs.version }}
         body: |
           # 🚀 RDWS Microservices API Gateway ${{ steps.version.outputs.version }}
-          
+
           ## 📦 What's Included
-          
+
           - **C++ Microservices**: `users_service`, `orders_service`
           - **API Gateway**: Node.js Express server with proxy functionality
           - **Deploy Scripts**: Automated deployment for Fedora Server
           - **Docker Support**: Complete containerization setup
           - **Documentation**: Complete setup and API documentation
-          
+
           ## 📋 Quick Install
-          
+
           ```bash
           # Download and extract
           wget https://github.com/RDMSE/rdws_webserver/releases/download/${{ steps.version.outputs.version }}/rdws-microservices-${{ steps.version.outputs.version }}.tar.gz
           tar -xzf rdws-microservices-${{ steps.version.outputs.version }}.tar.gz
           cd rdws-microservices-${{ steps.version.outputs.version }}
-          
+
           # Install
           ./install.sh
-          
+
           # Start
           npm install && npm start
           ```
-          
+
           ## 🐳 Docker Install
-          
+
           ```bash
           # Load Docker image
           docker load < rdws-api-gateway-${{ steps.version.outputs.version_number }}.tar.gz
-          
+
           # Run
           docker run -d -p 8080:8080 rdws-api-gateway:${{ steps.version.outputs.version_number }}
           ```
-          
+
           ## 📡 API Endpoints
-          
+
           - `GET /health` - Service health check
-          - `GET /users` - List all users  
+          - `GET /users` - List all users
           - `GET /orders` - List all orders
           - `GET /api-docs` - API documentation
-          
+
           ## 📖 Documentation
-          
+
           - [API Gateway Guide](API-GATEWAY.md)
           - [Fedora Deploy Guide](DEPLOY-FEDORA.md)
           - [Quick Deploy Guide](DEPLOY-QUICK.md)
-          
+
           ## 🔄 Changelog
-          
+
           ${{ steps.changelog.outputs.changelog }}
         draft: false
         prerelease: ${{ github.event.inputs.prerelease || false }}
@@ -275,6 +275,6 @@ jobs:
         echo ""
         echo "📦 Assets uploaded:"
         echo "  - rdws-microservices-${{ steps.version.outputs.version }}.tar.gz"
-        echo "  - rdws-microservices-${{ steps.version.outputs.version }}.zip" 
+        echo "  - rdws-microservices-${{ steps.version.outputs.version }}.zip"
         echo "  - rdws-api-gateway-${{ steps.version.outputs.version_number }}.tar.gz"
         echo ""
