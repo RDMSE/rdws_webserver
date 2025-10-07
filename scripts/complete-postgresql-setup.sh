@@ -12,12 +12,27 @@ echo "Checking PostgreSQL status..."
 if ! sudo systemctl is-active --quiet postgresql; then
     echo "Starting PostgreSQL..."
     sudo systemctl start postgresql
+    sleep 2
 fi
 
-# Create databases if they don't exist
+# Create databases if they don't exist (with timeout)
 echo "Creating databases..."
-sudo -u postgres createdb rdws_development 2>/dev/null || echo "Development DB already exists"
-sudo -u postgres createdb rdws_production 2>/dev/null || echo "Production DB already exists"
+timeout 30 sudo -u postgres createdb rdws_development 2>/dev/null || echo "Development DB already exists or creation failed"
+timeout 30 sudo -u postgres createdb rdws_production 2>/dev/null || echo "Production DB already exists or creation failed"
+
+# Verify databases exist
+echo "Verifying databases..."
+if sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw rdws_development; then
+    echo "rdws_development exists"
+else
+    echo "rdws_development not found"
+fi
+
+if sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw rdws_production; then
+    echo "rdws_production exists"
+else
+    echo "rdws_production not found"
+fi
 
 # Create user if doesn't exist and grant database privileges
 echo "Setting up user and database privileges..."

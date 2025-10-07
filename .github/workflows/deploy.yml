@@ -220,22 +220,22 @@ jobs:
 
                 # Install PostgreSQL if not already installed
         if ! command -v psql &> /dev/null; then
-          echo "Installing PostgreSQL..."
+          echo "📦 Installing PostgreSQL..."
           ./scripts/setup-postgresql.sh
         else
-          echo "PostgreSQL already installed"
+          echo "✅ PostgreSQL already installed"
 
           # Ensure configuration is correct for existing installation
-          echo "Updating PostgreSQL configuration..."
+          echo "🔧 Updating PostgreSQL configuration..."
           sudo sed -i "s/ident$/md5/" /var/lib/pgsql/data/pg_hba.conf
           sudo sed -i "s/peer$/md5/" /var/lib/pgsql/data/pg_hba.conf
           sudo systemctl restart postgresql
           sleep 3
 
-          # Run complete setup (creates DBs, user, permissions)
-          echo "Running complete PostgreSQL setup..."
-          chmod +x scripts/complete-postgresql-setup.sh
-          ./scripts/complete-postgresql-setup.sh
+          # Run quick setup (creates DBs, user, permissions)
+          echo "⚡ Running quick PostgreSQL setup..."
+          chmod +x scripts/quick-postgresql-setup.sh
+          timeout 120 ./scripts/quick-postgresql-setup.sh
         fi
 
         # Test connection before proceeding
