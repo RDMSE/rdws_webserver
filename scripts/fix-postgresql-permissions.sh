@@ -7,12 +7,21 @@ set -e
 echo "Fixing PostgreSQL Permissions"
 echo "================================="
 
+# First, check if databases exist
+echo "Checking if databases exist..."
+sudo -u postgres psql -l | grep rdws || echo "No rdws databases found"
+
 echo "Granting schema permissions to rdws_user..."
 
 # Grant schema permissions for development database
 echo "Development database permissions..."
-sudo -u postgres psql -d rdws_development -c "GRANT ALL ON SCHEMA public TO rdws_user;" 2>/dev/null || echo "Development DB not found"
-sudo -u postgres psql -d rdws_development -c "GRANT CREATE ON SCHEMA public TO rdws_user;" 2>/dev/null || echo "Development DB not found"
+if sudo -u postgres psql -d rdws_development -c "SELECT 1;" 2>/dev/null; then
+    sudo -u postgres psql -d rdws_development -c "GRANT ALL ON SCHEMA public TO rdws_user;"
+    sudo -u postgres psql -d rdws_development -c "GRANT CREATE ON SCHEMA public TO rdws_user;"
+    echo "Development permissions applied"
+else
+    echo "Development database not found"
+fi
 
 # Grant schema permissions for production database
 echo "Production database permissions..."

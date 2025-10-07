@@ -218,13 +218,12 @@ jobs:
         chmod +x scripts/setup-postgresql.sh
         chmod +x scripts/migrate-database.sh
 
-        # Install PostgreSQL if not already installed
+                # Install PostgreSQL if not already installed
         if ! command -v psql &> /dev/null; then
           echo "Installing PostgreSQL..."
           ./scripts/setup-postgresql.sh
         else
           echo "PostgreSQL already installed"
-          sudo systemctl start postgresql || echo "PostgreSQL already running"
 
           # Ensure configuration is correct for existing installation
           echo "Updating PostgreSQL configuration..."
@@ -233,10 +232,10 @@ jobs:
           sudo systemctl restart postgresql
           sleep 3
 
-          # Fix permissions for existing installation
-          echo "Fixing database permissions..."
-          chmod +x scripts/fix-postgresql-permissions.sh
-          ./scripts/fix-postgresql-permissions.sh
+          # Run complete setup (creates DBs, user, permissions)
+          echo "Running complete PostgreSQL setup..."
+          chmod +x scripts/complete-postgresql-setup.sh
+          ./scripts/complete-postgresql-setup.sh
         fi
 
         # Test connection before proceeding
