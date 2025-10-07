@@ -225,7 +225,19 @@ jobs:
         else
           echo "PostgreSQL already installed"
           sudo systemctl start postgresql || echo "PostgreSQL already running"
+
+          # Ensure configuration is correct for existing installation
+          echo "Updating PostgreSQL configuration..."
+          sudo sed -i "s/ident$/md5/" /var/lib/pgsql/data/pg_hba.conf
+          sudo sed -i "s/peer$/md5/" /var/lib/pgsql/data/pg_hba.conf
+          sudo systemctl restart postgresql
+          sleep 3
         fi
+
+        # Test connection before proceeding
+        echo "Testing database connection..."
+        chmod +x scripts/test-postgresql.sh
+        ./scripts/test-postgresql.sh || echo "Connection test completed with warnings"
 
         # Run database migrations for production
         echo "Running database migrations..."

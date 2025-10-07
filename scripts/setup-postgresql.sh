@@ -22,8 +22,21 @@ sudo systemctl start postgresql
 sudo systemctl enable postgresql
 
 # Configure PostgreSQL for remote connections (if needed)
-echo "Configuring PostgreSQL..."
+echo "⚙️ Configuring PostgreSQL..."
 sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres123';"
+
+# Configure authentication to allow password authentication
+echo "🔐 Configuring authentication..."
+sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = 'localhost'/" /var/lib/pgsql/data/postgresql.conf
+sudo sed -i "s/ident$/md5/" /var/lib/pgsql/data/pg_hba.conf
+sudo sed -i "s/peer$/md5/" /var/lib/pgsql/data/pg_hba.conf
+
+# Restart PostgreSQL to apply configuration changes
+echo "🔄 Restarting PostgreSQL..."
+sudo systemctl restart postgresql
+
+# Wait a moment for restart
+sleep 3
 
 # Create application databases
 echo "Creating application databases..."
