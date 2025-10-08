@@ -7,18 +7,11 @@ set -e
 ENVIRONMENT=${1:-development}
 ACTION=${2:-migrate}
 
-echo "Database Migration Script"
-echo "Environment: $ENVIRONMENT"
-echo "Action: $ACTION"
 
-# Database configuration
+# validate $ENVIRONMENT
 case $ENVIRONMENT in
-    "production")
-        DB_NAME="rdws_production"
-        ;;
-    "development")
-        DB_NAME="rdws_development"
-        ;;
+    "production") ;;
+    "development") ;;
     *)
         echo "Invalid environment: $ENVIRONMENT"
         echo "Usage: $0 [development|production] [migrate|seed|reset]"
@@ -26,10 +19,12 @@ case $ENVIRONMENT in
         ;;
 esac
 
-DB_USER="rdws_user"
-DB_PASS="rdws_pass123"
-DB_HOST="localhost"
-DB_PORT="5432"
+
+echo "Database Migration Script"
+echo "Environment: $ENVIRONMENT"
+echo "Action: $ACTION"
+
+source "$(dirname "$0")/load_env.sh" "$ENVIRONMENT"
 
 echo "Target database: $DB_NAME"
 

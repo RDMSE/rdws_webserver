@@ -170,7 +170,7 @@ if test_endpoint "/nonexistent" "404 handling" 404; then
 fi
 
 echo ""
-print_status "⚡ Performance tests..."
+print_status "Performance tests..."
 
 # Testes de performance
 if command -v bc > /dev/null; then
