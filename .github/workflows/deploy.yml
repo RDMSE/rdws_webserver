@@ -290,6 +290,19 @@ jobs:
         echo "Development database:"
         ./scripts/migrate-database.sh development status || echo "Development status check failed"
 
+    - name: Enable External PostgreSQL Access
+      run: |
+        cd ${{ env.PRODUCTION_DIR }}
+        
+        echo "Enabling external PostgreSQL connections..."
+        chmod +x scripts/enable-postgresql-external.sh
+        
+        # Enable for production environment
+        ./scripts/enable-postgresql-external.sh production || echo "Failed to enable external access for production"
+        
+        # Optionally enable for development environment too
+        ./scripts/enable-postgresql-external.sh development || echo "Failed to enable external access for development"
+
     - name: Start API Gateway
       run: |
         cd ${{ env.PRODUCTION_DIR }}
