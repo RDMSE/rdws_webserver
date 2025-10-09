@@ -81,10 +81,15 @@ Thumbs.db
 # Docker
 .dockerignore
 
-# Environment files
+# Environment files (never commit these!)
 .env
 .env.local
+.env.development
 .env.production
+.env.test
+
+# Environment examples are safe to commit
+!.env*.example
 
 # Node modules (if using any JS tools)
 node_modules/
