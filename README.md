@@ -186,14 +186,17 @@ All responses include gateway metadata:
 │   │   ├── users.routes.ts       # Users service routes
 │   │   ├── orders.routes.ts      # Orders service routes
 │   │   └── index.ts              # Route exports
-│   └── README.md                 # How to add new microservices
-├── services/
-│   ├── users/
-│   │   ├── main.cpp             # Users C++ microservice
-│   │   └── CMakeLists.txt
-│   └── orders/
-│       ├── main.cpp             # Orders C++ microservice
-│       └── CMakeLists.txt
+│   ├── services/                 # C++ Microservices (reorganized)
+│   │   ├── users/
+│   │   │   ├── main.cpp         # Users C++ microservice
+│   │   │   └── CMakeLists.txt
+│   │   ├── orders/
+│   │   │   ├── main.cpp         # Orders C++ microservice
+│   │   │   └── CMakeLists.txt
+│   │   ├── CMakeLists.txt       # Services build config
+│   │   └── README.md            # C++ services documentation
+│   ├── shared/                  # Shared utilities (previously src/services)
+│   └── README.md                # How to add new microservices
 ├── test/
 │   └── api-gateway.spec.ts       # Comprehensive test suite
 ├── scripts/
@@ -241,9 +244,10 @@ const microserviceRouters = [
 #### 3. Create C++ Service
 ```bash
 # Create the microservice directory
-mkdir services/inventory
+mkdir src/services/inventory
 
 # Implement main.cpp with CLI interface
+# Add to src/services/CMakeLists.txt
 # Build with CMake
 ```
 
@@ -340,7 +344,7 @@ export SERVICE_TIMEOUT=5000
 |----------|---------|-------------|
 | `NODE_ENV` | `development` | Environment mode |
 | `PORT` | `8080` | API Gateway port |
-| `BUILD_PATH` | `./build` | C++ executables path |
+| `BUILD_PATH` | `./build` | C++ executables path (src/services/) |
 | `SERVICE_TIMEOUT` | `5000` | Microservice timeout (ms) |
 
 ### Health Monitoring

@@ -143,11 +143,11 @@ jobs:
     - name: Check microservices before upload
       run: |
         echo "Checking if microservices were built..."
-        if [ ! -f "${{ env.BUILD_DIR }}/services/users/users_service" ]; then
+        if [ ! -f "${{ env.BUILD_DIR }}/src/services/users/users_service" ]; then
           echo "ERROR: users_service not found"
           exit 1
         fi
-        if [ ! -f "${{ env.BUILD_DIR }}/services/orders/orders_service" ]; then
+        if [ ! -f "${{ env.BUILD_DIR }}/src/services/orders/orders_service" ]; then
           echo "ERROR: orders_service not found"
           exit 1
         fi
@@ -158,12 +158,12 @@ jobs:
       with:
         name: microservices-binaries-${{ github.run_number }}
         path: |
-          ${{ env.BUILD_DIR }}/services/
+          ${{ env.BUILD_DIR }}/src/services/
 
     - name: Verify uploaded artifacts
       run: |
         echo "Verifying artifacts that were uploaded..."
-        find ${{ env.BUILD_DIR }}/services/ -name "*_service" -type f -ls || echo "No service executables found"
+        find ${{ env.BUILD_DIR }}/src/services/ -name "*_service" -type f -ls || echo "No service executables found"
 
   # Job 2: Test API Gateway (Node.js)
   test-api-gateway:
@@ -237,10 +237,10 @@ jobs:
         fi
 
         # Create symlinks in expected locations for API Gateway
-        mkdir -p ${{ env.BUILD_DIR }}/services/users
-        mkdir -p ${{ env.BUILD_DIR }}/services/orders
-        ln -sf "$USERS_SERVICE" ${{ env.BUILD_DIR }}/services/users/users_service
-        ln -sf "$ORDERS_SERVICE" ${{ env.BUILD_DIR }}/services/orders/orders_service
+        mkdir -p ${{ env.BUILD_DIR }}/src/services/users
+        mkdir -p ${{ env.BUILD_DIR }}/src/services/orders
+        ln -sf "$USERS_SERVICE" ${{ env.BUILD_DIR }}/src/services/users/users_service
+        ln -sf "$ORDERS_SERVICE" ${{ env.BUILD_DIR }}/src/services/orders/orders_service
         echo "Created symlinks in expected locations"
 
     - name: Install API Gateway dependencies

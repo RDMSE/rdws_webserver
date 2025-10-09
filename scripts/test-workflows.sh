@@ -58,19 +58,19 @@ make -j$(nproc)
 cd ..
 
 print_step "1.4. Test microservices executables"
-if [ -f "$BUILD_DIR/services/users/users_service" ]; then
+if [ -f "$BUILD_DIR/src/services/users/users_service" ]; then
     print_success "users_service built successfully"
     echo "Testing users_service..."
-    $BUILD_DIR/services/users/users_service "GET" "/users" | head -2
+    $BUILD_DIR/src/services/users/users_service "GET" "/users" | head -2
 else
     print_error "users_service not found"
     exit 1
 fi
 
-if [ -f "$BUILD_DIR/services/orders/orders_service" ]; then
+if [ -f "$BUILD_DIR/src/services/orders/orders_service" ]; then
     print_success "orders_service built successfully"
     echo "Testing orders_service..."
-    $BUILD_DIR/services/orders/orders_service "GET" "/orders" | head -2
+    $BUILD_DIR/src/services/orders/orders_service "GET" "/orders" | head -2
 else
     print_error "orders_service not found"
     exit 1
@@ -122,7 +122,7 @@ print_step "2.3. Quick deploy verification"
 if [ -f "scripts/deploy-fedora.sh" ]; then
     print_success "Deploy script found"
     chmod +x scripts/deploy-fedora.sh
-    
+
     # Check if script is executable but don't run full deploy
     if head -1 scripts/deploy-fedora.sh | grep -q "#!/bin/bash"; then
         print_success "Deploy script is valid"
@@ -140,7 +140,7 @@ print_step "3.1. Check version and changelog"
 if git rev-parse --is-inside-work-tree &> /dev/null; then
     CURRENT_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.1.0")
     print_success "Current version: $CURRENT_VERSION"
-    
+
     # Generate sample changelog
     echo "Generating sample changelog..."
     git log --oneline -5 > CHANGELOG-sample.md
@@ -151,7 +151,7 @@ fi
 
 print_step "3.2. Create mock release package"
 mkdir -p packages/test-release
-cp -r $BUILD_DIR/services packages/test-release/
+cp -r $BUILD_DIR/src/services packages/test-release/
 cp api-gateway.js package*.json packages/test-release/
 cp -r scripts packages/test-release/
 cp README.md API-GATEWAY.md DEPLOY-*.md packages/test-release/ 2>/dev/null || true
@@ -178,7 +178,7 @@ echo ""
 print_step "4. Summary"
 
 print_success "CI workflow steps: PASSED"
-print_success "Deploy workflow steps: PASSED"  
+print_success "Deploy workflow steps: PASSED"
 print_success "Release workflow steps: PASSED"
 
 echo ""

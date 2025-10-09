@@ -23,7 +23,7 @@ enable_testing()
 find_package(GTest REQUIRED)
 
 # Add services subdirectory (microservices executables)
-add_subdirectory(services)
+add_subdirectory(src/services)
 
 # Add tests subdirectory
 add_subdirectory(tests)

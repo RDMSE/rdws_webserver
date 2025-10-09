@@ -113,7 +113,7 @@ jobs:
         mkdir -p packages/rdws-microservices-$VERSION
 
         # Copy microservices binaries
-        cp -r build/services packages/rdws-microservices-$VERSION/
+        cp -r build/src/services packages/rdws-microservices-$VERSION/
 
         # Copy API Gateway and dependencies
         cp api-gateway.js packages/rdws-microservices-$VERSION/
