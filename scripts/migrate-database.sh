@@ -8,18 +8,6 @@ ENVIRONMENT=${1:-development}
 ACTION=${2:-migrate}
 
 
-# validate $ENVIRONMENT
-case $ENVIRONMENT in
-    "production") ;;
-    "development") ;;
-    *)
-        echo "Invalid environment: $ENVIRONMENT"
-        echo "Usage: $0 [development|production] [migrate|seed|reset]"
-        exit 1
-        ;;
-esac
-
-
 echo "Database Migration Script"
 echo "Environment: $ENVIRONMENT"
 echo "Action: $ACTION"
