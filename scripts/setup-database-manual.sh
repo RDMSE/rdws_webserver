@@ -10,6 +10,9 @@ echo "Manual Database Setup"
 echo "Environment: $ENVIRONMENT"
 echo ""
 
+# Load environment variables to show connection info
+source "$(dirname "$0")/load_env.sh" "$ENVIRONMENT"
+
 # Check if PostgreSQL is installed
 if ! command -v psql &> /dev/null; then
     echo "PostgreSQL not found!"
@@ -43,9 +46,10 @@ echo "Database status:"
 echo ""
 echo "Database setup complete!"
 echo "Environment: $ENVIRONMENT"
-echo "Database: rdws_$ENVIRONMENT"
-echo "User: rdws_user"
-echo "Password: rdws_pass123"
+echo "Database: $DB_NAME"
+echo "User: $DB_USER"
+echo "Host: $DB_HOST"
+echo "Port: $DB_PORT"
 echo ""
 echo "Connection string:"
-echo "postgresql://rdws_user:rdws_pass123@localhost:5432/rdws_$ENVIRONMENT"
+echo "postgresql://$DB_USER:$DB_PASS@$DB_HOST:$DB_PORT/$DB_NAME"

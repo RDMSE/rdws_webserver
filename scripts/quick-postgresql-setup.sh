@@ -4,7 +4,7 @@
 
 set -e
 
-echo "⚡ Quick PostgreSQL Setup for CI/CD"
+echo "Quick PostgreSQL Setup for CI/CD"
 echo "==================================="
 
 #!/bin/bash
@@ -13,7 +13,7 @@ echo "==================================="
 
 set -e
 
-echo "⚡ Quick PostgreSQL Setup for CI/CD"
+echo "Quick PostgreSQL Setup for CI/CD"
 echo "==================================="
 
 # Wait for PostgreSQL to be ready
@@ -23,14 +23,14 @@ sleep 5
 # Create databases using sudo -u postgres (local socket connection)
 echo "Creating databases..."
 echo "Creating rdws_development..."
-sudo -u postgres psql -c "CREATE DATABASE rdws_development;" 2>/dev/null || echo "✅ rdws_development already exists"
+sudo -u postgres psql -c "CREATE DATABASE rdws_development;" 2>/dev/null || echo "rdws_development already exists"
 
 echo "Creating rdws_production..."
-sudo -u postgres psql -c "CREATE DATABASE rdws_production;" 2>/dev/null || echo "✅ rdws_production already exists"
+sudo -u postgres psql -c "CREATE DATABASE rdws_production;" 2>/dev/null || echo "rdws_production already exists"
 
 # Create user
 echo "Creating user..."
-sudo -u postgres psql -c "CREATE USER rdws_user WITH PASSWORD 'rdws_pass123';" 2>/dev/null || echo "✅ User already exists"
+sudo -u postgres psql -c "CREATE USER rdws_user WITH PASSWORD 'rdws_pass123';" 2>/dev/null || echo "User already exists"
 
 # Grant database privileges
 echo "Granting database privileges..."
