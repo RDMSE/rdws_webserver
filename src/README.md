@@ -91,7 +91,7 @@ export { InventoryRouter } from './inventory.routes';
 
 ### 3. Register in API Gateway
 
-Add your router to the main `api-gateway.ts`:
+Add your router to the main `src/api-gateway/api-gateway.ts`:
 
 ```typescript
 import {

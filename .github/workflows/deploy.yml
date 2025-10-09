@@ -348,7 +348,7 @@ jobs:
         echo "Starting API Gateway with PM2..."
 
         # Try to compile TypeScript first
-        npx tsc api-gateway.ts --target es2020 --module commonjs --esModuleInterop --outDir . || echo "TypeScript compilation failed, using ts-node"
+        npx tsc src/api-gateway/api-gateway.ts --target es2020 --module commonjs --esModuleInterop --outDir . || echo "TypeScript compilation failed, using ts-node"
 
         # Use JavaScript if available, otherwise TypeScript with ts-node
         if [ -f "api-gateway.js" ]; then
@@ -356,7 +356,7 @@ jobs:
           NODE_ENV=production PORT=8080 BUILD_PATH=/opt/rdws_webserver/build SERVICE_TIMEOUT=5000 pm2 start api-gateway.js --name api-gateway --instances 1
         else
           echo "Using TypeScript with ts-node"
-          NODE_ENV=production PORT=8080 BUILD_PATH=/opt/rdws_webserver/build SERVICE_TIMEOUT=5000 pm2 start api-gateway.ts --name api-gateway --instances 1 --interpreter node --interpreter-args "--require ts-node/register"
+          NODE_ENV=production PORT=8080 BUILD_PATH=/opt/rdws_webserver/build SERVICE_TIMEOUT=5000 pm2 start src/api-gateway/api-gateway.ts --name api-gateway --instances 1 --interpreter node --interpreter-args "--require ts-node/register"
         fi
 
         pm2 save
@@ -385,7 +385,7 @@ jobs:
         ls -la *.ts *.js || echo "No TypeScript/JavaScript files found"
 
         echo "=== Test direct Node.js execution ==="
-        timeout 5s node --require ts-node/register api-gateway.ts || echo "Direct execution failed"
+        timeout 5s node --require ts-node/register src/api-gateway/api-gateway.ts || echo "Direct execution failed"
 
         # Use our verification script with correct parameter order
         echo "=== Running verification script ==="
@@ -441,7 +441,7 @@ jobs:
         cd /opt/rdws_webserver
         ls -la
         echo "TypeScript file content:"
-        head -20 api-gateway.ts || echo "File not found"
+        head -20 src/api-gateway/api-gateway.ts || echo "File not found"
 
         echo "=== Debug: Try manual curl ==="
         curl -v http://localhost:8080/ || echo "Root endpoint failed"

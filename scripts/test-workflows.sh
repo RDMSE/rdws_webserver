@@ -90,7 +90,7 @@ BUILD_PATH=$BUILD_DIR npm test
 print_success "API Gateway tests passed"
 
 print_step "1.7. Integration test (start gateway + test)"
-BUILD_PATH=$BUILD_DIR nohup node api-gateway.js > gateway-test.log 2>&1 &
+BUILD_PATH=$BUILD_DIR nohup node dist/src/api-gateway/api-gateway.js > gateway-test.log 2>&1 &
 GATEWAY_PID=$!
 sleep 5
 
@@ -152,7 +152,7 @@ fi
 print_step "3.2. Create mock release package"
 mkdir -p packages/test-release
 cp -r $BUILD_DIR/src/services packages/test-release/
-cp api-gateway.js package*.json packages/test-release/
+cp dist/src/api-gateway/api-gateway.js package*.json packages/test-release/
 cp -r scripts packages/test-release/
 cp README.md API-GATEWAY.md DEPLOY-*.md packages/test-release/ 2>/dev/null || true
 

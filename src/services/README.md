@@ -33,7 +33,7 @@ src/services/
 ### **1. API Gateway calls C++ Executable**
 
 ```typescript
-// api-gateway.ts
+// src/api-gateway/api-gateway.ts
 const servicePath = `${config.buildPath}/src/services/${serviceName}/${serviceName}_service`;
 const command = `"${servicePath}" "${method}" "${path}"`;
 
@@ -134,7 +134,7 @@ After deploy via GitHub Actions:
 
 ```
 1. Client → GET http://server:8080/users
-2. API Gateway → Route to users service  
+2. API Gateway → Route to users service
 3. Gateway → exec("./build/src/services/users/users_service GET /users")
 4. C++ Executable → Process & return JSON
 5. API Gateway → Parse JSON & add metadata

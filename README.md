@@ -177,8 +177,9 @@ All responses include gateway metadata:
 ## Project Structure
 
 ```
-├── api-gateway.ts                 # Main TypeScript API Gateway
 ├── src/
+│   ├── api-gateway/
+│   │   └── api-gateway.ts        # Main TypeScript API Gateway
 │   ├── types/
 │   │   └── index.ts              # Shared TypeScript interfaces
 │   ├── routes/

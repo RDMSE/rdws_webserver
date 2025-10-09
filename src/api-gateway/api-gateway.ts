@@ -26,7 +26,7 @@ import {
     HealthResponse,
     ApiDocsResponse,
     MicroserviceRouter
-} from './src/routes';
+} from '../routes';
 
 const execAsync = promisify(exec);
 

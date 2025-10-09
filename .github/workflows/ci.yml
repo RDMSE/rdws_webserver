@@ -358,7 +358,7 @@ jobs:
           nohup node dist/api-gateway.js > gateway.log 2>&1 &
         else
           echo "Using ts-node directly"
-          nohup npx ts-node api-gateway.ts > gateway.log 2>&1 &
+          nohup npx ts-node src/api-gateway/api-gateway.ts > gateway.log 2>&1 &
         fi
         echo $! > gateway.pid
 
