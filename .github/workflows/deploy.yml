@@ -18,6 +18,13 @@ env:
   BUILD_DIR: ${{ github.workspace }}/build
   PRODUCTION_DIR: /opt/rdws_webserver
   NODE_VERSION: '20'
+  # Database Configuration from GitHub Secrets
+  DB_HOST: ${{ secrets.DB_HOST }}
+  DB_PORT: ${{ secrets.DB_PORT || '5432' }}
+  DB_USER: ${{ secrets.DB_USER }}
+  DB_PASS: ${{ secrets.DB_PASS }}
+  DB_NAME_PROD: ${{ secrets.DB_NAME_PROD }}
+  DB_NAME_DEV: ${{ secrets.DB_NAME_DEV }}
 
 jobs:
   # Job 1: Build everything
@@ -266,12 +273,28 @@ jobs:
         chmod +x scripts/test-postgresql.sh
         ./scripts/test-postgresql.sh || echo "Connection test completed with warnings"
 
+        # Set up environment variables for database scripts
+        echo "Setting up database environment variables..."
+        
+        # Export database variables for production environment
+        export DB_HOST="${{ env.DB_HOST }}"
+        export DB_PORT="${{ env.DB_PORT }}"
+        export DB_USER="${{ env.DB_USER }}"
+        export DB_PASS="${{ env.DB_PASS }}"
+        
+        # Production database name
+        export DB_NAME="${{ env.DB_NAME_PROD }}"
+        echo "Production DB config: $DB_USER@$DB_HOST:$DB_PORT/$DB_NAME"
+
         # Run database migrations for both environments
         echo "Running database migrations..."
         echo "Production environment:"
         ./scripts/migrate-database.sh production migrate
 
         echo "Development environment:"
+        # Switch to development database name
+        export DB_NAME="${{ env.DB_NAME_DEV }}"
+        echo "Development DB config: $DB_USER@$DB_HOST:$DB_PORT/$DB_NAME"
         ./scripts/migrate-database.sh development migrate
 
         # Run seeds for both environments
@@ -289,6 +312,21 @@ jobs:
 
         echo "Development database:"
         ./scripts/migrate-database.sh development status || echo "Development status check failed"
+
+    - name: Generate C++ Configuration Files
+      run: |
+        cd ${{ env.PRODUCTION_DIR }}
+        
+        echo "Generating configuration files for C++ microservices..."
+        chmod +x scripts/generate-cpp-config.sh
+        
+        # Generate config for production environment
+        export DB_NAME="${{ env.DB_NAME_PROD }}"
+        ./scripts/generate-cpp-config.sh production ${{ env.PRODUCTION_DIR }}/config
+        
+        # Generate config for development environment  
+        export DB_NAME="${{ env.DB_NAME_DEV }}"
+        ./scripts/generate-cpp-config.sh development ${{ env.PRODUCTION_DIR }}/config
 
     - name: Enable External PostgreSQL Access
       run: |

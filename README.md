@@ -70,7 +70,25 @@ Client Request → API Gateway (8080) → C++ Microservice → JSON Response
 
 ## Quick Start
 
-### 1. Prerequisites
+### 1. Environment Setup
+
+**Database Configuration:**
+
+For local development:
+```bash
+# Copy environment templates
+cp .env.development.example .env.development
+cp .env.production.example .env.production
+
+# Edit with your database settings
+vim .env.development
+```
+
+For CI/CD, configure GitHub Secrets (see [SECRETS_SETUP.md](SECRETS_SETUP.md)):
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`
+- `DB_NAME_PROD`, `DB_NAME_DEV`
+
+### 2. Prerequisites
 
 **Development Environment:**
 ```bash
