@@ -26,7 +26,9 @@
     "db:seed": "./scripts/migrate-database.sh development seed",
     "db:seed:prod": "./scripts/migrate-database.sh production seed",
     "db:reset": "./scripts/migrate-database.sh development reset",
-    "db:status": "./scripts/migrate-database.sh development status"
+    "db:status": "./scripts/migrate-database.sh development status",
+    "db:external": "./scripts/enable-postgresql-external.sh development",
+    "db:external:prod": "./scripts/enable-postgresql-external.sh production"
   },
   "keywords": [
     "api-gateway",
