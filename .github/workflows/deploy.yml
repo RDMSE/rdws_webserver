@@ -79,10 +79,10 @@ jobs:
 
         # Verify microservices were built
         echo "Verifying built microservices..."
-        ls -la services/*/
+        ls -la src/services/*/
         find . -name "*_service" -type f -executable
-        ./services/users/users_service "GET" "/users" | head -2
-        ./services/orders/orders_service "GET" "/orders" | head -2
+        ./src/services/users/users_service "GET" "/users" | head -2
+        ./src/services/orders/orders_service "GET" "/orders" | head -2
 
     - name: Install API Gateway dependencies
       run: |
@@ -184,8 +184,8 @@ jobs:
 
         cd ${{ env.PRODUCTION_DIR }}
         chmod +x scripts/*.sh || true
-        chmod +x build/services/*/users_service || true
-        chmod +x build/services/*/orders_service || true
+        chmod +x build/src/services/*/users_service || true
+        chmod +x build/src/services/*/orders_service || true
 
         # Verify deployment
         echo "Files deployed successfully:"
@@ -275,13 +275,13 @@ jobs:
 
         # Set up environment variables for database scripts
         echo "Setting up database environment variables..."
-        
+
         # Export database variables for production environment
         export DB_HOST="${{ env.DB_HOST }}"
         export DB_PORT="${{ env.DB_PORT }}"
         export DB_USER="${{ env.DB_USER }}"
         export DB_PASS="${{ env.DB_PASS }}"
-        
+
         # Production database name
         export DB_NAME="${{ env.DB_NAME_PROD }}"
         echo "Production DB config: $DB_USER@$DB_HOST:$DB_PORT/$DB_NAME"
@@ -316,28 +316,28 @@ jobs:
     - name: Generate C++ Configuration Files
       run: |
         cd ${{ env.PRODUCTION_DIR }}
-        
+
         echo "Generating configuration files for C++ microservices..."
         chmod +x scripts/generate-cpp-config.sh
-        
+
         # Generate config for production environment
         export DB_NAME="${{ env.DB_NAME_PROD }}"
         ./scripts/generate-cpp-config.sh production ${{ env.PRODUCTION_DIR }}/config
-        
-        # Generate config for development environment  
+
+        # Generate config for development environment
         export DB_NAME="${{ env.DB_NAME_DEV }}"
         ./scripts/generate-cpp-config.sh development ${{ env.PRODUCTION_DIR }}/config
 
     - name: Enable External PostgreSQL Access
       run: |
         cd ${{ env.PRODUCTION_DIR }}
-        
+
         echo "Enabling external PostgreSQL connections..."
         chmod +x scripts/enable-postgresql-external.sh
-        
+
         # Enable for production environment
         ./scripts/enable-postgresql-external.sh production || echo "Failed to enable external access for production"
-        
+
         # Optionally enable for development environment too
         ./scripts/enable-postgresql-external.sh development || echo "Failed to enable external access for development"
 
@@ -348,7 +348,7 @@ jobs:
         echo "Starting API Gateway with PM2..."
 
         # Try to compile TypeScript first
-        npx tsc api-gateway.ts --target es2020 --module commonjs --esModuleInterop --outDir . || echo "TypeScript compilation failed, using ts-node"
+        npx tsc src/api-gateway/api-gateway.ts --target es2020 --module commonjs --esModuleInterop --outDir . || echo "TypeScript compilation failed, using ts-node"
 
         # Use JavaScript if available, otherwise TypeScript with ts-node
         if [ -f "api-gateway.js" ]; then
@@ -356,7 +356,7 @@ jobs:
           NODE_ENV=production PORT=8080 BUILD_PATH=/opt/rdws_webserver/build SERVICE_TIMEOUT=5000 pm2 start api-gateway.js --name api-gateway --instances 1
         else
           echo "Using TypeScript with ts-node"
-          NODE_ENV=production PORT=8080 BUILD_PATH=/opt/rdws_webserver/build SERVICE_TIMEOUT=5000 pm2 start api-gateway.ts --name api-gateway --instances 1 --interpreter node --interpreter-args "--require ts-node/register"
+          NODE_ENV=production PORT=8080 BUILD_PATH=/opt/rdws_webserver/build SERVICE_TIMEOUT=5000 pm2 start src/api-gateway/api-gateway.ts --name api-gateway --instances 1 --interpreter node --interpreter-args "--require ts-node/register"
         fi
 
         pm2 save
@@ -385,7 +385,7 @@ jobs:
         ls -la *.ts *.js || echo "No TypeScript/JavaScript files found"
 
         echo "=== Test direct Node.js execution ==="
-        timeout 5s node --require ts-node/register api-gateway.ts || echo "Direct execution failed"
+        timeout 5s node --require ts-node/register src/api-gateway/api-gateway.ts || echo "Direct execution failed"
 
         # Use our verification script with correct parameter order
         echo "=== Running verification script ==="
@@ -441,7 +441,7 @@ jobs:
         cd /opt/rdws_webserver
         ls -la
         echo "TypeScript file content:"
-        head -20 api-gateway.ts || echo "File not found"
+        head -20 src/api-gateway/api-gateway.ts || echo "File not found"
 
         echo "=== Debug: Try manual curl ==="
         curl -v http://localhost:8080/ || echo "Root endpoint failed"

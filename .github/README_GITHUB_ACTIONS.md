@@ -10,7 +10,7 @@ This repository uses GitHub Actions for automated CI/CD with three main workflow
 
 **Jobs:**
 - **build-cpp-microservices**: Compiles C++ microservices
-- **test-api-gateway**: Tests Node.js API Gateway  
+- **test-api-gateway**: Tests Node.js API Gateway
 - **integration-tests**: Complete integration tests
 - **ci-summary**: Results summary
 
@@ -62,7 +62,7 @@ Uploads all assets
 
 The workflows use self-hosted runner on Fedora Server with labels:
 - `self-hosted`
-- `Linux` 
+- `Linux`
 - `X64`
 - `webserver`
 - `fedora`
@@ -81,7 +81,7 @@ The workflows use self-hosted runner on Fedora Server with labels:
 - Integration tests passing
 - Health checks working
 
-### Deploy Status  
+### Deploy Status
 - Automatic deployment working
 - PM2 managing the service
 - Firewall configured
@@ -151,8 +151,8 @@ pm2 logs api-gateway
 2. **Node.js Tests Failing**:
    ```bash
    # Check if microservices were compiled
-   ls -la build/services/*/
-   
+   ls -la build/src/services/*/
+
    # Test locally
    npm test
    ```
@@ -161,7 +161,7 @@ pm2 logs api-gateway
    ```bash
    # Check if API Gateway starts
    BUILD_PATH=./build node api-gateway.js
-   
+
    # Test endpoints
    curl http://localhost:8080/health
    ```

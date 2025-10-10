@@ -2,7 +2,7 @@ module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   collectCoverageFrom: [
-    'api-gateway.{js,ts}',
+    'src/api-gateway/api-gateway.{js,ts}',
     '!node_modules/**',
     '!build/**',
     '!coverage/**',

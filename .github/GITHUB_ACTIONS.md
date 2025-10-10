@@ -245,10 +245,10 @@ curl -v http://localhost:8080/health
 ```bash
 # Check TypeScript compilation
 cd /opt/rdws_webserver
-npx tsc api-gateway.ts --target es2020 --module commonjs
+npx tsc src/api-gateway/api-gateway.ts --target es2020 --module commonjs
 
 # Test direct execution
-node --require ts-node/register api-gateway.ts
+node --require ts-node/register src/api-gateway/api-gateway.ts
 
 # Check dependencies
 npm list ts-node typescript
@@ -273,7 +273,10 @@ Since this uses a self-hosted runner:
 ### Deployment Structure:
 ```
 /opt/rdws_webserver/
-├── api-gateway.ts          # Main API Gateway
+├── src/
+│   ├── api-gateway/
+│   │   └── api-gateway.ts      # Main API Gateway
+│   ├── types/
 ├── build/                  # C++ binaries
 │   └── services/
 │       ├── users/users_service
