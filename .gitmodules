@@ -1,0 +1,3 @@
+[submodule "src/third_party/dotenv-cpp"]
+	path = src/third_party/dotenv-cpp
+	url = https://github.com/laserpants/dotenv-cpp.git
