@@ -50,7 +50,7 @@ ENV_FILE="$(dirname "${BASH_SOURCE[0]}")/../.env.$ENVIRONMENT"
 if [ -n "$GITHUB_ACTIONS" ] || [ -n "$CI" ]; then
     echo "CI/CD environment detected - using environment variables"
 
-    # In CI/CD, set DB_NAME based on environment using DB_NAME_DEV or DB_NAME_PROD
+    # In CI/CD, export both specific and generic variables
     case $ENVIRONMENT in
         "production")
             if [ -z "$DB_NAME_PROD" ]; then
@@ -61,8 +61,9 @@ if [ -n "$GITHUB_ACTIONS" ] || [ -n "$CI" ]; then
                     exit 1
                 fi
             fi
-            export DB_NAME="$DB_NAME_PROD"
-            echo "Using production database: $DB_NAME"
+            export DB_NAME_PROD="$DB_NAME_PROD"
+            export ENVIRONMENT="production"
+            echo "Using production database: $DB_NAME_PROD"
             ;;
         "development")
             if [ -z "$DB_NAME_DEV" ]; then
@@ -73,8 +74,9 @@ if [ -n "$GITHUB_ACTIONS" ] || [ -n "$CI" ]; then
                     exit 1
                 fi
             fi
-            export DB_NAME="$DB_NAME_DEV"
-            echo "Using development database: $DB_NAME"
+            export DB_NAME_DEV="$DB_NAME_DEV"
+            export ENVIRONMENT="development"
+            echo "Using development database: $DB_NAME_DEV"
             ;;
     esac
     

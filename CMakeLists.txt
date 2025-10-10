@@ -22,6 +22,20 @@ enable_testing()
 # Find Google Test
 find_package(GTest REQUIRED)
 
+# Find libpqxx for PostgreSQL support
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(PQXX REQUIRED libpqxx)
+
+# Make libpqxx available to all subdirectories
+set(PQXX_LIBS ${PQXX_LIBRARIES})
+set(PQXX_INCLUDES ${PQXX_INCLUDE_DIRS})
+
+# Add dotenv-cpp third-party library
+add_subdirectory(src/third_party/dotenv-cpp)
+
+# Make dotenv include available globally
+include_directories(src/third_party/dotenv-cpp/include/laserpants/dotenv)
+
 # Add services subdirectory (microservices executables)
 add_subdirectory(src/services)
 

@@ -10,6 +10,14 @@ env:
   BUILD_TYPE: Debug
   BUILD_DIR: ${{ github.workspace }}/build
   NODE_VERSION: '20'
+  # Database configuration
+  ENVIRONMENT: development  # branch develop
+  DB_HOST: ${{ secrets.DB_HOST }}
+  DB_PORT: ${{ secrets.DB_PORT }}
+  DB_USER: ${{ secrets.DB_USER }}
+  DB_PASS: ${{ secrets.DB_PASS }}
+  DB_NAME_DEV: ${{ secrets.DB_NAME_DEV }}
+  DB_NAME_PROD: ${{ secrets.DB_NAME_PROD }}
 
 jobs:
   # Job 1: Build and test C++ microservices
@@ -30,12 +38,21 @@ jobs:
       run: |
         echo "Running on self-hosted Fedora runner"
         echo "Build directory: ${{ env.BUILD_DIR }}"
+        echo "Environment: ${{ env.ENVIRONMENT }}"
+        echo "Database DEV: ${{ env.DB_NAME_DEV }}"
+        echo "Database PROD: ${{ env.DB_NAME_PROD }}"
         whoami
         pwd
         which cmake || echo "CMake not found"
         which g++ || echo "g++ not found"
         which node || echo "Node.js not found"
         which npm || echo "npm not found"
+
+    - name: Load database environment
+      run: |
+        echo "Loading database environment variables..."
+        source scripts/load_env.sh ${{ env.ENVIRONMENT }}
+        echo "Database configuration loaded for environment: ${{ env.ENVIRONMENT }}"
 
     - name: Install dependencies if needed
       run: |
@@ -470,9 +487,9 @@ jobs:
         if [[ "${{ needs.build-cpp-microservices.result }}" == "success" &&
               "${{ needs.test-api-gateway.result }}" == "success" &&
               "${{ needs.integration-tests.result }}" == "success" ]]; then
-          echo "✅ All critical CI jobs passed!"
+          echo "All critical CI jobs passed!"
           exit 0
         else
-          echo "❌ Some CI jobs failed!"
+          echo "Some CI jobs failed!"
           exit 1
         fi
