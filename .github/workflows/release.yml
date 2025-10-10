@@ -75,8 +75,8 @@ jobs:
         make -j$(nproc)
 
         echo "Verifying microservices..."
-        ./services/users/users_service "GET" "/users" | head -2
-        ./services/orders/orders_service "GET" "/orders" | head -2
+        ./src/services/users/users_service "GET" "/users" | head -2
+        ./src/services/orders/orders_service "GET" "/orders" | head -2
 
     - name: Install and test API Gateway
       run: |

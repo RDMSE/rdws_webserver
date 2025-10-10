@@ -79,10 +79,10 @@ jobs:
 
         # Verify microservices were built
         echo "Verifying built microservices..."
-        ls -la services/*/
+        ls -la src/services/*/
         find . -name "*_service" -type f -executable
-        ./services/users/users_service "GET" "/users" | head -2
-        ./services/orders/orders_service "GET" "/orders" | head -2
+        ./src/services/users/users_service "GET" "/users" | head -2
+        ./src/services/orders/orders_service "GET" "/orders" | head -2
 
     - name: Install API Gateway dependencies
       run: |
