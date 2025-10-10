@@ -2,15 +2,21 @@
 # Test PostgreSQL Connection Script
 # Run this locally to test remote PostgreSQL
 
+ENVIRONMENT=${1:-production}
+
 echo "PostgreSQL Connection Test"
 echo "============================="
+echo "Environment: $ENVIRONMENT"
 
-SERVER="fedora-server.local"
-DB_USER="rdws_user"
-DB_PASS="rdws_pass123"
-DB_NAME="rdws_production"
+# Load environment variables
+source "$(dirname "$0")/load_env.sh" "$ENVIRONMENT"
 
 echo "Testing connection to $SERVER..."
+echo "Database host: $DB_HOST"
+echo "Database: $DB_NAME"
+echo "User: $DB_USER"
+echo "Host: $DB_HOST"
+echo "Port: $DB_PORT"
 
 # Test 1: SSH and check PostgreSQL status
 echo ""
@@ -20,12 +26,12 @@ ssh rdias@$SERVER "sudo systemctl status postgresql --no-pager" || echo "❌ SSH
 # Test 2: List databases via SSH
 echo ""
 echo "Test 2: List Databases"
-ssh rdias@$SERVER "export PGPASSWORD='$DB_PASS' && psql -h localhost -U $DB_USER -l" || echo "❌ Database connection failed"
+ssh rdias@$SERVER "export PGPASSWORD='$DB_PASS' && psql -h $DB_HOST -p $DB_PORT -U $DB_USER -l" || echo "❌ Database connection failed"
 
 # Test 3: Test specific database connection
 echo ""
 echo "Test 3: Connect to Production Database"
-ssh rdias@$SERVER "export PGPASSWORD='$DB_PASS' && psql -h localhost -U $DB_USER -d $DB_NAME -c 'SELECT current_database(), current_user, now();'" || echo "❌ Production DB connection failed"
+ssh rdias@$SERVER "export PGPASSWORD='$DB_PASS' && psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c 'SELECT current_database(), current_user, now();'" || echo "❌ Production DB connection failed"
 
 # Test 4: Check if migrations table exists
 echo ""

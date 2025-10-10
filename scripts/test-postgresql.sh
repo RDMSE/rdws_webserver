@@ -4,8 +4,14 @@
 
 set -e
 
+ENVIRONMENT=${1:-development}
+
 echo "PostgreSQL Connection Test"
 echo "=============================="
+echo "Environment: $ENVIRONMENT"
+
+# Load environment variables
+source "$(dirname "$0")/load_env.sh" "$ENVIRONMENT"
 
 # Check if PostgreSQL is running
 echo "Checking PostgreSQL status..."
@@ -31,9 +37,9 @@ sudo -u postgres psql -c "SELECT version();" 2>/dev/null && echo "Postgres user 
 
 # Test as rdws_user
 echo ""
-echo "Testing as rdws_user:"
-export PGPASSWORD="rdws_pass123"
-psql -h localhost -U rdws_user -d rdws_production -c "SELECT current_database();" 2>/dev/null && echo "✅ rdws_user connection: OK" || echo "❌ rdws_user connection: FAILED"
+echo "Testing as $DB_USER:"
+export PGPASSWORD="$DB_PASS"
+psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "SELECT current_database();" 2>/dev/null && echo "✅ $DB_USER connection: OK" || echo "❌ $DB_USER connection: FAILED"
 
 # Show databases
 echo ""

@@ -7,7 +7,7 @@
  */
 
 import request from 'supertest';
-import { app } from '../../api-gateway';
+import { app } from '../../src/api-gateway/api-gateway';
 import * as childProcess from 'child_process';
 
 // Mock the child_process module to intercept microservice calls

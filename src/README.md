@@ -8,12 +8,21 @@ This guide explains how to add new microservices to the modular API Gateway arch
 src/
 ├── types/
 │   └── index.ts              # Shared types and interfaces
-└── routes/
-    ├── BaseRouter.ts         # Abstract base class for all routers
-    ├── users.routes.ts       # Users microservice routes
-    ├── orders.routes.ts      # Orders microservice routes
-    ├── products.routes.ts    # Example: Products microservice routes
-    └── index.ts              # Exports all routers
+├── routes/
+│   ├── BaseRouter.ts         # Abstract base class for all routers
+│   ├── users.routes.ts       # Users microservice routes
+│   ├── orders.routes.ts      # Orders microservice routes
+│   ├── products.routes.ts    # Example: Products microservice routes
+│   └── index.ts              # Exports all routers
+├── services/                 # C++ Microservices (reorganized location)
+│   ├── users/
+│   │   ├── main.cpp         # Users C++ implementation
+│   │   └── CMakeLists.txt
+│   ├── orders/
+│   │   ├── main.cpp         # Orders C++ implementation
+│   │   └── CMakeLists.txt
+│   └── CMakeLists.txt       # Services build configuration
+└── shared/                   # Shared utilities and common code
 ```
 
 ## ✨ How to Add a New Microservice
@@ -60,7 +69,7 @@ export class InventoryRouter extends BaseRouter {
         // GET /inventory/:id
         this.router.get('/:id', async (req: Request, res: Response): Promise<void> => {
             const handler = this.createRouteHandler(
-                'GET', 
+                'GET',
                 '/inventory/:id',
                 (req) => this.validateNumericId(req.params.id, 'Item ID')
             );
@@ -82,12 +91,12 @@ export { InventoryRouter } from './inventory.routes';
 
 ### 3. Register in API Gateway
 
-Add your router to the main `api-gateway.ts`:
+Add your router to the main `src/api-gateway/api-gateway.ts`:
 
 ```typescript
-import { 
-    UsersRouter, 
-    OrdersRouter, 
+import {
+    UsersRouter,
+    OrdersRouter,
     UserOrdersRouter,
     InventoryRouter,  // Add this import
     // ... other imports
@@ -106,7 +115,7 @@ const microserviceRouters: MicroserviceRouter[] = [
 
 Ensure you have a corresponding C++ executable at:
 ```
-build/services/inventory/inventory_service
+build/src/services/inventory/inventory_service
 ```
 
 That accepts command line arguments: `method` and `path`
@@ -116,6 +125,8 @@ That accepts command line arguments: `method` and `path`
 - ✅ Listed in `/health` endpoint
 - ✅ Documented in `/api-docs`
 - ✅ Available at startup logs
+
+> **Note**: With the reorganized structure, C++ microservices are now located in `src/services/` for better project organization.
 
 ## 🛠️ Advanced Features
 
@@ -184,7 +195,7 @@ After adding a new microservice:
 ## 🎯 Example Use Cases
 
 - **E-commerce**: products, cart, payments, shipping
-- **Social**: users, posts, comments, notifications  
+- **Social**: users, posts, comments, notifications
 - **Business**: employees, departments, projects, reports
 - **IoT**: devices, sensors, data, analytics
 

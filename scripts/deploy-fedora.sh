@@ -108,7 +108,7 @@ else
             cd "$PROJECT_DIR"
         fi
     fi
-    
+
     git clone https://github.com/RDMSE/rdws_webserver.git .
     git checkout 14-featureserverinfra-enable-servless-archtecture
 fi
@@ -166,7 +166,7 @@ if command -v pm2 &> /dev/null; then
 module.exports = {
   apps: [{
     name: '${SERVICE_NAME}',
-    script: './api-gateway.js',
+    script: './dist/src/api-gateway/api-gateway.js',
     instances: 'max',
     exec_mode: 'cluster',
     env: {
@@ -231,7 +231,7 @@ else
 
     # Create systemd service file
     SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
-    
+
     if [ "$IS_ROOT" = true ]; then
         cat > ${SERVICE_FILE} << EOF
 [Unit]
@@ -245,7 +245,7 @@ Type=simple
 User=$USER
 Group=$USER
 WorkingDirectory=${PROJECT_DIR}
-ExecStart=/usr/bin/node api-gateway.js
+ExecStart=/usr/bin/node dist/src/api-gateway/api-gateway.js
 Restart=always
 RestartSec=3
 TimeoutStopSec=10

@@ -70,7 +70,25 @@ Client Request → API Gateway (8080) → C++ Microservice → JSON Response
 
 ## Quick Start
 
-### 1. Prerequisites
+### 1. Environment Setup
+
+**Database Configuration:**
+
+For local development:
+```bash
+# Copy environment templates
+cp .env.development.example .env.development
+cp .env.production.example .env.production
+
+# Edit with your database settings
+vim .env.development
+```
+
+For CI/CD, configure GitHub Secrets (see [SECRETS_SETUP.md](SECRETS_SETUP.md)):
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`
+- `DB_NAME_PROD`, `DB_NAME_DEV`
+
+### 2. Prerequisites
 
 **Development Environment:**
 ```bash
@@ -159,8 +177,9 @@ All responses include gateway metadata:
 ## Project Structure
 
 ```
-├── api-gateway.ts                 # Main TypeScript API Gateway
 ├── src/
+│   ├── api-gateway/
+│   │   └── api-gateway.ts        # Main TypeScript API Gateway
 │   ├── types/
 │   │   └── index.ts              # Shared TypeScript interfaces
 │   ├── routes/
@@ -168,14 +187,17 @@ All responses include gateway metadata:
 │   │   ├── users.routes.ts       # Users service routes
 │   │   ├── orders.routes.ts      # Orders service routes
 │   │   └── index.ts              # Route exports
-│   └── README.md                 # How to add new microservices
-├── services/
-│   ├── users/
-│   │   ├── main.cpp             # Users C++ microservice
-│   │   └── CMakeLists.txt
-│   └── orders/
-│       ├── main.cpp             # Orders C++ microservice
-│       └── CMakeLists.txt
+│   ├── services/                 # C++ Microservices (reorganized)
+│   │   ├── users/
+│   │   │   ├── main.cpp         # Users C++ microservice
+│   │   │   └── CMakeLists.txt
+│   │   ├── orders/
+│   │   │   ├── main.cpp         # Orders C++ microservice
+│   │   │   └── CMakeLists.txt
+│   │   ├── CMakeLists.txt       # Services build config
+│   │   └── README.md            # C++ services documentation
+│   ├── shared/                  # Shared utilities (previously src/services)
+│   └── README.md                # How to add new microservices
 ├── test/
 │   └── api-gateway.spec.ts       # Comprehensive test suite
 ├── scripts/
@@ -223,9 +245,10 @@ const microserviceRouters = [
 #### 3. Create C++ Service
 ```bash
 # Create the microservice directory
-mkdir services/inventory
+mkdir src/services/inventory
 
 # Implement main.cpp with CLI interface
+# Add to src/services/CMakeLists.txt
 # Build with CMake
 ```
 
@@ -322,7 +345,7 @@ export SERVICE_TIMEOUT=5000
 |----------|---------|-------------|
 | `NODE_ENV` | `development` | Environment mode |
 | `PORT` | `8080` | API Gateway port |
-| `BUILD_PATH` | `./build` | C++ executables path |
+| `BUILD_PATH` | `./build` | C++ executables path (src/services/) |
 | `SERVICE_TIMEOUT` | `5000` | Microservice timeout (ms) |
 
 ### Health Monitoring

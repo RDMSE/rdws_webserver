@@ -53,7 +53,7 @@ Client → API Gateway (port 8080) → C++ Executables
 ### Requirements
 
 - Node.js 18+
-- C++ microservices compiled in `./build/services/`
+- C++ microservices compiled in `./build/src/services/`
 
 ### Local Installation
 
@@ -304,7 +304,7 @@ npm test -- --coverage
 The gateway produces structured logs:
 
 ```
-[abc123] Calling: "./build/services/users/users_service" "GET" "/users"
+[abc123] Calling: "./build/src/services/users/users_service" "GET" "/users"
 [abc123] users completed in 23ms
 ```
 
@@ -335,6 +335,8 @@ Each request receives a unique ID that can be used for tracing:
 ├── __tests__/            # Automated tests
 │   └── api-gateway.test.js
 └── build/                # Compiled microservices
+    └── src/
+        └── services/     # C++ executables location
     └── services/
         ├── users/
         │   └── users_service
@@ -344,7 +346,7 @@ Each request receives a unique ID that can be used for tracing:
 
 ### Adding New Microservices
 
-1. **Compile** the C++ executable in `build/services/name/`
+1. **Compile** the C++ executable in `build/src/services/name/`
 2. **Add routes** in `api-gateway.js`
 3. **Include** in health check
 4. **Add tests** in `__tests__/`

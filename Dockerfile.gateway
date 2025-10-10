@@ -28,11 +28,11 @@ WORKDIR /app
 COPY --from=builder --chown=apigateway:nodejs /app/node_modules ./node_modules
 
 # Copy application code
-COPY --chown=apigateway:nodejs api-gateway.js ./
+COPY --chown=apigateway:nodejs dist/src/api-gateway/api-gateway.js ./
 COPY --chown=apigateway:nodejs package*.json ./
 
 # Create directory for build files (microservices will be mounted here)
-RUN mkdir -p build/services && chown -R apigateway:nodejs build
+RUN mkdir -p build/src/services && chown -R apigateway:nodejs build
 
 # Switch to non-root user
 USER apigateway
@@ -43,8 +43,8 @@ EXPOSE 8080
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD node -e "require('http').get('http://localhost:8080/health', (res) => { \
-        if (res.statusCode === 200 || res.statusCode === 503) process.exit(0); \
-        else process.exit(1); \
+    if (res.statusCode === 200 || res.statusCode === 503) process.exit(0); \
+    else process.exit(1); \
     }).on('error', () => process.exit(1))"
 
 # Environment variables
