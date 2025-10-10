@@ -110,10 +110,6 @@ sudo apt install -y build-essential cmake git curl
 sudo apt install -y libcurl4-openssl-dev rapidjson-dev
 sudo apt install -y libgtest-dev libgmock-dev
 
-# Compile Pistache (if not in repos)
-git clone https://github.com/pistacheio/pistache.git /tmp/pistache
-cd /tmp/pistache
-meson setup build --buildtype=release
 meson compile -C build
 sudo meson install -C build
 sudo ldconfig
