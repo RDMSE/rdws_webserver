@@ -18,6 +18,33 @@ source "$(dirname "$0")/load_env.sh" "$ENVIRONMENT"
 mkdir -p "$CONFIG_DIR"
 
 # Generate database configuration JSON
+# Determine database name based on environment
+case $ENVIRONMENT in
+    "production")
+        DB_NAME_TO_USE="${DB_NAME_PROD}"
+        ;;
+    "development")
+        DB_NAME_TO_USE="${DB_NAME_DEV:-$DB_NAME}"
+        ;;
+    *)
+        echo "Invalid environment: $ENVIRONMENT"
+        exit 1
+        ;;
+esac
+
+cat > "$CONFIG_DIR/database.json" << EOF
+{
+    "host": "${DB_HOST}",
+    "port": ${DB_PORT},
+    "user": "${DB_USER}",
+    "password": "${DB_PASS}",
+    "database": "${DB_NAME_TO_USE}",
+    "environment": "${ENVIRONMENT}"
+}
+EOF
+
+echo "Database configuration generated: $CONFIG_DIR/database.json"
+echo "Database: $DB_NAME_TO_USE (${ENVIRONMENT})"
 cat > "$CONFIG_DIR/database.json" << EOF
 {
   "environment": "$ENVIRONMENT",

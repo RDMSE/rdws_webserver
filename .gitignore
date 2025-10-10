@@ -97,3 +97,7 @@ node_modules/
 # Coverage reports
 coverage/
 *.lcov
+
+# Lab executables (experimental tests)
+lab/test_dotenv
+lab/test_database_config
