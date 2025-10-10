@@ -247,8 +247,11 @@ jobs:
           if ! grep -q "# External access for DBeaver" /var/lib/pgsql/data/pg_hba.conf; then
             echo "" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
             echo "# External access for DBeaver" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
-            echo "host    rdws_development    rdws_user       0.0.0.0/0               md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
-            echo "host    rdws_production     rdws_user       0.0.0.0/0               md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
+            echo "host    ${{ env.DB_NAME_DEV }}    ${{ env.DB_USER }}       0.0.0.0/0               md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
+            echo "host    ${{ env.DB_NAME_PROD }}     ${{ env.DB_USER }}       0.0.0.0/0               md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
+            echo "# IPv6 support" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
+            echo "host    ${{ env.DB_NAME_DEV }}    ${{ env.DB_USER }}       ::/0                    md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
+            echo "host    ${{ env.DB_NAME_PROD }}     ${{ env.DB_USER }}       ::/0                    md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
           fi
 
           # Configure postgresql.conf for external connections
@@ -285,6 +288,20 @@ jobs:
         # Production database name
         export DB_NAME="${{ env.DB_NAME_PROD }}"
         echo "Production DB config: $DB_USER@$DB_HOST:$DB_PORT/$DB_NAME"
+
+        # Force IPv4 for PostgreSQL connections
+        export PGHOST="$DB_HOST"
+        export PGPORT="$DB_PORT"
+        export PGUSER="$DB_USER"
+        export PGPASSWORD="$DB_PASS"
+
+        # Test connection first
+        echo "Testing PostgreSQL connection..."
+        psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres -c "SELECT 'Connection successful';" || {
+          echo "Connection failed, trying with localhost..."
+          export DB_HOST="localhost"
+          export PGHOST="localhost"
+        }
 
         # Run database migrations for both environments
         echo "Running database migrations..."

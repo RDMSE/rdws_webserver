@@ -77,6 +77,20 @@ if [ -n "$GITHUB_ACTIONS" ] || [ -n "$CI" ]; then
             echo "Using development database: $DB_NAME"
             ;;
     esac
+    
+    # For CI/CD, prefer localhost for PostgreSQL connections to avoid IPv6 issues
+    if [ -n "$GITHUB_ACTIONS" ] || [ -n "$CI" ]; then
+        if [ "$DB_HOST" = "fedora-server.local" ] || [ "$DB_HOST" = "$(hostname)" ] || [ "$DB_HOST" = "$(hostname -f)" ]; then
+            export DB_HOST="localhost"
+            echo "Using localhost for PostgreSQL connection in CI/CD"
+        fi
+        
+        # Set PGHOST to ensure psql uses the correct host
+        export PGHOST="$DB_HOST"
+        export PGPORT="$DB_PORT"
+        export PGUSER="$DB_USER"
+        export PGPASSWORD="$DB_PASS"
+    fi
 
     # Verify other required variables exist
     if [ -z "$DB_HOST" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASS" ] || [ -z "$DB_PORT" ]; then
