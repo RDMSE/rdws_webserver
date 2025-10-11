@@ -100,7 +100,7 @@ coverage/
 
 # Lab executables (experimental tests)
 lab/test_dotenv
-lab/test_database_config
+lab/test_config
 
 # Deprecated files (old Pistache-based architecture)
 deprecated/

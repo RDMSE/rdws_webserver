@@ -15,7 +15,7 @@ add_executable(orders_service main.cpp)
 
 # Link with static libgcc to reduce dependencies
 set_target_properties(orders_service PROPERTIES
-    LINK_FLAGS "-static-libgcc"
+  LINK_FLAGS "-static-libgcc"
 )
 
 # Install target
