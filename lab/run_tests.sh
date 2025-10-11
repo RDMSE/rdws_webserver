@@ -16,17 +16,17 @@ run_test() {
     local test_name="$1"
     local compile_cmd="$2"
     local description="$3"
-    
+
     echo
     echo "$description"
     echo "Compiling: $test_name"
-    
+
     cd "$LAB_DIR"
-    
+
     # Compile
     if eval "$compile_cmd"; then
         echo "Compilation successful"
-        
+
         # Run
         echo "Running: ./$test_name"
         if "./$test_name"; then
@@ -47,12 +47,12 @@ run_test "test_dotenv" \
     "Testing dotenv-cpp library integration"
 
 # Test database configuration
-run_test "test_database_config" \
-    "g++ -std=c++17 -I .. test_database_config.cpp -o test_database_config" \
+run_test "test_config" \
+    "g++ -std=c++17 -I .. test_config.cpp -o test_config" \
     "Testing database configuration system"
 
 echo
 echo "All lab tests completed successfully!"
 echo
 echo "To clean up compiled files:"
-echo "  cd lab && rm -f test_dotenv test_database_config"
+echo "  cd lab && rm -f test_dotenv test_config"

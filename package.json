@@ -5,7 +5,7 @@
   "main": "dist/src/api-gateway/api-gateway.js",
   "scripts": {
     "build:ts": "tsc",
-    "build:cpp": "echo 'Building C++ microservices...' && cd build && make -j$(nproc)",
+    "build:cpp": "echo 'Building C++ microservices...' && mkdir -p build && cd build && PKG_CONFIG_PATH=/usr/local/lib64/pkgconfig cmake .. && make -j$(nproc)",
     "build": "npm run build:ts && npm run build:cpp",
     "start": "npm run build:ts && node dist/src/api-gateway/api-gateway.js",
     "dev": "ts-node src/api-gateway/api-gateway.ts",
