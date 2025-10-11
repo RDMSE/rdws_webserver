@@ -148,7 +148,7 @@ class Config {
                 "Database configuration incomplete. Required: host, user, database");
         }
 
-        std::cout << "✅ " << getDebugInfo() << std::endl;
+        std::cout << "getDebugInfo() << std::endl;
     }
 
     // Getters
