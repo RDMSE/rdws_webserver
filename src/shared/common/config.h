@@ -104,19 +104,29 @@ class Config {
 
   public:
     Config(const std::string& env_name = "development") {
-        // Priority order:
-        // 1. Try .env file first (development)
-        // 2. Try JSON config file (production)
-        // 3. Fallback to environment variables (CI/CD)
+        // Priority order (when called from API Gateway):
+        // 1. Environment variables (inherited from API Gateway process) - PREFERRED
+        // 2. Try .env file (standalone mode)
+        // 3. Try JSON config file (production deployment)
 
         bool loaded = false;
 
+        // Check if we have environment variables set (from API Gateway)
+        if (std::getenv("DB_HOST") && std::getenv("DB_NAME")) {
+            std::cout << "Using environment variables from API Gateway" << std::endl;
+            loadFromEnvironment();
+            loaded = true;
+        }
         // Check if we're in CI/CD (GitHub Actions, etc.)
-        if (std::getenv("GITHUB_ACTIONS") || std::getenv("CI")) {
+        else if (std::getenv("GITHUB_ACTIONS") || std::getenv("CI")) {
             std::cout << "CI/CD environment detected, using environment variables" << std::endl;
             loadFromEnvironment();
             loaded = true;
-        } else {
+        }
+        // Standalone mode - try local .env file
+        else {
+            std::cout << "Standalone mode - trying local configuration..." << std::endl;
+
             // Try .env file first
             loaded = loadFromDotEnv(env_name);
 
@@ -127,7 +137,7 @@ class Config {
 
             // Final fallback to environment
             if (!loaded) {
-                std::cout << "Using environment variables as fallback" << std::endl;
+                std::cout << "Using environment variables as final fallback" << std::endl;
                 loadFromEnvironment();
             }
         }

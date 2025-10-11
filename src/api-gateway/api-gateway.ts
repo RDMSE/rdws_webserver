@@ -8,6 +8,31 @@
  * and response formatting.
  */
 
+// Load environment variables first
+import { config as dotenvConfig } from 'dotenv';
+import { resolve } from 'path';
+
+// Determine which .env file to load based on NODE_ENV
+const environment = process.env.NODE_ENV || 'development';
+const envFile = resolve(process.cwd(), `.env.${environment}`);
+
+console.log(`Loading environment: ${environment}`);
+console.log(`Environment file: ${envFile}`);
+
+// Load .env file - this makes variables available to child processes
+const envResult = dotenvConfig({ path: envFile });
+if (envResult.error) {
+  console.warn(`Warning: Could not load ${envFile}:`, envResult.error.message);
+  console.log('Falling back to system environment variables');
+} else {
+  console.log(`Environment variables loaded from ${envFile}`);
+  // Log some key variables (without sensitive data)
+  console.log(`   DB_HOST: ${process.env.DB_HOST || 'not set'}`);
+  console.log(`   DB_PORT: ${process.env.DB_PORT || 'not set'}`);
+  console.log(`   DB_NAME: ${process.env.DB_NAME || 'not set'}`);
+  console.log(`   ENVIRONMENT: ${process.env.ENVIRONMENT || 'not set'}`);
+}
+
 import express, { Request, Response, NextFunction, Application } from 'express';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -57,6 +82,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 /**
  * Helper function to execute microservice and handle errors
+ * Environment variables are automatically inherited by child processes
  */
 async function callMicroservice(
   serviceName: string,
@@ -71,10 +97,15 @@ async function callMicroservice(
     const command = `"${servicePath}" "${method}" "${path}"`;
 
     console.log(`[${requestId}] Calling: ${command}`);
+    console.log(
+      `[${requestId}] Environment inherited: DB_HOST=${process.env.DB_HOST}, DB_NAME=${process.env.DB_NAME}`
+    );
 
+    // Execute with inherited environment variables
     const { stdout, stderr } = await execAsync(command, {
       timeout: config.timeout,
       encoding: 'utf8',
+      // env: process.env <- This is the default, environment is automatically inherited
     });
 
     if (stderr) {
