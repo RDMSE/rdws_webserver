@@ -1,8 +1,8 @@
-# 🚀 Adding New Microservices to API Gateway
+# Adding New Microservices to API Gateway
 
 This guide explains how to add new microservices to the modular API Gateway architecture.
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 src/
@@ -25,7 +25,7 @@ src/
 └── shared/                   # Shared utilities and common code
 ```
 
-## ✨ How to Add a New Microservice
+## How to Add a New Microservice
 
 ### 1. Create the Router File
 
@@ -120,15 +120,15 @@ build/src/services/inventory/inventory_service
 
 That accepts command line arguments: `method` and `path`
 
-**That's it!** 🎉 Your new microservice will be automatically:
-- ✅ Registered with routes
-- ✅ Listed in `/health` endpoint
-- ✅ Documented in `/api-docs`
-- ✅ Available at startup logs
+**That's it!** Your new microservice will be automatically:
+- Registered with routes
+- Listed in `/health` endpoint
+- Documented in `/api-docs`
+- Available at startup logs
 
 > **Note**: With the reorganized structure, C++ microservices are now located in `src/services/` for better project organization.
 
-## 🛠️ Advanced Features
+## Advanced Features
 
 ### Custom Validation
 
@@ -174,7 +174,7 @@ export class UserInventoryRouter extends BaseRouter {
 }
 ```
 
-## 🧪 Testing
+## Testing
 
 After adding a new microservice:
 
@@ -183,20 +183,20 @@ After adding a new microservice:
 3. **Test**: `npm test`
 4. **Run**: `npm run dev`
 
-## 📋 Benefits of This Architecture
+## Benefits of This Architecture
 
-- ✅ **Scalable**: Easy to add new microservices
-- ✅ **Type Safe**: Full TypeScript support
-- ✅ **Consistent**: Standardized patterns via BaseRouter
-- ✅ **Automatic**: Documentation and health checks
-- ✅ **Modular**: Each service in its own file
-- ✅ **Testable**: Isolated and mockable components
+- **Scalable**: Easy to add new microservices
+- **Type Safe**: Full TypeScript support
+- **Consistent**: Standardized patterns via BaseRouter
+- **Automatic**: Documentation and health checks
+- **Modular**: Each service in its own file
+- **Testable**: Isolated and mockable components
 
-## 🎯 Example Use Cases
+## Example Use Cases
 
 - **E-commerce**: products, cart, payments, shipping
 - **Social**: users, posts, comments, notifications
 - **Business**: employees, departments, projects, reports
 - **IoT**: devices, sensors, data, analytics
 
-Each microservice becomes a simple addition following the same pattern! 🚀
+Each microservice becomes a simple addition following the same pattern!

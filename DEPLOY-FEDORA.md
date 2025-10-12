@@ -1,5 +1,5 @@
 ````markdown
-# 🚀 Fedora Server Deployment - API Gateway + C++ Microservices
+# Fedora Server Deployment - API Gateway + C++ Microservices
 
 Complete guide to deploy your microservices architecture on Fedora Server.
 

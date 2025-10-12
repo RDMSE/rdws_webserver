@@ -8,20 +8,20 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue.svg)](https://www.typescriptlang.org/)
 [![C++](https://img.shields.io/badge/C++-17-red.svg)](https://en.cppreference.com/w/cpp/17)
 
-## 📊 Project Status
+## Project Status
 
 | Component | Status | Tests | Coverage | Performance |
 |-----------|--------|-------|----------|-------------|
-| 🚀 **API Gateway** | ✅ Active | ![36 tests](https://img.shields.io/badge/tests-36%20passing-brightgreen) | ![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen) | ![Response](https://img.shields.io/badge/avg%20response-15ms-green) |
-| 🔧 **Users Service** | ✅ Healthy | ![15 tests](https://img.shields.io/badge/tests-15%20passing-brightgreen) | ![Unit Tests](https://img.shields.io/badge/unit%20tests-100%25-brightgreen) | ![Memory](https://img.shields.io/badge/memory-2MB-green) |
-| 📦 **Orders Service** | ✅ Healthy | ![21 tests](https://img.shields.io/badge/tests-21%20passing-brightgreen) | ![Unit Tests](https://img.shields.io/badge/unit%20tests-100%25-brightgreen) | ![Memory](https://img.shields.io/badge/memory-2MB-green) |
-| 🚢 **Production** | ✅ Running | ![PM2](https://img.shields.io/badge/PM2-active-blue) | ![Uptime](https://img.shields.io/badge/uptime-99.9%25-green) | ![Load](https://img.shields.io/badge/load-0.1-green) |
+| **API Gateway** | Active | ![36 tests](https://img.shields.io/badge/tests-36%20passing-brightgreen) | ![Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen) | ![Response](https://img.shields.io/badge/avg%20response-15ms-green) |
+| **Users Service** | Healthy | ![15 tests](https://img.shields.io/badge/tests-15%20passing-brightgreen) | ![Unit Tests](https://img.shields.io/badge/unit%20tests-100%25-brightgreen) | ![Memory](https://img.shields.io/badge/memory-2MB-green) |
+| **Orders Service** | Healthy | ![21 tests](https://img.shields.io/badge/tests-21%20passing-brightgreen) | ![Unit Tests](https://img.shields.io/badge/unit%20tests-100%25-brightgreen) | ![Memory](https://img.shields.io/badge/memory-2MB-green) |
+| **Production** | Running | ![PM2](https://img.shields.io/badge/PM2-active-blue) | ![Uptime](https://img.shields.io/badge/uptime-99.9%25-green) | ![Load](https://img.shields.io/badge/load-0.1-green) |
 
-### 🔄 CI/CD Pipeline
+### CI/CD Pipeline
 ```
 ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
 │   Build     │→ │    Test     │→ │   Deploy    │→ │  Monitor    │
-│ C++ + TS    │  │ 36 tests ✅ │  │ PM2 + Auto  │  │ Health ✅   │
+│ C++ + TS    │  │ 36 tests OK │  │ PM2 + Auto  │  │ Health OK   │
 └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘
 ```
 
