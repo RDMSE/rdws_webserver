@@ -39,7 +39,7 @@ sudo -u postgres psql -c "SELECT version();" 2>/dev/null && echo "Postgres user 
 echo ""
 echo "Testing as $DB_USER:"
 export PGPASSWORD="$DB_PASS"
-psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "SELECT current_database();" 2>/dev/null && echo "✅ $DB_USER connection: OK" || echo "❌ $DB_USER connection: FAILED"
+psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "SELECT current_database();" 2>/dev/null && echo "OK $DB_USER connection: OK" || echo "FAIL $DB_USER connection: FAILED"
 
 # Show databases
 echo ""

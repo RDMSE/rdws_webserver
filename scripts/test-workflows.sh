@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# 🧪 Script para testar workflows GitHub Actions localmente
-# Simula os passos dos workflows para debug
+# Script to test GitHub Actions workflows locally
+# Simulates workflow steps for debugging
 
 set -e
 
-# Cores
+# Colors
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
@@ -22,7 +22,7 @@ BUILD_DIR="./build"
 print_step "Testing GitHub Actions workflows locally..."
 echo ""
 
-# Simular CI workflow
+# Simulate CI workflow
 print_step "1. Testing CI Workflow Steps"
 
 print_step "1.1. Clean and prepare"
@@ -100,7 +100,7 @@ else
     print_warning "Integration tests had issues"
 fi
 
-# Clean up
+# Cleanup
 kill $GATEWAY_PID 2>/dev/null || true
 rm gateway-test.log || true
 
@@ -195,4 +195,4 @@ echo "  • npm run deploy:check     - Run deploy verification"
 echo "  • ./scripts/deploy-fedora.sh - Full deployment"
 echo ""
 
-print_success "GitHub Actions workflows are ready! 🚀"
+print_success "GitHub Actions workflows are ready!"
