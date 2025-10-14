@@ -27,6 +27,10 @@ if (envResult.error) {
 } else {
   console.log(`Environment variables loaded from ${envFile}`);
   // Log some key variables (without sensitive data)
+
+  process.env.DB_NAME = environment === 'development' ? process.env.DB_NAME_DEV : process.env.DB_NAME_PROD;
+  process.env.ENVIRONMENT = environment;
+
   console.log(`   DB_HOST: ${process.env.DB_HOST || 'not set'}`);
   console.log(`   DB_PORT: ${process.env.DB_PORT || 'not set'}`);
   console.log(`   DB_NAME: ${process.env.DB_NAME || 'not set'}`);
