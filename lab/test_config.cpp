@@ -11,8 +11,7 @@ int main() {
         setenv("DB_PORT", "5432", 1);
         setenv("DB_USER", "postgres", 1);
         setenv("DB_PASS", "password", 1);
-        setenv("DB_NAME_DEV", "rdws_dev", 1);
-        setenv("DB_NAME_PROD", "rdws_prod", 1);
+        setenv("DB_NAME", "rdws_dev", 1);
 
         rdws::Config config_dev;
         std::cout << "=== Development Config ===" << std::endl;
@@ -24,6 +23,7 @@ int main() {
 
         // Test production environment
         setenv("RDWS_ENVIRONMENT", "production", 1);
+        setenv("DB_NAME", "rdws_prod", 1);
 
         rdws::Config config_prod;
         std::cout << "\n=== Production Config ===" << std::endl;
