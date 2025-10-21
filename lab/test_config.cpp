@@ -1,13 +1,12 @@
-#include <iostream>
-#include <cstdlib>
 #include "../src/shared/common/config.h"
 
-int main()
-{
-    try
-    {
+#include <cstdlib>
+#include <iostream>
+
+int main() {
+    try {
         // Test development environment
-        setenv("ENVIRONMENT", "development", 1);
+        setenv("RDWS_ENVIRONMENT", "development", 1);
         setenv("DB_HOST", "localhost", 1);
         setenv("DB_PORT", "5432", 1);
         setenv("DB_USER", "postgres", 1);
@@ -24,7 +23,7 @@ int main()
         std::cout << "Environment: " << config_dev.getEnvironment() << std::endl;
 
         // Test production environment
-        setenv("ENVIRONMENT", "production", 1);
+        setenv("RDWS_ENVIRONMENT", "production", 1);
 
         rdws::Config config_prod;
         std::cout << "\n=== Production Config ===" << std::endl;
@@ -35,9 +34,7 @@ int main()
         std::cout << "Environment: " << config_prod.getEnvironment() << std::endl;
 
         return 0;
-    }
-    catch (const std::exception &e)
-    {
+    } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }

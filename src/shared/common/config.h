@@ -99,21 +99,35 @@ class Config {
         user = std::getenv("DB_USER") ? std::getenv("DB_USER") : "postgres";
         password = std::getenv("DB_PASS") ? std::getenv("DB_PASS") : "";
         database = std::getenv("DB_NAME") ? std::getenv("DB_NAME") : "postgres";
-        environment = std::getenv("ENVIRONMENT") ? std::getenv("ENVIRONMENT") : "development";
+        
+        // Use RDWS_ENVIRONMENT from .bashrc, fallback to ENVIRONMENT, then development
+        const char* rdws_env = std::getenv("RDWS_ENVIRONMENT");
+        const char* env = std::getenv("ENVIRONMENT");
+        environment = rdws_env ? rdws_env : (env ? env : "development");
     }
 
   public:
-    Config(const std::string& env_name = "development") {
-        // Priority order (when called from API Gateway):
+    Config(const std::string& env_name = "") {
+        // Auto-detect environment from RDWS_ENVIRONMENT (set in .bashrc)
+        std::string detected_env = env_name;
+        if (detected_env.empty()) {
+            const char* rdws_env = std::getenv("RDWS_ENVIRONMENT");
+            const char* env = std::getenv("ENVIRONMENT");
+            detected_env = rdws_env ? rdws_env : (env ? env : "development");
+        }
+        
+        std::cout << "Detected environment: " << detected_env << std::endl;
+        
+        // Priority order:
         // 1. Environment variables (inherited from API Gateway process) - PREFERRED
         // 2. Try .env file (standalone mode)
         // 3. Try JSON config file (production deployment)
 
         bool loaded = false;
 
-        // Check if we have environment variables set (from API Gateway)
+        // Check if we have environment variables set (from API Gateway or CI/CD)
         if (std::getenv("DB_HOST") && std::getenv("DB_NAME")) {
-            std::cout << "Using environment variables from API Gateway" << std::endl;
+            std::cout << "Using environment variables from API Gateway/CI/CD" << std::endl;
             loadFromEnvironment();
             loaded = true;
         }
@@ -125,10 +139,10 @@ class Config {
         }
         // Standalone mode - try local .env file
         else {
-            std::cout << "Standalone mode - trying local configuration..." << std::endl;
+            std::cout << "Standalone mode (" << detected_env << ") - trying local configuration..." << std::endl;
 
             // Try .env file first
-            loaded = loadFromDotEnv(env_name);
+            loaded = loadFromDotEnv(detected_env);
 
             // If no .env, try JSON config
             if (!loaded) {
@@ -148,7 +162,7 @@ class Config {
                 "Database configuration incomplete. Required: host, user, database");
         }
 
-        std::cout << "getDebugInfo() << std::endl;
+        std::cout << getDebugInfo() << std::endl;
     }
 
     // Getters
