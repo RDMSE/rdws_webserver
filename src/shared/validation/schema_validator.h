@@ -2,93 +2,50 @@
 
 #include <string>
 #include <vector>
-#include <map>
-#include <set>
-#include <climits>
-#include <cfloat>
+#include <memory>
 #include <jsoncpp/json/json.h>
+#include <valijson/adapters/jsoncpp_adapter.hpp>
+#include <valijson/schema.hpp>
+#include <valijson/schema_parser.hpp>
+#include <valijson/validator.hpp>
+#include <valijson/validation_results.hpp>
+#include <valijson/utils/jsoncpp_utils.hpp>
 
 namespace rdws {
 namespace validation {
 
-enum class ValidationResult {
-    VALID,
-    INVALID_FORMAT,
-    MISSING_REQUIRED_FIELD,
-    INVALID_FIELD_TYPE,
-    INVALID_FIELD_VALUE,
-    FIELD_TOO_LONG,
-    FIELD_TOO_SHORT,
-    INVALID_EMAIL_FORMAT,
-    INVALID_DATE_FORMAT,
-    VALUE_OUT_OF_RANGE
-};
-
 struct ValidationError {
     std::string field;
-    ValidationResult result;
     std::string message;
+    std::string context;
     
-    ValidationError(const std::string& f, ValidationResult r, const std::string& m)
-        : field(f), result(r), message(m) {}
-};
-
-// Schema definition structures
-struct FieldSchema {
-    std::string type;           // "string", "integer", "number", "boolean", "array", "object"
-    std::string format;         // "email", "date", "datetime", etc.
-    int minLength = -1;
-    int maxLength = -1;
-    int minimum = INT_MIN;
-    int maximum = INT_MAX;
-    std::vector<std::string> enumValues;
-    std::string pattern;        // regex pattern
-    
-    FieldSchema() = default;
-    FieldSchema(const std::string& t) : type(t) {}
-};
-
-struct Schema {
-    std::string type = "object";
-    std::map<std::string, FieldSchema> properties;
-    std::set<std::string> required;
-    
-    Schema& addProperty(const std::string& name, const FieldSchema& field) {
-        properties[name] = field;
-        return *this;
-    }
-    
-    Schema& addRequired(const std::string& name) {
-        required.insert(name);
-        return *this;
-    }
-    
-    Schema& addRequired(const std::vector<std::string>& names) {
-        for (const auto& name : names) {
-            required.insert(name);
-        }
-        return *this;
-    }
+    ValidationError(const std::string& f, const std::string& m, const std::string& c = "")
+        : field(f), message(m), context(c) {}
 };
 
 class SchemaValidator {
 private:
     std::string schemaName;
-    Schema schema;
+    std::unique_ptr<valijson::Schema> schema;
+    std::unique_ptr<valijson::Validator> validator;
     
-    std::vector<ValidationError> validateField(
-        const std::string& fieldName,
-        const Json::Value& value,
-        const FieldSchema& fieldSchema
+    std::string getSchemaPath(const std::string& schemaFile) const;
+    bool loadSchemaFromFile(const std::string& filePath);
+    std::vector<ValidationError> convertValidationResults(
+        const valijson::ValidationResults& results
     ) const;
     
-    bool isValidEmail(const std::string& email) const;
-    bool isValidDate(const std::string& date) const;
-    bool matchesPattern(const std::string& value, const std::string& pattern) const;
-    
 public:
-    SchemaValidator(const std::string& name, const Schema& s) 
-        : schemaName(name), schema(s) {}
+    SchemaValidator(const std::string& name, const std::string& schemaFile);
+    ~SchemaValidator() = default;
+    
+    // Move constructor and assignment
+    SchemaValidator(SchemaValidator&& other) noexcept;
+    SchemaValidator& operator=(SchemaValidator&& other) noexcept;
+    
+    // Disable copy
+    SchemaValidator(const SchemaValidator&) = delete;
+    SchemaValidator& operator=(const SchemaValidator&) = delete;
     
     std::vector<ValidationError> validate(const Json::Value& json) const;
     std::vector<ValidationError> validate(const std::string& jsonString) const;
@@ -102,23 +59,30 @@ public:
     }
     
     std::string getErrorsAsJson(const std::vector<ValidationError>& errors) const;
+    
+    const std::string& getName() const { return schemaName; }
 };
 
-// Helper functions for creating field schemas
-FieldSchema stringField(int minLen = -1, int maxLen = -1);
-FieldSchema emailField();
-FieldSchema dateField();
-FieldSchema integerField(int min = INT_MIN, int max = INT_MAX);
-FieldSchema numberField(double min = -DBL_MAX, double max = DBL_MAX);
-FieldSchema booleanField();
-FieldSchema enumField(const std::vector<std::string>& values);
-
-// Predefined schemas for User operations
-namespace UserSchemas {
-    Schema createUserSchema();
-    Schema updateUserSchema();
-    Schema getUserQuerySchema();
+// Factory functions for common validators
+namespace UserValidators {
+    SchemaValidator createUserValidator();
+    SchemaValidator updateUserValidator();
+    SchemaValidator queryUserValidator();
 }
+
+// Schema manager for loading and caching schemas
+class SchemaManager {
+private:
+    std::string schemasPath;
+    mutable std::map<std::string, std::unique_ptr<valijson::Schema>> schemaCache;
+    
+public:
+    SchemaManager(const std::string& path = "schemas");
+    
+    std::shared_ptr<valijson::Schema> getSchema(const std::string& schemaFile) const;
+    void clearCache();
+    bool reloadSchema(const std::string& schemaFile);
+};
 
 } // namespace validation
 } // namespace rdws

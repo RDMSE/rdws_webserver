@@ -36,6 +36,9 @@ add_subdirectory(src/third_party/dotenv-cpp)
 # Make dotenv include available globally
 include_directories(src/third_party/dotenv-cpp/include/laserpants/dotenv)
 
+# Add Valijson header-only library
+include_directories(src/third_party/valijson/include)
+
 # Add services subdirectory (microservices executables)
 add_subdirectory(src/services)
 

@@ -1,6 +1,7 @@
 #include "postgresql_database.h"
 #include <stdexcept>
 #include <sstream>
+#include <functional>
 
 namespace rdws {
 namespace database {
@@ -101,7 +102,7 @@ PostgreSQLDatabase::~PostgreSQLDatabase() {
 }
 
 std::unique_ptr<IResultSet> PostgreSQLDatabase::execQuery(
-    const std::string& query, 
+    const std::string& query,
     const std::vector<std::string>& parameters
 ) {
     try {
@@ -112,7 +113,16 @@ std::unique_ptr<IResultSet> PostgreSQLDatabase::execQuery(
             if (parameters.empty()) {
                 result = currentTransaction->exec(query);
             } else {
-                result = currentTransaction->exec_params(query, parameters);
+                // Use individual parameters for better compatibility
+                if (parameters.size() == 1) {
+                    result = currentTransaction->exec_params(query, parameters[0]);
+                } else if (parameters.size() == 2) {
+                    result = currentTransaction->exec_params(query, parameters[0], parameters[1]);
+                } else if (parameters.size() == 3) {
+                    result = currentTransaction->exec_params(query, parameters[0], parameters[1], parameters[2]);
+                } else {
+                    result = currentTransaction->exec_params(query, parameters);
+                }
             }
             return std::make_unique<PostgreSQLResultSet>(std::move(result));
         } else {
@@ -121,7 +131,16 @@ std::unique_ptr<IResultSet> PostgreSQLDatabase::execQuery(
             if (parameters.empty()) {
                 result = txn.exec(query);
             } else {
-                result = txn.exec_params(query, parameters);
+                // Use individual parameters for better compatibility
+                if (parameters.size() == 1) {
+                    result = txn.exec_params(query, parameters[0]);
+                } else if (parameters.size() == 2) {
+                    result = txn.exec_params(query, parameters[0], parameters[1]);
+                } else if (parameters.size() == 3) {
+                    result = txn.exec_params(query, parameters[0], parameters[1], parameters[2]);
+                } else {
+                    result = txn.exec_params(query, parameters);
+                }
             }
             txn.commit();
             return std::make_unique<PostgreSQLResultSet>(std::move(result));
@@ -130,9 +149,7 @@ std::unique_ptr<IResultSet> PostgreSQLDatabase::execQuery(
         lastError = e.what();
         throw std::runtime_error("Query execution failed: " + std::string(e.what()));
     }
-}
-
-bool PostgreSQLDatabase::execCommand(
+}bool PostgreSQLDatabase::execCommand(
     const std::string& command, 
     const std::vector<std::string>& parameters
 ) {
@@ -143,7 +160,16 @@ bool PostgreSQLDatabase::execCommand(
             if (parameters.empty()) {
                 currentTransaction->exec(command);
             } else {
-                currentTransaction->exec_params(command, parameters);
+                // Use individual parameters for better compatibility
+                if (parameters.size() == 1) {
+                    currentTransaction->exec_params(command, parameters[0]);
+                } else if (parameters.size() == 2) {
+                    currentTransaction->exec_params(command, parameters[0], parameters[1]);
+                } else if (parameters.size() == 3) {
+                    currentTransaction->exec_params(command, parameters[0], parameters[1], parameters[2]);
+                } else {
+                    currentTransaction->exec_params(command, parameters);
+                }
             }
             return true;
         } else {
@@ -151,7 +177,16 @@ bool PostgreSQLDatabase::execCommand(
             if (parameters.empty()) {
                 txn.exec(command);
             } else {
-                txn.exec_params(command, parameters);
+                // Use individual parameters for better compatibility
+                if (parameters.size() == 1) {
+                    txn.exec_params(command, parameters[0]);
+                } else if (parameters.size() == 2) {
+                    txn.exec_params(command, parameters[0], parameters[1]);
+                } else if (parameters.size() == 3) {
+                    txn.exec_params(command, parameters[0], parameters[1], parameters[2]);
+                } else {
+                    txn.exec_params(command, parameters);
+                }
             }
             txn.commit();
             return true;

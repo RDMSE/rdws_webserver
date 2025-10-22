@@ -1,196 +1,124 @@
 #include "schema_validator.h"
+#include <fstream>
 #include <sstream>
-#include <regex>
-#include <climits>
-#include <cfloat>
+#include <filesystem>
+#include <iostream>
 
 namespace rdws {
 namespace validation {
 
-// Helper functions for creating field schemas
-FieldSchema stringField(int minLen, int maxLen) {
-    FieldSchema field("string");
-    field.minLength = minLen;
-    field.maxLength = maxLen;
-    return field;
+// SchemaValidator Implementation
+SchemaValidator::SchemaValidator(const std::string& name, const std::string& schemaFile)
+    : schemaName(name),
+      schema(std::make_unique<valijson::Schema>()),
+      validator(std::make_unique<valijson::Validator>()) {
+    
+    if (!loadSchemaFromFile(getSchemaPath(schemaFile))) {
+        throw std::runtime_error("Failed to load schema: " + schemaFile);
+    }
 }
 
-FieldSchema emailField() {
-    FieldSchema field("string");
-    field.format = "email";
-    field.minLength = 5;
-    field.maxLength = 255;
-    return field;
+SchemaValidator::SchemaValidator(SchemaValidator&& other) noexcept
+    : schemaName(std::move(other.schemaName)),
+      schema(std::move(other.schema)),
+      validator(std::move(other.validator)) {
 }
 
-FieldSchema dateField() {
-    FieldSchema field("string");
-    field.format = "date";
-    return field;
+SchemaValidator& SchemaValidator::operator=(SchemaValidator&& other) noexcept {
+    if (this != &other) {
+        schemaName = std::move(other.schemaName);
+        schema = std::move(other.schema);
+        validator = std::move(other.validator);
+    }
+    return *this;
 }
 
-FieldSchema integerField(int min, int max) {
-    FieldSchema field("integer");
-    field.minimum = min;
-    field.maximum = max;
-    return field;
+std::string SchemaValidator::getSchemaPath(const std::string& schemaFile) const {
+    // Try relative to current directory first (new location in src)
+    std::string relativePath = "src/schemas/" + schemaFile;
+    if (std::filesystem::exists(relativePath)) {
+        return relativePath;
+    }
+    
+    // Try old schemas path for backward compatibility
+    std::string oldPath = "schemas/" + schemaFile;
+    if (std::filesystem::exists(oldPath)) {
+        return oldPath;
+    }
+    
+    // Try absolute path
+    if (std::filesystem::exists(schemaFile)) {
+        return schemaFile;
+    }
+    
+    // Default to new schemas directory
+    return relativePath;
 }
 
-FieldSchema numberField(double min, double max) {
-    FieldSchema field("number");
-    // Note: using int fields for simplicity, could be extended for doubles
-    return field;
+bool SchemaValidator::loadSchemaFromFile(const std::string& filePath) {
+    try {
+        Json::Value schemaDoc;
+        if (!valijson::utils::loadDocument(filePath, schemaDoc)) {
+            std::cerr << "Failed to load schema document: " << filePath << std::endl;
+            return false;
+        }
+        
+        valijson::SchemaParser parser;
+        valijson::adapters::JsonCppAdapter schemaAdapter(schemaDoc);
+        parser.populateSchema(schemaAdapter, *schema);
+        
+        return true;
+    } catch (const std::exception& e) {
+        std::cerr << "Error loading schema " << filePath << ": " << e.what() << std::endl;
+        return false;
+    }
 }
 
-FieldSchema booleanField() {
-    return FieldSchema("boolean");
-}
-
-FieldSchema enumField(const std::vector<std::string>& values) {
-    FieldSchema field("string");
-    field.enumValues = values;
-    return field;
-}
-
-// SchemaValidator implementation
 std::vector<ValidationError> SchemaValidator::validate(const Json::Value& json) const {
-    std::vector<ValidationError> errors;
+    valijson::ValidationResults results;
+    valijson::adapters::JsonCppAdapter targetAdapter(json);
     
-    if (!json.isObject()) {
-        errors.emplace_back("root", ValidationResult::INVALID_FORMAT, "Input must be a JSON object");
-        return errors;
+    if (validator->validate(*schema, targetAdapter, &results)) {
+        return {}; // No errors
     }
     
-    // Check required fields
-    for (const auto& requiredField : schema.required) {
-        if (!json.isMember(requiredField)) {
-            errors.emplace_back(requiredField, ValidationResult::MISSING_REQUIRED_FIELD,
-                              "Required field '" + requiredField + "' is missing");
-        } else if (json[requiredField].isNull()) {
-            errors.emplace_back(requiredField, ValidationResult::MISSING_REQUIRED_FIELD,
-                              "Required field '" + requiredField + "' cannot be null");
-        }
-    }
-    
-    // Validate each property
-    for (const auto& member : json.getMemberNames()) {
-        auto propIt = schema.properties.find(member);
-        if (propIt != schema.properties.end()) {
-            auto fieldErrors = validateField(member, json[member], propIt->second);
-            errors.insert(errors.end(), fieldErrors.begin(), fieldErrors.end());
-        }
-        // Note: We're not strict about unknown properties (could add option for this)
-    }
-    
-    return errors;
+    return convertValidationResults(results);
 }
 
 std::vector<ValidationError> SchemaValidator::validate(const std::string& jsonString) const {
-    std::vector<ValidationError> errors;
-    
     Json::Value json;
     Json::Reader reader;
     
     if (!reader.parse(jsonString, json)) {
-        errors.emplace_back("root", ValidationResult::INVALID_FORMAT,
-                          "Invalid JSON format: " + reader.getFormattedErrorMessages());
-        return errors;
+        return {ValidationError("root", "Invalid JSON format: " + reader.getFormattedErrorMessages())};
     }
     
     return validate(json);
 }
 
-std::vector<ValidationError> SchemaValidator::validateField(
-    const std::string& fieldName,
-    const Json::Value& value,
-    const FieldSchema& fieldSchema
+std::vector<ValidationError> SchemaValidator::convertValidationResults(
+    const valijson::ValidationResults& results
 ) const {
     std::vector<ValidationError> errors;
     
-    // Skip validation if value is null and field is not required
-    if (value.isNull() && schema.required.find(fieldName) == schema.required.end()) {
-        return errors;
-    }
+    // Note: results.popError modifies the object, so we need non-const
+    valijson::ValidationResults& mutableResults = const_cast<valijson::ValidationResults&>(results);
     
-    // Type validation
-    if (fieldSchema.type == "string" && !value.isString()) {
-        errors.emplace_back(fieldName, ValidationResult::INVALID_FIELD_TYPE,
-                          "Field '" + fieldName + "' must be a string");
-        return errors; // Skip further validation
-    } else if (fieldSchema.type == "integer" && !value.isInt()) {
-        errors.emplace_back(fieldName, ValidationResult::INVALID_FIELD_TYPE,
-                          "Field '" + fieldName + "' must be an integer");
-        return errors;
-    } else if (fieldSchema.type == "number" && !value.isNumeric()) {
-        errors.emplace_back(fieldName, ValidationResult::INVALID_FIELD_TYPE,
-                          "Field '" + fieldName + "' must be a number");
-        return errors;
-    } else if (fieldSchema.type == "boolean" && !value.isBool()) {
-        errors.emplace_back(fieldName, ValidationResult::INVALID_FIELD_TYPE,
-                          "Field '" + fieldName + "' must be a boolean");
-        return errors;
-    }
-    
-    // String-specific validations
-    if (fieldSchema.type == "string" && value.isString()) {
-        std::string strValue = value.asString();
-        
-        // Length validation
-        if (fieldSchema.minLength >= 0 && static_cast<int>(strValue.length()) < fieldSchema.minLength) {
-            errors.emplace_back(fieldName, ValidationResult::FIELD_TOO_SHORT,
-                              "Field '" + fieldName + "' must be at least " + 
-                              std::to_string(fieldSchema.minLength) + " characters");
-        }
-        if (fieldSchema.maxLength >= 0 && static_cast<int>(strValue.length()) > fieldSchema.maxLength) {
-            errors.emplace_back(fieldName, ValidationResult::FIELD_TOO_LONG,
-                              "Field '" + fieldName + "' must be at most " + 
-                              std::to_string(fieldSchema.maxLength) + " characters");
-        }
-        
-        // Format validation
-        if (fieldSchema.format == "email" && !isValidEmail(strValue)) {
-            errors.emplace_back(fieldName, ValidationResult::INVALID_EMAIL_FORMAT,
-                              "Field '" + fieldName + "' must be a valid email address");
-        } else if (fieldSchema.format == "date" && !isValidDate(strValue)) {
-            errors.emplace_back(fieldName, ValidationResult::INVALID_DATE_FORMAT,
-                              "Field '" + fieldName + "' must be a valid date (YYYY-MM-DD)");
-        }
-        
-        // Enum validation
-        if (!fieldSchema.enumValues.empty()) {
-            bool found = false;
-            for (const auto& enumValue : fieldSchema.enumValues) {
-                if (strValue == enumValue) {
-                    found = true;
-                    break;
-                }
+    valijson::ValidationResults::Error error;
+    while (mutableResults.popError(error)) {
+        std::string fieldPath;
+        for (const auto& token : error.context) {
+            if (!fieldPath.empty()) {
+                fieldPath += ".";
             }
-            if (!found) {
-                errors.emplace_back(fieldName, ValidationResult::INVALID_FIELD_VALUE,
-                                  "Field '" + fieldName + "' must be one of the allowed values");
-            }
+            fieldPath += token;
         }
         
-        // Pattern validation
-        if (!fieldSchema.pattern.empty() && !matchesPattern(strValue, fieldSchema.pattern)) {
-            errors.emplace_back(fieldName, ValidationResult::INVALID_FIELD_VALUE,
-                              "Field '" + fieldName + "' does not match required pattern");
+        if (fieldPath.empty()) {
+            fieldPath = "root";
         }
-    }
-    
-    // Integer-specific validations
-    if (fieldSchema.type == "integer" && value.isInt()) {
-        int intValue = value.asInt();
-        if (intValue < fieldSchema.minimum) {
-            errors.emplace_back(fieldName, ValidationResult::VALUE_OUT_OF_RANGE,
-                              "Field '" + fieldName + "' must be at least " + 
-                              std::to_string(fieldSchema.minimum));
-        }
-        if (intValue > fieldSchema.maximum) {
-            errors.emplace_back(fieldName, ValidationResult::VALUE_OUT_OF_RANGE,
-                              "Field '" + fieldName + "' must be at most " + 
-                              std::to_string(fieldSchema.maximum));
-        }
+        
+        errors.emplace_back(fieldPath, error.description, "");
     }
     
     return errors;
@@ -205,8 +133,10 @@ std::string SchemaValidator::getErrorsAsJson(const std::vector<ValidationError>&
     for (const auto& error : errors) {
         Json::Value errorObj;
         errorObj["field"] = error.field;
-        errorObj["code"] = static_cast<int>(error.result);
         errorObj["message"] = error.message;
+        if (!error.context.empty()) {
+            errorObj["context"] = error.context;
+        }
         result["errors"].append(errorObj);
     }
     
@@ -215,55 +145,57 @@ std::string SchemaValidator::getErrorsAsJson(const std::vector<ValidationError>&
     return Json::writeString(builder, result);
 }
 
-// Validation helper methods
-bool SchemaValidator::isValidEmail(const std::string& email) const {
-    const std::regex emailRegex(
-        R"(^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$)"
-    );
-    return std::regex_match(email, emailRegex);
-}
-
-bool SchemaValidator::isValidDate(const std::string& date) const {
-    const std::regex dateRegex(R"(^\d{4}-\d{2}-\d{2}$)");
-    return std::regex_match(date, dateRegex);
-}
-
-bool SchemaValidator::matchesPattern(const std::string& value, const std::string& pattern) const {
-    try {
-        const std::regex regex(pattern);
-        return std::regex_match(value, regex);
-    } catch (const std::exception&) {
-        return false; // Invalid regex pattern
-    }
-}
-
-// Predefined schemas
-namespace UserSchemas {
-    Schema createUserSchema() {
-        Schema schema;
-        schema.addProperty("name", stringField(2, 100))
-              .addProperty("email", emailField());
-        schema.addRequired("name");
-        schema.addRequired("email");
-        return schema;
+// Factory functions
+namespace UserValidators {
+    SchemaValidator createUserValidator() {
+        return SchemaValidator("create_user", "user/create.json");
     }
     
-    Schema updateUserSchema() {
-        Schema schema;
-        schema.addProperty("id", integerField(1, INT_MAX))
-              .addProperty("name", stringField(2, 100))
-              .addProperty("email", emailField());
-        schema.addRequired("id");
-        return schema;
+    SchemaValidator updateUserValidator() {
+        return SchemaValidator("update_user", "user/update.json");
     }
     
-    Schema getUserQuerySchema() {
-        Schema schema;
-        schema.addProperty("id", integerField(1, INT_MAX))
-              .addProperty("limit", integerField(1, 1000))
-              .addProperty("offset", integerField(0, INT_MAX));
-        return schema;
+    SchemaValidator queryUserValidator() {
+        return SchemaValidator("query_user", "user/query.json");
     }
+}
+
+// SchemaManager Implementation
+SchemaManager::SchemaManager(const std::string& path) : schemasPath(path) {
+}
+
+std::shared_ptr<valijson::Schema> SchemaManager::getSchema(const std::string& schemaFile) const {
+    auto it = schemaCache.find(schemaFile);
+    if (it != schemaCache.end()) {
+        return std::shared_ptr<valijson::Schema>(it->second.get(), [](valijson::Schema*){});
+    }
+    
+    // Load schema
+    auto schema = std::make_unique<valijson::Schema>();
+    std::string filePath = schemasPath + "/" + schemaFile;
+    
+    Json::Value schemaDoc;
+    if (!valijson::utils::loadDocument(filePath, schemaDoc)) {
+        return nullptr;
+    }
+    
+    valijson::SchemaParser parser;
+    valijson::adapters::JsonCppAdapter schemaAdapter(schemaDoc);
+    parser.populateSchema(schemaAdapter, *schema);
+    
+    auto rawPtr = schema.get();
+    schemaCache[schemaFile] = std::move(schema);
+    
+    return std::shared_ptr<valijson::Schema>(rawPtr, [](valijson::Schema*){});
+}
+
+void SchemaManager::clearCache() {
+    schemaCache.clear();
+}
+
+bool SchemaManager::reloadSchema(const std::string& schemaFile) {
+    schemaCache.erase(schemaFile);
+    return getSchema(schemaFile) != nullptr;
 }
 
 } // namespace validation
