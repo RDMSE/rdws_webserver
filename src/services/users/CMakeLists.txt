@@ -18,19 +18,23 @@ find_package(jsoncpp REQUIRED)
 
 # Include directories
 include_directories(${LIBPQXX_INCLUDE_DIRS})
+include_directories(../../../third_party/valijson/include)
+include_directories(/usr/include/rapidjson)
 
 # Add executable
-add_executable(users_service 
+add_executable(users_service
     main.cpp
+    user_service.cpp
     ../../shared/common/database/postgresql_database.cpp
     ../../shared/repository/user_repository.cpp
     ../../shared/types/user.cpp
     ../../shared/common/config/config.cpp
     ../../shared/validation/schema_validator.cpp
+    ../../shared/common/utils/response_helper.cpp
 )
 
 # Link libraries
-target_link_libraries(users_service 
+target_link_libraries(users_service
     ${LIBPQXX_LIBRARIES}
     jsoncpp_lib
 )

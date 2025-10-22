@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Update User Schema",
+  "description": "Schema for updating an existing user",
+  "properties": {
+    "id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "User ID"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 100,
+      "description": "User's full name"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "maxLength": 255,
+      "description": "User's email address"
+    }
+  },
+  "required": ["id"],
+  "additionalProperties": false
+}

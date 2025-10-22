@@ -4,6 +4,9 @@ cmake_minimum_required(VERSION 3.10)
 # Include Google Test
 include(GoogleTest)
 
+# Include Valijson for tests that need validation
+include_directories(../src/third_party/valijson/include)
+
 # Criar biblioteca de helpers comuns
 add_library(test_helpers
     common/test_helpers.cpp

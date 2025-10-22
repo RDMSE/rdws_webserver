@@ -1,7 +1,10 @@
 #pragma once
 
 #include <string>
+#include <sstream>
+#include <iomanip>
 #include <jsoncpp/json/json.h>
+#include <rapidjson/document.h>
 
 namespace rdws {
 namespace types {
@@ -12,66 +15,35 @@ struct User {
     std::string email;
     std::string created_at;
     
-    // Default constructor
+    // Constructors
     User() = default;
+    User(const std::string& n, const std::string& e) : name(n), email(e) {}
+    User(int i, const std::string& n, const std::string& e, const std::string& c) 
+        : id(i), name(n), email(e), created_at(c) {}
     
-    // Constructor with parameters
-    User(int id, const std::string& name, const std::string& email, const std::string& created_at = "")
-        : id(id), name(name), email(email), created_at(created_at) {}
-    
-    // Constructor from name and email (for creation)
-    User(const std::string& name, const std::string& email)
-        : id(0), name(name), email(email) {}
-    
-    // JSON serialization
-    Json::Value toJson() const {
+    // Convert to JSON string using jsoncpp (for backward compatibility)
+    std::string toJsonString() const {
         Json::Value json;
         json["id"] = id;
         json["name"] = name;
         json["email"] = email;
-        if (!created_at.empty()) {
-            json["created_at"] = created_at;
-        }
-        return json;
-    }
-    
-    // JSON serialization to string
-    std::string toJsonString() const {
+        json["created_at"] = created_at;
+        
         Json::StreamWriterBuilder builder;
         builder["indentation"] = "";
-        return Json::writeString(builder, toJson());
+        return Json::writeString(builder, json);
     }
     
-    // JSON deserialization
-    static User fromJson(const Json::Value& json) {
-        User user;
-        if (json.isMember("id")) {
-            user.id = json["id"].asInt();
-        }
-        if (json.isMember("name")) {
-            user.name = json["name"].asString();
-        }
-        if (json.isMember("email")) {
-            user.email = json["email"].asString();
-        }
-        if (json.isMember("created_at")) {
-            user.created_at = json["created_at"].asString();
-        }
-        return user;
-    }
-    
-    // Validation
-    bool isValid() const {
-        return !name.empty() && !email.empty() && email.find('@') != std::string::npos;
-    }
-    
-    // Comparison operators
-    bool operator==(const User& other) const {
-        return id == other.id && name == other.name && email == other.email;
-    }
-    
-    bool operator!=(const User& other) const {
-        return !(*this == other);
+    // Convert to RapidJSON Value (for ResponseHelper)
+    ::rapidjson::Value toJsonValue(::rapidjson::Document::AllocatorType& allocator) const {
+        ::rapidjson::Value userObj(::rapidjson::kObjectType);
+        
+        userObj.AddMember("id", ::rapidjson::Value(id), allocator);
+        userObj.AddMember("name", ::rapidjson::Value(name.c_str(), allocator), allocator);
+        userObj.AddMember("email", ::rapidjson::Value(email.c_str(), allocator), allocator);
+        userObj.AddMember("created_at", ::rapidjson::Value(created_at.c_str(), allocator), allocator);
+        
+        return userObj;
     }
 };
 

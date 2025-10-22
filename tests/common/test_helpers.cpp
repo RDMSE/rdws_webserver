@@ -85,7 +85,10 @@ std::string ExecutableTestHelper::getServiceExecutablePath(const std::string &se
         "../../src/services/" + serviceName + "/" + serviceName + "_service", // Alternative (new structure)
         "../services/" + serviceName + "/" + serviceName + "_service",        // From tests/ dir (old structure - fallback)
         "./services/" + serviceName + "/" + serviceName + "_service",         // From build/ dir (old structure - fallback)
-        "../../services/" + serviceName + "/" + serviceName + "_service"      // Alternative (old structure - fallback)
+        "../../services/" + serviceName + "/" + serviceName + "_service",      // Alternative (old structure - fallback)
+        "../../build/src/services/" + serviceName + "/" + serviceName + "_service", // From project root via build
+        "../build/src/services/" + serviceName + "/" + serviceName + "_service",    // From tests dir to build
+        "./build/src/services/" + serviceName + "/" + serviceName + "_service"      // Direct build path
     };
 
     for (const auto &path : possiblePaths)
