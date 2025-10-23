@@ -104,7 +104,21 @@ app.get('/debug/microservice/:service', async (req, res) => {
     console.log(`   Method: ${method}`);
     console.log(`   Path: ${path}`);
     
-    const result = await originalCallMicroservice(service, method, path, req.requestId);
+    // Create a mock request for debug testing
+    const mockReq = {
+      method,
+      path,
+      route: { path },
+      body: null,
+      headers: {},
+      query: {},
+      ip: '127.0.0.1',
+      requestId: req.requestId,
+      get: () => 'DebugTester/1.0',
+      params: {}
+    } as any;
+    
+    const result = await originalCallMicroservice(service, mockReq);
     
     res.json({
       success: true,

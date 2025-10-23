@@ -264,7 +264,7 @@ bool MockDatabase::execCommand(
     }
     
     // Handle USER commands (existing logic)
-    if (command.find("INSERT") != std::string::npos && parameters.size() >= 2) {
+    if (command.find("INSERT INTO users") != std::string::npos && parameters.size() >= 2) {
         // Extract name and email from parameters and add user
         std::string name = parameters[0];
         std::string email = parameters[1];
@@ -273,9 +273,18 @@ bool MockDatabase::execCommand(
         return true;
     }
     
-    if (command.find("UPDATE") != std::string::npos && command.find("users") != std::string::npos) {
-        // Simulate successful update
-        return true;
+    if (command.find("UPDATE users") != std::string::npos && parameters.size() >= 3) {
+        // Update user: name, email, id
+        std::string name = parameters[0];
+        std::string email = parameters[1];
+        int userId = std::stoi(parameters[2]);
+        
+        if (users.count(userId)) {
+            users[userId]["name"] = name;
+            users[userId]["email"] = email;
+            return true;
+        }
+        return false; // User not found
     }
     
     if (command.find("DELETE FROM users") != std::string::npos && !parameters.empty()) {

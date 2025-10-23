@@ -22,15 +22,17 @@ include_directories(../../../third_party/valijson/include)
 include_directories(/usr/include/rapidjson)
 
 # Add executable
-add_executable(users_service
+add_executable(users_service 
     main.cpp
     user_service.cpp
-    ../../shared/common/database/postgresql_database.cpp
     ../../shared/repository/user_repository.cpp
     ../../shared/types/user.cpp
+    ../../shared/types/lambda_event.cpp
+    ../../shared/types/lambda_context.cpp
+    ../../shared/common/utils/response_helper.cpp
     ../../shared/common/config/config.cpp
     ../../shared/validation/schema_validator.cpp
-    ../../shared/common/utils/response_helper.cpp
+    ../../shared/common/database/postgresql_database.cpp
 )
 
 # Link libraries

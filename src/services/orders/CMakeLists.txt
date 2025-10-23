@@ -20,9 +20,12 @@ add_executable(orders_service
     order_service.cpp
     order_repository.cpp
     ../../shared/types/order.cpp
+    ../../shared/types/lambda_event.cpp
+    ../../shared/types/lambda_context.cpp
     ../../shared/common/utils/response_helper.cpp
     ../../shared/common/config/config.cpp
     ../../shared/validation/schema_validator.cpp
+    ../../shared/common/database/postgresql_database.cpp
 )
 
 # Find required libraries
@@ -36,6 +39,7 @@ set_target_properties(orders_service PROPERTIES
 # Link libraries
 target_link_libraries(orders_service
     jsoncpp_lib
+    ${PQXX_LIBS}
 )
 
 # Install target

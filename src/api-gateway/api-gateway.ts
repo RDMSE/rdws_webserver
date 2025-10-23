@@ -55,6 +55,10 @@ import {
   HealthResponse,
   ApiDocsResponse,
   MicroserviceRouter,
+  LambdaEvent,
+  LambdaContext,
+  createLambdaEvent,
+  createLambdaContext,
 } from '../routes';
 
 const execAsync = promisify(exec);
@@ -85,22 +89,32 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 /**
- * Helper function to execute microservice and handle errors
+ * Helper function to execute microservice with AWS Lambda-like Event/Context
  * Environment variables are automatically inherited by child processes
  */
 async function callMicroservice(
   serviceName: string,
-  method: string,
-  path: string,
-  requestId: string
+  req: Request,
+  pathParameters: Record<string, string> = {}
 ): Promise<ServiceResponse> {
+  const requestId = req.requestId;
   const startTime = Date.now();
 
   try {
-    const servicePath = `${config.buildPath}/src/services/${serviceName}/${serviceName}_service`;
-    const command = `"${servicePath}" "${method}" "${path}"`;
+    // Create AWS Lambda-like Event and Context objects
+    const lambdaEvent = createLambdaEvent(req, requestId, pathParameters);
+    const lambdaContext = createLambdaContext(requestId, serviceName);
 
-    console.log(`[${requestId}] Calling: ${command}`);
+    // Serialize to JSON
+    const eventJson = JSON.stringify(lambdaEvent);
+    const contextJson = JSON.stringify(lambdaContext);
+
+    const servicePath = `${config.buildPath}/src/services/${serviceName}/${serviceName}_service`;
+    const command = `"${servicePath}" '${eventJson}' '${contextJson}'`;
+
+    console.log(`[${requestId}] Calling: ${serviceName} with Event/Context JSON`);
+    console.log(`[${requestId}] Event: ${req.method} ${req.path}`);
+    console.log(`[${requestId}] Context: ${lambdaContext.functionName} v${lambdaContext.functionVersion}`);
     console.log(
       `[${requestId}] Environment inherited: DB_HOST=${process.env.DB_HOST}, DB_NAME=${process.env.DB_NAME}`
     );
@@ -227,7 +241,20 @@ app.get('/health', async (req: Request, res: Response) => {
   for (const service of uniqueServices) {
     try {
       const startTime = Date.now();
-      await callMicroservice(service, 'GET', `/${service}`, req.requestId);
+      // Create a mock request for health check
+      const mockReq = {
+        method: 'GET',
+        path: `/${service}`,
+        route: { path: `/${service}` },
+        body: null,
+        headers: {},
+        query: {},
+        ip: '127.0.0.1',
+        requestId: req.requestId,
+        get: () => 'HealthCheck/1.0',
+      } as any;
+      
+      await callMicroservice(service, mockReq);
       healthData.services[service] = {
         status: 'healthy',
         responseTime: Date.now() - startTime,

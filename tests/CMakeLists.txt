@@ -28,6 +28,8 @@ add_executable(users_service_unit_tests
     ../src/services/users/user_service.cpp
     ../src/shared/repository/user_repository.cpp
     ../src/shared/types/user.cpp
+    ../src/shared/types/lambda_event.cpp
+    ../src/shared/types/lambda_context.cpp
     ../src/shared/common/config/config.cpp
     ../src/shared/validation/schema_validator.cpp
     ../src/shared/common/utils/response_helper.cpp
@@ -63,6 +65,8 @@ add_executable(orders_service_unit_tests
     ../src/services/orders/order_service.cpp
     ../src/services/orders/order_repository.cpp
     ../src/shared/types/order.cpp
+    ../src/shared/types/lambda_event.cpp
+    ../src/shared/types/lambda_context.cpp
     ../src/shared/common/config/config.cpp
     ../src/shared/validation/schema_validator.cpp
     ../src/shared/common/utils/response_helper.cpp

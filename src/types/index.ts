@@ -6,6 +6,9 @@
 
 import { Request, Response } from 'express';
 
+// Export Lambda types
+export * from './lambda';
+
 // Configuration interface
 export interface Config {
   port: number;
@@ -74,9 +77,8 @@ declare global {
 // Microservice call function type
 export type CallMicroserviceFunction = (
   serviceName: string,
-  method: string,
-  path: string,
-  requestId: string
+  req: Request,
+  pathParameters?: Record<string, string>
 ) => Promise<ServiceResponse>;
 
 // Error handler function type

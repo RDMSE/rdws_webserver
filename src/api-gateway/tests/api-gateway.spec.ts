@@ -56,7 +56,7 @@ describe('API Gateway', () => {
     // Reset mocks before each test
     jest.clearAllMocks();
 
-    // Default successful mock implementation
+    // Default successful mock implementation for JSON Event/Context format
     mockExec.mockImplementation((command: string, options: any, callback?: any) => {
       // Handle promisified exec
       if (typeof options === 'function') {
@@ -68,31 +68,55 @@ describe('API Gateway', () => {
         let mockData: any = {};
         let stdout = '';
 
-        // Parse command to determine response
-        if (command.includes('users_service')) {
-          if (command.includes('"/users"')) {
-            mockData = mockUsersResponse;
-          } else if (command.includes('"/users/1"')) {
-            mockData = mockUserResponse;
-          } else {
-            return callback(new Error('Service users not found'));
+        try {
+          // Extract JSON arguments from command
+          const jsonMatches = command.match(/'(\{.*?\})'/g);
+          
+          if (!jsonMatches || jsonMatches.length < 2) {
+            return callback(new Error('Invalid command format - missing JSON arguments'));
           }
-        } else if (command.includes('orders_service')) {
-          if (command.includes('"/orders"')) {
-            mockData = mockOrdersResponse;
-          } else if (command.includes('"/orders/1"')) {
-            mockData = mockOrderResponse;
-          } else if (command.includes('"/users/1/orders"')) {
-            mockData = mockUserOrdersResponse;
-          } else {
-            return callback(new Error('Service orders not found'));
-          }
-        } else {
-          return callback(new Error('Service not found'));
-        }
 
-        stdout = JSON.stringify(mockData);
-        callback(null, { stdout, stderr: '' });
+          // Parse Event and Context JSON
+          const eventJson = jsonMatches[0].slice(1, -1); // Remove quotes
+          const contextJson = jsonMatches[1].slice(1, -1); // Remove quotes
+          
+          const lambdaEvent = JSON.parse(eventJson);
+          const lambdaContext = JSON.parse(contextJson);
+
+          // Determine service and route from context and event
+          const serviceName = lambdaContext.functionName;
+          const httpMethod = lambdaEvent.httpMethod;
+          const path = lambdaEvent.path;
+
+          // Route based on service and path
+          if (serviceName === 'users') {
+            if (httpMethod === 'GET' && (path === '/' || path === '/users')) {
+              mockData = mockUsersResponse;
+            } else if (httpMethod === 'GET' && (path === '/1' || path === '/users/1')) {
+              mockData = mockUserResponse;
+            } else {
+              return callback(new Error('Service users not found'));
+            }
+          } else if (serviceName === 'orders') {
+            if (httpMethod === 'GET' && (path === '/' || path === '/orders')) {
+              mockData = mockOrdersResponse;
+            } else if (httpMethod === 'GET' && (path === '/1' || path === '/orders/1')) {
+              mockData = mockOrderResponse;
+            } else if (httpMethod === 'GET' && (path === '/1/orders' || path === '/users/1/orders')) {
+              mockData = mockUserOrdersResponse;
+            } else {
+              return callback(new Error('Service orders not found'));
+            }
+          } else {
+            return callback(new Error('Service not found'));
+          }
+
+          stdout = JSON.stringify(mockData);
+          callback(null, { stdout, stderr: '' });
+        } catch (parseError) {
+          console.error('Mock parse error:', parseError, 'Command:', command);
+          return callback(new Error('Invalid JSON in command'));
+        }
       }, 10);
 
       return {} as any; // Mock child process
@@ -119,7 +143,7 @@ describe('API Gateway', () => {
       expect(response.body.services.orders).toHaveProperty('status', 'healthy');
       expect(response.body.services.orders).toHaveProperty('responseTime');
 
-      // Verify that exec was called for health check
+      // Verify that exec was called for health check with JSON format
       expect(mockExec).toHaveBeenCalledWith(
         expect.stringContaining('users_service'),
         expect.any(Object),
@@ -185,12 +209,17 @@ describe('API Gateway', () => {
       expect(response.body.gateway).toHaveProperty('requestId');
       expect(response.body.gateway).toHaveProperty('serviceName', 'users');
 
-      // Verify exec was called correctly
+      // Verify exec was called correctly with JSON format
       expect(mockExec).toHaveBeenCalledWith(
         expect.stringContaining('users_service'),
         expect.any(Object),
         expect.any(Function)
       );
+
+      // Verify JSON Event/Context format
+      const calls = mockExec.mock.calls;
+      const lastCall = calls[calls.length - 1];
+      expect(lastCall[0]).toMatch(/'\{.*\}' '\{.*\}'$/);
     });
 
     test('GET /users/:id with valid ID', async () => {
@@ -205,12 +234,17 @@ describe('API Gateway', () => {
       expect(response.body).toHaveProperty('gateway');
       expect(response.body.gateway).toHaveProperty('serviceName', 'users');
 
-      // Verify exec was called with correct command
+      // Verify exec was called with correct JSON Event
       expect(mockExec).toHaveBeenCalledWith(
-        expect.stringContaining('/users/1'),
+        expect.stringContaining('users_service'),
         expect.any(Object),
         expect.any(Function)
       );
+
+      // Verify Event contains correct path
+      const calls = mockExec.mock.calls;
+      const lastCall = calls[calls.length - 1];
+      expect(lastCall[0]).toContain('"path":"/1"');
     });
 
     test('GET /users/:id with invalid ID returns 400', async () => {
@@ -268,12 +302,17 @@ describe('API Gateway', () => {
       expect(response.body).toHaveProperty('gateway');
       expect(response.body.gateway).toHaveProperty('serviceName', 'orders');
 
-      // Verify exec was called correctly
+      // Verify exec was called correctly with JSON format
       expect(mockExec).toHaveBeenCalledWith(
         expect.stringContaining('orders_service'),
         expect.any(Object),
         expect.any(Function)
       );
+
+      // Verify JSON Event/Context format
+      const calls = mockExec.mock.calls;
+      const lastCall = calls[calls.length - 1];
+      expect(lastCall[0]).toMatch(/'\{.*\}' '\{.*\}'$/);
     });
 
     test('GET /orders/:id with valid ID', async () => {
@@ -288,12 +327,17 @@ describe('API Gateway', () => {
       expect(response.body).toHaveProperty('gateway');
       expect(response.body.gateway).toHaveProperty('serviceName', 'orders');
 
-      // Verify exec was called with correct command
+      // Verify exec was called with correct JSON Event
       expect(mockExec).toHaveBeenCalledWith(
-        expect.stringContaining('/orders/1'),
+        expect.stringContaining('orders_service'),
         expect.any(Object),
         expect.any(Function)
       );
+
+      // Verify Event contains correct path
+      const calls = mockExec.mock.calls;
+      const lastCall = calls[calls.length - 1];
+      expect(lastCall[0]).toContain('"path":"/1"');
     });
 
     test('GET /orders/:id with invalid ID returns 400', async () => {
@@ -321,12 +365,17 @@ describe('API Gateway', () => {
       expect(response.body.orders[0]).toHaveProperty('product', 'Laptop');
       expect(response.body).toHaveProperty('gateway');
 
-      // Verify exec was called with correct path
+      // Verify exec was called with correct JSON Event
       expect(mockExec).toHaveBeenCalledWith(
-        expect.stringContaining('/users/1/orders'),
+        expect.stringContaining('orders_service'),
         expect.any(Object),
         expect.any(Function)
       );
+
+      // Verify Event contains correct path
+      const calls = mockExec.mock.calls;
+      const lastCall = calls[calls.length - 1];
+      expect(lastCall[0]).toContain('"path":"/1/orders"');
     });
 
     test('GET /users/:userId/orders with invalid user ID returns 400', async () => {
@@ -494,10 +543,24 @@ describe('API Gateway', () => {
         expect.any(Function)
       );
 
-      // Verify the command contains the correct path
+      // Verify the command contains the correct JSON Event with path
       const calls = mockExec.mock.calls;
       const lastCall = calls[calls.length - 1];
-      expect(lastCall[0]).toContain('/users/123');
+      const command = lastCall[0];
+      
+      // Extract and parse the Event JSON from the command (more flexible regex)
+      const jsonMatches = command.match(/'(\{.*?\})'/g);
+      expect(jsonMatches).toBeTruthy();
+      
+      if (jsonMatches) {
+        expect(jsonMatches.length).toBeGreaterThanOrEqual(2);
+        
+        const eventJson = jsonMatches[0].slice(1, -1); // Remove quotes
+        const lambdaEvent = JSON.parse(eventJson);
+        expect(lambdaEvent.path).toBe('/123');
+        expect(lambdaEvent.httpMethod).toBe('GET');
+        expect(lambdaEvent.pathParameters).toHaveProperty('id', '123');
+      }
     });
 
     test('Mock can simulate different response times', async () => {
