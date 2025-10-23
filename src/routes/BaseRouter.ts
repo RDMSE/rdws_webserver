@@ -67,18 +67,17 @@ export abstract class BaseRouter implements MicroserviceRouter {
           }
         }
 
-        // Build the actual path by replacing parameters
-        let actualPath = pathTemplate;
+                // Build path parameters object
+        const pathParameters: Record<string, string> = {};
         Object.keys(req.params).forEach(param => {
-          actualPath = actualPath.replace(`:${param}`, req.params[param]);
+          pathParameters[param] = req.params[param];
         });
 
-        // Call microservice
+        // Call microservice with new Event/Context API
         const result = await callMicroservice(
           this.routeConfig.serviceName,
-          method,
-          actualPath,
-          req.requestId
+          req,
+          pathParameters
         );
 
         res.json(result);
