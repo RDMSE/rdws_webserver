@@ -8,13 +8,13 @@ namespace database {
 
 // PostgreSQLResultSet Implementation
 
-PostgreSQLResultSet::PostgreSQLResultSet(pqxx::result res) 
+PostgreSQLResultSet::PostgreSQLResultSet(pqxx::result res)
     : result(std::move(res)), currentRow(0) {}
 
 bool PostgreSQLResultSet::next() {
-    if (currentRow < result.size()) {
+    if (currentRow < (size_t)result.size()) {
         ++currentRow;
-        return currentRow <= result.size();
+        return currentRow <= (size_t)result.size();
     }
     return false;
 }
@@ -32,35 +32,35 @@ void PostgreSQLResultSet::reset() {
 }
 
 std::string PostgreSQLResultSet::getString(const std::string& columnName) {
-    if (currentRow == 0 || currentRow > result.size()) {
+    if (currentRow == 0 || currentRow > (size_t)result.size()) {
         throw std::runtime_error("Invalid row position");
     }
     return result[currentRow - 1][columnName].as<std::string>();
 }
 
 int PostgreSQLResultSet::getInt(const std::string& columnName) {
-    if (currentRow == 0 || currentRow > result.size()) {
+    if (currentRow == 0 || currentRow > (size_t)result.size()) {
         throw std::runtime_error("Invalid row position");
     }
     return result[currentRow - 1][columnName].as<int>();
 }
 
 double PostgreSQLResultSet::getDouble(const std::string& columnName) {
-    if (currentRow == 0 || currentRow > result.size()) {
+    if (currentRow == 0 || currentRow > (size_t)result.size()) {
         throw std::runtime_error("Invalid row position");
     }
     return result[currentRow - 1][columnName].as<double>();
 }
 
 bool PostgreSQLResultSet::getBool(const std::string& columnName) {
-    if (currentRow == 0 || currentRow > result.size()) {
+    if (currentRow == 0 || currentRow > (size_t)result.size()) {
         throw std::runtime_error("Invalid row position");
     }
     return result[currentRow - 1][columnName].as<bool>();
 }
 
 bool PostgreSQLResultSet::isNull(const std::string& columnName) {
-    if (currentRow == 0 || currentRow > result.size()) {
+    if (currentRow == 0 || currentRow > (size_t)result.size()) {
         throw std::runtime_error("Invalid row position");
     }
     return result[currentRow - 1][columnName].is_null();
@@ -72,7 +72,7 @@ size_t PostgreSQLResultSet::getColumnCount() {
 
 std::vector<std::string> PostgreSQLResultSet::getColumnNames() {
     std::vector<std::string> names;
-    for (size_t i = 0; i < result.columns(); ++i) {
+    for (size_t i = 0; i < (size_t)result.columns(); ++i) {
         names.push_back(result.column_name(i));
     }
     return names;
@@ -89,7 +89,7 @@ PostgreSQLDatabase::PostgreSQLDatabase() {
     connect();
 }
 
-PostgreSQLDatabase::PostgreSQLDatabase(const rdws::Config& dbConfig) 
+PostgreSQLDatabase::PostgreSQLDatabase(const rdws::Config& dbConfig)
     : config(dbConfig) {
     connect();
 }
@@ -107,7 +107,7 @@ std::unique_ptr<IResultSet> PostgreSQLDatabase::execQuery(
 ) {
     try {
         ensureConnection();
-        
+
         if (currentTransaction) {
             pqxx::result result;
             if (parameters.empty()) {
@@ -150,12 +150,12 @@ std::unique_ptr<IResultSet> PostgreSQLDatabase::execQuery(
         throw std::runtime_error("Query execution failed: " + std::string(e.what()));
     }
 }bool PostgreSQLDatabase::execCommand(
-    const std::string& command, 
+    const std::string& command,
     const std::vector<std::string>& parameters
 ) {
     try {
         ensureConnection();
-        
+
         if (currentTransaction) {
             if (parameters.empty()) {
                 currentTransaction->exec(command);
@@ -205,23 +205,23 @@ bool PostgreSQLDatabase::execBatch(
         lastError = "Commands and parameter sets size mismatch";
         return false;
     }
-    
+
     try {
         ensureConnection();
-        
+
         bool wasInTransaction = (currentTransaction != nullptr);
         if (!wasInTransaction) {
             beginTransaction();
         }
-        
+
         for (size_t i = 0; i < commands.size(); ++i) {
             currentTransaction->exec_params(commands[i], parameterSets[i]);
         }
-        
+
         if (!wasInTransaction) {
             commitTransaction();
         }
-        
+
         return true;
     } catch (const std::exception& e) {
         lastError = e.what();
