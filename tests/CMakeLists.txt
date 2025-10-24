@@ -44,6 +44,7 @@ target_include_directories(users_service_unit_tests PRIVATE
 )
 
 target_link_libraries(users_service_unit_tests
+    GTest::gmock
     GTest::gtest
     GTest::gtest_main
     jsoncpp_lib
@@ -78,6 +79,7 @@ target_include_directories(orders_service_unit_tests PRIVATE
 )
 
 target_link_libraries(orders_service_unit_tests
+    GTest::gmock
     GTest::gtest
     GTest::gtest_main
     jsoncpp_lib

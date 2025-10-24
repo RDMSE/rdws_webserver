@@ -1,5 +1,8 @@
 #include "order_service.h"
 #include "order_repository.h"
+#ifdef UNIT_TEST
+#include "tests/mocks/mock_database.h"
+#endif
 #include <iostream>
 
 namespace rdws {
@@ -183,6 +186,18 @@ bool OrderService::updateOrderStatus(int orderId, const std::string& newStatus) 
         std::cerr << "Error updating order status: " << e.what() << std::endl;
         return false;
     }
+}
+
+// Método de teste para limpar pedidos
+void OrderService::clearOrders() {
+    #ifdef UNIT_TEST
+    if (db_) {
+        auto mockPtr = std::dynamic_pointer_cast<rdws::testing::MockDatabase>(db_);
+        if (mockPtr) {
+            mockPtr->clearOrders();
+        }
+    }
+    #endif
 }
 
 } // namespace orders

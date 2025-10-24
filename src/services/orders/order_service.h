@@ -86,6 +86,11 @@ public:
      * @return True if update was successful, false otherwise
      */
     bool updateOrderStatus(int orderId, const std::string& newStatus);
+
+    /**
+     * Clear all orders (for unit test purposes)
+     */
+    void clearOrders();
 };
 
 } // namespace orders
