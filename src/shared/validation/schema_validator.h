@@ -29,13 +29,22 @@ class SchemaValidator {
     std::unique_ptr<valijson::Schema> schema;
     std::unique_ptr<valijson::Validator> validator;
 
+    // Private default constructor for factory methods
+    SchemaValidator() = default;
+
     std::string getSchemaPath(const std::string& schemaFile) const;
     bool loadSchemaFromFile(const std::string& filePath);
+    bool loadSchemaFromString(const std::string& schemaString);
     std::vector<ValidationError>
     convertValidationResults(const valijson::ValidationResults& results) const;
 
   public:
+    // Constructor for file-based schemas (legacy)
     SchemaValidator(const std::string& name, const std::string& schemaFile);
+
+    // Constructor for string-based schemas (recommended)
+    static SchemaValidator fromString(const std::string& name, const std::string& schemaString);
+
     ~SchemaValidator() = default;
 
     // Move constructor and assignment
@@ -70,6 +79,12 @@ SchemaValidator createUserValidator();
 SchemaValidator updateUserValidator();
 SchemaValidator queryUserValidator();
 } // namespace UserValidators
+
+// Factory functions for order validators
+namespace OrderValidators {
+SchemaValidator createOrderValidator();
+SchemaValidator updateOrderValidator();
+} // namespace OrderValidators
 
 // Schema manager for loading and caching schemas
 class SchemaManager {
