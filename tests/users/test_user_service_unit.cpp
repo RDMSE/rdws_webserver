@@ -48,9 +48,9 @@ protected:
                 if (query.find("COUNT(*)") != std::string::npos) {
                     // If test calls clearUsers, return 0
                     if (query.find("users") != std::string::npos && params.size() > 0 && params[0] == "0") {
-                        return std::make_unique<rdws::testing::MockUserResultSet>(std::vector<std::map<std::string, std::string>>{{{"count", "0"}}});
+                        return std::make_unique<rdws::testing::MockUserResultSet>(std::vector<std::map<std::string, std::string>>{{{"total", "0"}}});
                     }
-                    return std::make_unique<rdws::testing::MockUserResultSet>(std::vector<std::map<std::string, std::string>>{{{"count", "3"}}});
+                    return std::make_unique<rdws::testing::MockUserResultSet>(std::vector<std::map<std::string, std::string>>{{{"total", "3"}}});
                 }
                 // Match select by email
                 if (query.find("SELECT id, name, email, created_at FROM users WHERE email = $1") != std::string::npos) {
@@ -242,7 +242,7 @@ TEST_F(UserServiceUnitTest, GetUsersCount_ReturnsCorrectCount) {
     using ::testing::Return;
     using ::testing::_;
     // The repository's count() method may call execQuery or execCommand, but let's assume it uses execQuery for count
-    std::vector<std::map<std::string, std::string>> countRows = { { {"count", "3"} } };
+    std::vector<std::map<std::string, std::string>> countRows = { { {"total", "3"} } };
     EXPECT_CALL(*mockDb, execQuery(::testing::HasSubstr("COUNT(*)"), _))
         .WillOnce(Return(std::make_unique<rdws::testing::MockUserResultSet>(countRows)));
     std::string result = userService->getUsersCount();
@@ -408,7 +408,7 @@ TEST_F(UserServiceUnitTest, GetUsersCount_ReturnsZero) {
     using ::testing::Return;
     using ::testing::_;
     mockDb->clearUsers();
-    std::vector<std::map<std::string, std::string>> countRows = { { {"count", "0"} } };
+    std::vector<std::map<std::string, std::string>> countRows = { { {"total", "0"} } };
     EXPECT_CALL(*mockDb, execQuery(::testing::HasSubstr("COUNT(*)"), _))
         .WillOnce(Return(std::make_unique<rdws::testing::MockUserResultSet>(countRows)));
     std::string result = userService->getUsersCount();
