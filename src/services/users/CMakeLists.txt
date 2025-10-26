@@ -13,11 +13,12 @@ set(CMAKE_CXX_FLAGS "-O2 -Wall -Wextra")
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBPQXX REQUIRED libpqxx)
 
-# Find jsoncpp
-find_package(jsoncpp REQUIRED)
+# Find jsoncpp via pkg-config
+pkg_check_modules(JSONCPP REQUIRED jsoncpp)
 
 # Include directories
 include_directories(${LIBPQXX_INCLUDE_DIRS})
+include_directories(${JSONCPP_INCLUDE_DIRS})
 include_directories(../../../third_party/valijson/include)
 include_directories(/usr/include/rapidjson)
 
@@ -38,7 +39,7 @@ add_executable(users_service
 # Link libraries
 target_link_libraries(users_service
     ${LIBPQXX_LIBRARIES}
-    jsoncpp_lib
+    ${JSONCPP_LIBRARIES}
 )
 
 # Link with static libgcc to reduce dependencies

@@ -9,7 +9,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # Add compile flags
 set(CMAKE_CXX_FLAGS "-O2 -Wall -Wextra")
 
+# Find required packages
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBPQXX REQUIRED libpqxx)
+pkg_check_modules(JSONCPP REQUIRED jsoncpp)
+
 # Include directories
+include_directories(${LIBPQXX_INCLUDE_DIRS})
+include_directories(${JSONCPP_INCLUDE_DIRS})
 include_directories(../../../third_party/valijson/include)
 include_directories(/usr/include/rapidjson)
 
@@ -28,9 +35,6 @@ add_executable(orders_service
     ../../shared/common/database/postgresql_database.cpp
 )
 
-# Find required libraries
-find_package(jsoncpp REQUIRED)
-
 # Link with static libgcc to reduce dependencies
 set_target_properties(orders_service PROPERTIES
   LINK_FLAGS "-static-libgcc"
@@ -38,8 +42,8 @@ set_target_properties(orders_service PROPERTIES
 
 # Link libraries
 target_link_libraries(orders_service
-    jsoncpp_lib
-    ${PQXX_LIBS}
+    ${JSONCPP_LIBRARIES}
+    ${LIBPQXX_LIBRARIES}
 )
 
 # Install target

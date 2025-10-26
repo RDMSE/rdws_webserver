@@ -1,6 +1,10 @@
 # CMakeLists.txt for tests
 cmake_minimum_required(VERSION 3.10)
 
+# Find required packages
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(JSONCPP REQUIRED jsoncpp)
+
 # Include Google Test
 include(GoogleTest)
 
@@ -35,19 +39,17 @@ add_executable(users_service_unit_tests
     ../src/shared/common/utils/response_helper.cpp
 )
 
-# Find jsoncpp for unit tests
-find_package(jsoncpp REQUIRED)
-
 target_include_directories(users_service_unit_tests PRIVATE
     ../src/third_party/valijson/include
     /usr/include/rapidjson
+    ${JSONCPP_INCLUDE_DIRS}
 )
 
 target_link_libraries(users_service_unit_tests
     GTest::gmock
     GTest::gtest
     GTest::gtest_main
-    jsoncpp_lib
+    ${JSONCPP_LIBRARIES}
     pthread
 )
 
@@ -76,13 +78,14 @@ add_executable(orders_service_unit_tests
 target_include_directories(orders_service_unit_tests PRIVATE
     ../src/third_party/valijson/include
     /usr/include/rapidjson
+    ${JSONCPP_INCLUDE_DIRS}
 )
 
 target_link_libraries(orders_service_unit_tests
     GTest::gmock
     GTest::gtest
     GTest::gtest_main
-    jsoncpp_lib
+    ${JSONCPP_LIBRARIES}
     pthread
 )
 
