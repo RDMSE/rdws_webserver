@@ -23,7 +23,7 @@ include_directories(../../../third_party/valijson/include)
 include_directories(/usr/include/rapidjson)
 
 # Add executable
-add_executable(users_service 
+add_executable(users_service
     main.cpp
     user_service.cpp
     ../../shared/repository/user_repository.cpp
