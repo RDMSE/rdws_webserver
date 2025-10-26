@@ -21,10 +21,10 @@ class UserService {
   public:
     UserService() : db_config() {
         std::cout << "Initialized with: " << db_config.getDebugInfo() << std::endl;
-        
+
         // Initialize database connection
         database = std::make_shared<rdws::database::PostgreSQLDatabase>(db_config);
-        
+
         // Initialize user repository
         userRepository = std::make_unique<rdws::repository::UserRepository>(database);
     }
@@ -61,11 +61,11 @@ class UserService {
             return Json::writeString(builder, error);
         }
     }
-    
+
     std::string getUserById(int id) {
         try {
             auto user = userRepository->findById(id);
-            
+
             Json::Value response;
             if (user) {
                 Json::Value userJson;
@@ -73,14 +73,14 @@ class UserService {
                 userJson["name"] = user->name;
                 userJson["email"] = user->email;
                 userJson["created_at"] = user->created_at;
-                
+
                 response["user"] = userJson;
                 response["found"] = true;
             } else {
                 response["found"] = false;
                 response["message"] = "User not found";
             }
-            
+
             response["source"] = "users_service C++ executable (findById)";
             response["environment"] = db_config.getEnvironment();
 
@@ -95,11 +95,11 @@ class UserService {
             return Json::writeString(builder, error);
         }
     }
-    
+
     std::string getUsersCount() {
         try {
             size_t count = userRepository->count();
-            
+
             Json::Value response;
             response["count"] = static_cast<int>(count);
             response["source"] = "users_service C++ executable (count)";
