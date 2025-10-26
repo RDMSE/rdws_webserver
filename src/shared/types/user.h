@@ -3,7 +3,7 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
-#include <jsoncpp/json/json.h>
+#include <json/json.h>
 #include <rapidjson/document.h>
 
 namespace rdws {

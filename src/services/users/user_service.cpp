@@ -1,7 +1,7 @@
 #include "user_service.h"
 #include "../../shared/validation/schema_validator.h"
 #include <rapidjson/document.h>
-#include <jsoncpp/json/json.h>
+#include <json/json.h>
 
 namespace rdws {
 namespace users {

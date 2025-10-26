@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include <jsoncpp/json/json.h>
+#include <json/json.h>
 #include <valijson/adapters/jsoncpp_adapter.hpp>
 #include <valijson/schema.hpp>
 #include <valijson/schema_parser.hpp>
