@@ -104,7 +104,7 @@ jobs:
         BUILD_PATH=${{ env.BUILD_DIR }} npm test
 
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: deployment-package-${{ github.run_number }}
         path: |
