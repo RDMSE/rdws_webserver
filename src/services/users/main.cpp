@@ -1,6 +1,7 @@
-#include "../../shared/common/database/postgresql_database.h"
-#include "../../shared/types/lambda_event.h"
-#include "../../shared/types/lambda_context.h"
+#include "common/database/postgresql_database.h"
+#include "types/lambda_event.h"
+#include "types/lambda_context.h"
+#include "controllers/user_controller.h"
 #include "user_service.h"
 
 #include <ctime>
@@ -12,6 +13,7 @@
 using namespace rdws::types;
 using namespace rdws::database;
 using namespace rdws::users;
+using namespace rdws::controllers;
 
 int main(int argc, char* argv[]) {
     try {
@@ -23,7 +25,7 @@ int main(int argc, char* argv[]) {
             // New approach: API Gateway passes JSON strings
             std::string eventJson = argv[1];
             std::string contextJson = argv[2];
-            
+
             try {
                 event = LambdaEvent::fromJson(eventJson);
                 context = LambdaContext::fromJson(contextJson);
@@ -44,7 +46,7 @@ int main(int argc, char* argv[]) {
         auto db = std::make_shared<rdws::database::PostgreSQLDatabase>();
         if (!db->isConnected()) {
             context.log("Failed to connect to database", "ERROR");
-            std::cerr << "{\"error\":\"Failed to connect to database\"}" << std::endl;
+            std::cerr << UserController::formatDatabaseError() << std::endl;
             return 1;
         }
 
@@ -63,22 +65,25 @@ int main(int argc, char* argv[]) {
             if (event.pathMatches("/users") || event.pathMatches("/")) {
                 // List all users
                 context.log("Fetching all users", "INFO");
-                std::cout << userService.getAllUsers() << std::endl;
+                auto result = userService.getAllUsers();
+                std::cout << UserController::formatUsersResponse(result) << std::endl;
                 return 0;
             } else if (event.pathMatches("/users/{id}")) {
                 // Fetch specific user or handle special actions
                 std::string idParam = event.getPathParameter("id");
-                
+
                 if (idParam == "count") {
                     context.log("Getting user count", "INFO");
-                    std::cout << userService.getUsersCount() << std::endl;
+                    auto result = userService.getUsersCount();
+                    std::cout << UserController::formatCountResponse(result) << std::endl;
                     return 0;
                 }
 
                 try {
                     int userId = std::stoi(idParam);
                     context.log("Fetching user with ID: " + std::to_string(userId), "INFO");
-                    std::cout << userService.getUserById(userId) << std::endl;
+                    auto result = userService.getUserById(userId);
+                    std::cout << UserController::formatUserResponse(result) << std::endl;
                     return 0;
                 } catch (const std::exception& e) {
                     context.log("Invalid user ID: " + idParam, "ERROR");
@@ -91,56 +96,55 @@ int main(int argc, char* argv[]) {
             if (event.pathMatches("/users") || event.pathMatches("/")) {
                 // Create user
                 std::string jsonData = event.getBody();
-                
+
                 if (jsonData.empty()) {
                     context.log("No JSON data provided for user creation", "ERROR");
-                    std::cout << "{\"error\":\"No JSON data provided for user creation\"}"
-                              << std::endl;
+                    std::cout << UserController::formatNoDataProvidedError("user creation") << std::endl;
                     return 1;
                 }
 
                 context.log("Creating new user", "INFO");
-                std::cout << userService.createUser(jsonData) << std::endl;
+                auto result = userService.createUser(jsonData);
+                std::cout << UserController::formatUserResponse(result) << std::endl;
                 return 0;
             }
         } else if (event.isPut()) {
             if (event.pathMatches("/users/{id}")) {
                 std::string idParam = event.getPathParameter("id");
-                
+
                 try {
                     int userId = std::stoi(idParam);
                     std::string jsonData = event.getBody();
 
                     if (jsonData.empty()) {
                         context.log("No JSON data provided for user update", "ERROR");
-                        std::cout << "{\"error\":\"No JSON data provided for user update\"}"
-                                  << std::endl;
+                        std::cout << UserController::formatNoDataProvidedError("user update") << std::endl;
                         return 1;
                     }
 
                     context.log("Updating user with ID: " + std::to_string(userId), "INFO");
-                    std::cout << userService.updateUser(userId, jsonData) << std::endl;
+                    auto result = userService.updateUser(userId, jsonData);
+                    std::cout << UserController::formatUserResponse(result) << std::endl;
                     return 0;
                 } catch (const std::exception& e) {
                     context.log("Invalid user ID: " + idParam, "ERROR");
-                    std::cout << "{\"error\":\"Invalid user ID\",\"path\":\"" << event.getPath() << "\"}"
-                              << std::endl;
+                    std::cout << UserController::formatError("Invalid user ID", 400) << std::endl;
                     return 1;
                 }
             }
         } else if (event.isDelete()) {
             if (event.pathMatches("/users/{id}")) {
                 std::string idParam = event.getPathParameter("id");
-                
+
                 try {
                     int userId = std::stoi(idParam);
                     context.log("Deleting user with ID: " + std::to_string(userId), "INFO");
-                    std::cout << userService.deleteUser(userId) << std::endl;
+                    auto result = userService.deleteUser(userId);
+                    std::cout << UserController::formatOperationResponse(result) << std::endl;
                     return 0;
                 } catch (const std::exception& e) {
                     context.log("Invalid user ID: " + idParam, "ERROR");
-                    std::cout << "{\"error\":\"Invalid user ID\",\"path\":\"" << event.getPath() << "\"}"
-                              << std::endl;
+                    std::cout << UserController::formatError("Invalid user ID", 400) << std::endl;
                     return 1;
                 }
             }
@@ -148,12 +152,11 @@ int main(int argc, char* argv[]) {
 
         // Method not supported
         context.log("Method not allowed: " + event.getHttpMethod() + " " + event.getPath(), "WARN");
-        std::cout << "{\"error\":\"Method not allowed\",\"method\":\"" << event.getHttpMethod() 
-                  << "\",\"path\":\"" << event.getPath() << "\"}" << std::endl;
+        std::cout << UserController::formatMethodNotAllowedError(event.getHttpMethod(), event.getPath()) << std::endl;
         return 1;
 
     } catch (const std::exception& e) {
-        std::cerr << "{\"error\":\"Service error: " << e.what() << "\"}" << std::endl;
+        std::cerr << UserController::formatServiceError(e.what()) << std::endl;
         return 1;
     }
 }

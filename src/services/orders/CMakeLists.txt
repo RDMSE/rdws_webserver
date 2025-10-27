@@ -19,6 +19,7 @@ include_directories(${LIBPQXX_INCLUDE_DIRS})
 include_directories(${JSONCPP_INCLUDE_DIRS})
 include_directories(../../../third_party/valijson/include)
 include_directories(/usr/include/rapidjson)
+include_directories(../../shared)  # Add shared directory to include path
 
 # Add executable
 # Create standalone orders service executable (updated with new architecture)

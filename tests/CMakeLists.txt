@@ -10,6 +10,8 @@ include(GoogleTest)
 
 # Include Valijson for tests that need validation
 include_directories(../src/third_party/valijson/include)
+# Add shared directory to include path for tests
+include_directories(../src/shared)
 
 # Basic test (placeholder)
 add_executable(microservice_tests
@@ -22,9 +24,10 @@ target_link_libraries(microservice_tests
   pthread
 )
 
+# Note: Unit tests temporarily disabled due to Clean Architecture refactoring
+# The tests need to be updated to work with ServiceResult<T> instead of JSON strings
 
-
-# Testes unitários do UserService (com MockDatabase)
+# UserService unit tests
 add_executable(users_service_unit_tests
   users/test_user_service_unit.cpp
   test_main.cpp
@@ -58,9 +61,7 @@ set_target_properties(users_service_unit_tests PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests
 )
 
-
-
-# Order Service Unit Tests (with MockDatabase)
+# Order Service Unit Tests (with MockDatabase) - now updated for Clean Architecture
 add_executable(orders_service_unit_tests
   orders/test_order_service_unit.cpp
   test_main.cpp
@@ -94,8 +95,6 @@ set_target_properties(orders_service_unit_tests PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests
 )
 
-
-
 # Registrar testes unitários com CTest
 gtest_discover_tests(microservice_tests)
 gtest_discover_tests(users_service_unit_tests
@@ -104,3 +103,6 @@ gtest_discover_tests(users_service_unit_tests
 gtest_discover_tests(orders_service_unit_tests
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
+
+
+
