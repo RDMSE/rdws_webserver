@@ -74,11 +74,11 @@ bool Config::isProduction() const {
 
 void Config::loadEnvironmentVariables() {
     // Load from environment variables
-    settings["RDWS_ENVIRONMENT"] = getEnvVar("RDWS_ENVIRONMENT", "development");
-    settings["DB_HOST"] = getEnvVar("DB_HOST", "fedora-server.local");
-    settings["DB_PORT"] = getEnvVar("DB_PORT", "5432");
-    settings["DB_USER"] = getEnvVar("DB_USER", "rdws_user");
-    settings["DB_PASSWORD"] = getEnvVar("DB_PASSWORD", "rdws_pass123");
+    settings["RDWS_ENVIRONMENT"] = getEnvVar("RDWS_ENVIRONMENT", "test");
+    settings["DB_PORT"] = getEnvVar("DB_PORT", "1234");
+    settings["DB_HOST"] = getEnvVar("DB_HOST", "test-server");
+    settings["DB_USER"] = getEnvVar("DB_USER", "db_user");
+    settings["DB_PASSWORD"] = getEnvVar("DB_PASSWORD", "db_psswd");
     settings["DB_NAME"] = getEnvVar("DB_NAME", ""); // Will be set by getDatabaseName()
     
     // Try to load environment-specific .env file
@@ -90,7 +90,7 @@ void Config::loadEnvironmentVariables() {
     loadEnvFile(".env");
 }
 
-std::string Config::getEnvVar(const std::string& name, const std::string& defaultValue) const {
+std::string Config::getEnvVar(const std::string& name, const std::string& defaultValue) {
     const char* value = std::getenv(name.c_str());
     return value ? std::string(value) : defaultValue;
 }

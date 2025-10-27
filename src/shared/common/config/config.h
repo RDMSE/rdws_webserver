@@ -2,7 +2,6 @@
 
 #include <string>
 #include <map>
-#include <cstdlib>
 
 namespace rdws {
 
@@ -14,28 +13,28 @@ public:
     Config();
     
     // Get configuration value
-    std::string get(const std::string& key, const std::string& defaultValue = "") const;
+    [[nodiscard]] std::string get(const std::string& key, const std::string& defaultValue = "") const;
     
     // Set configuration value
     void set(const std::string& key, const std::string& value);
     
     // Database configuration
-    std::string getDatabaseHost() const;
-    std::string getDatabasePort() const;
-    std::string getDatabaseName() const;
-    std::string getDatabaseUser() const;
-    std::string getDatabasePassword() const;
-    std::string getConnectionString() const;
+    [[nodiscard]] std::string getDatabaseHost() const;
+    [[nodiscard]] std::string getDatabasePort() const;
+    [[nodiscard]] std::string getDatabaseName() const;
+    [[nodiscard]] std::string getDatabaseUser() const;
+    [[nodiscard]] std::string getDatabasePassword() const;
+    [[nodiscard]] std::string getConnectionString() const;
     
     // Environment detection
-    std::string getEnvironment() const;
-    bool isDevelopment() const;
-    bool isProduction() const;
+    [[nodiscard]] std::string getEnvironment() const;
+    [[nodiscard]] bool isDevelopment() const;
+    [[nodiscard]] bool isProduction() const;
     
 private:
     void loadEnvironmentVariables();
     void loadEnvFile(const std::string& filename);
-    std::string getEnvVar(const std::string& name, const std::string& defaultValue = "") const;
+    [[nodiscard]] static std::string getEnvVar(const std::string& name, const std::string& defaultValue = "") ;
 };
 
 } // namespace rdws
