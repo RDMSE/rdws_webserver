@@ -45,9 +45,13 @@ constexpr const char* USER_UPDATE_SCHEMA = R"({
             "format": "email",
             "maxLength": 255,
             "description": "User's email address"
+        },
+        "id": {
+            "type": "integer"
         }
     },
-    "additionalProperties": false
+    "additionalProperties": false,
+    "required": ["id"]
 })";
 
 constexpr const char* USER_QUERY_SCHEMA = R"({

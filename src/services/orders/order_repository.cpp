@@ -22,6 +22,8 @@ types::Order OrderRepository::resultToOrder(rdws::database::IResultSet& result) 
 std::vector<types::Order> OrderRepository::findAll() {
     std::vector<types::Order> orders;
     
+    if (!db_) return orders;
+    
     std::string query = "SELECT id, user_id, product, amount, status, created_at FROM orders ORDER BY created_at DESC";
     auto result = db_->execQuery(query);
     
@@ -35,6 +37,8 @@ std::vector<types::Order> OrderRepository::findAll() {
 }
 
 std::optional<types::Order> OrderRepository::findById(int orderId) {
+    if (!db_) return std::nullopt;
+    
     std::string query = "SELECT id, user_id, product, amount, status, created_at FROM orders WHERE id = $1";
     auto result = db_->execQuery(query, {std::to_string(orderId)});
     
@@ -47,6 +51,8 @@ std::optional<types::Order> OrderRepository::findById(int orderId) {
 
 std::vector<types::Order> OrderRepository::findByUserId(int userId) {
     std::vector<types::Order> orders;
+    
+    if (!db_) return orders;
     
     std::string query = "SELECT id, user_id, product, amount, status, created_at FROM orders WHERE user_id = $1 ORDER BY created_at DESC";
     auto result = db_->execQuery(query, {std::to_string(userId)});
@@ -61,6 +67,8 @@ std::vector<types::Order> OrderRepository::findByUserId(int userId) {
 }
 
 std::optional<types::Order> OrderRepository::create(const types::Order& order) {
+    if (!db_) return std::nullopt;
+    
     std::string query = "INSERT INTO orders (user_id, product, amount, status) VALUES ($1, $2, $3, $4) RETURNING id, user_id, product, amount, status, created_at";
     
     std::vector<std::string> params = {
@@ -80,6 +88,8 @@ std::optional<types::Order> OrderRepository::create(const types::Order& order) {
 }
 
 std::optional<types::Order> OrderRepository::update(const types::Order& order) {
+    if (!db_) return std::nullopt;
+    
     std::string query = "UPDATE orders SET user_id = $1, product = $2, amount = $3, status = $4 WHERE id = $5 RETURNING id, user_id, product, amount, status, created_at";
     
     std::vector<std::string> params = {
@@ -100,11 +110,15 @@ std::optional<types::Order> OrderRepository::update(const types::Order& order) {
 }
 
 bool OrderRepository::deleteById(int orderId) {
+    if (!db_) return false;
+    
     std::string query = "DELETE FROM orders WHERE id = $1";
     return db_->execCommand(query, {std::to_string(orderId)});
 }
 
 int OrderRepository::count() {
+    if (!db_) return 0;
+    
     std::string query = "SELECT COUNT(*) as total FROM orders";
     auto result = db_->execQuery(query);
     
@@ -116,6 +130,8 @@ int OrderRepository::count() {
 }
 
 int OrderRepository::countByUserId(int userId) {
+    if (!db_) return 0;
+    
     std::string query = "SELECT COUNT(*) as total FROM orders WHERE user_id = $1";
     auto result = db_->execQuery(query, {std::to_string(userId)});
     
@@ -127,6 +143,8 @@ int OrderRepository::countByUserId(int userId) {
 }
 
 bool OrderRepository::updateStatus(int orderId, const std::string& newStatus) {
+    if (!db_) return false;
+    
     std::string query = "UPDATE orders SET status = $1 WHERE id = $2";
     return db_->execCommand(query, {newStatus, std::to_string(orderId)});
 }
