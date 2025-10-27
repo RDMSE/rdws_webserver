@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../shared/common/database/idatabase.h"
-#include "../../shared/types/order.h"
+#include "common/database/idatabase.h"
+#include "types/order.h"
 #include <memory>
 #include <vector>
 #include <optional>

@@ -1,7 +1,8 @@
 #pragma once
 
-#include "../../shared/common/database/idatabase.h"
-#include "../../shared/types/order.h"
+#include "common/database/idatabase.h"
+#include "types/order.h"
+#include "types/service_result.h"
 #include "order_repository.h"
 
 #include <memory>
@@ -29,70 +30,58 @@ class OrderService {
 
     /**
      * Get all orders from the database
-     * @return Vector of all orders
+     * @return ServiceResult containing vector of all orders
      */
-    std::vector<types::Order> getAllOrders();
+    rdws::types::OrdersResult getAllOrders();
 
     /**
      * Get a specific order by ID
      * @param orderId ID of the order to retrieve
-     * @return Optional containing the order if found, nullopt otherwise
+     * @return ServiceResult containing the order if found, error otherwise
      */
-    std::optional<types::Order> getOrderById(int orderId);
+    rdws::types::OrderResult getOrderById(int orderId);
 
     /**
      * Get all orders for a specific user
      * @param userId ID of the user whose orders to retrieve
-     * @return Vector of orders for the specified user
+     * @return ServiceResult containing vector of orders for the specified user
      */
-    std::vector<types::Order> getOrdersByUserId(int userId);
+    rdws::types::OrdersResult getOrdersByUserId(int userId);
 
     /**
-     * Create a new order
-     * @param order Order object to create (ID will be auto-generated)
-     * @return Optional containing the created order with ID, nullopt if creation failed
+     * Create a new order from JSON data
+     * @param jsonData JSON string containing order data
+     * @return ServiceResult containing the created order with ID, error if creation failed
      */
-    std::optional<types::Order> createOrder(const types::Order& order);
+    rdws::types::OrderResult createOrder(const std::string& jsonData);
 
     /**
      * Update an existing order
-     * @param order Order object with updated information
-     * @return Optional containing the updated order if successful, nullopt otherwise
+     * @param orderId ID of the order to update
+     * @param jsonData JSON string containing updated order data
+     * @return ServiceResult containing the updated order if successful, error otherwise
      */
-    std::optional<types::Order> updateOrder(const types::Order& order);
+    rdws::types::OrderResult updateOrder(int orderId, const std::string& jsonData);
 
     /**
      * Delete an order by ID
      * @param orderId ID of the order to delete
-     * @return True if deletion was successful, false otherwise
+     * @return ServiceResult containing operation status
      */
-    bool deleteOrder(int orderId);
+    rdws::types::OperationResult deleteOrder(int orderId);
 
     /**
      * Get count of all orders
-     * @return Total number of orders in the database
+     * @return ServiceResult containing total number of orders in the database
      */
-    int getOrderCount();
+    rdws::types::CountResult getOrderCount();
 
     /**
      * Get count of orders for a specific user
      * @param userId ID of the user
-     * @return Number of orders for the specified user
+     * @return ServiceResult containing number of orders for the specified user
      */
-    int getOrderCountByUserId(int userId);
-
-    /**
-     * Update order status
-     * @param orderId ID of the order to update
-     * @param newStatus New status for the order
-     * @return True if update was successful, false otherwise
-     */
-    bool updateOrderStatus(int orderId, const std::string& newStatus);
-
-    /**
-     * Clear all orders (for unit test purposes)
-     */
-    void clearOrders();
+    rdws::types::CountResult getOrderCountByUserId(int userId);
 };
 
 } // namespace orders

@@ -1,7 +1,5 @@
 #include "user_service.h"
-
-#include "../../shared/validation/schema_validator.h"
-
+#include "validation/schema_validator.h"
 #include <json/json.h>
 #include <rapidjson/document.h>
 
@@ -10,81 +8,56 @@ namespace users {
 
 UserService::UserService(std::shared_ptr<rdws::database::IDatabase> db) : userRepository(db) {}
 
-std::string UserService::getAllUsers() {
+rdws::types::UsersResult UserService::getAllUsers() {
     try {
         auto users = userRepository.findAll();
-        return rdws::utils::ResponseHelper::returnEntities(users, "users");
+        return rdws::types::UsersResult::success(std::move(users));
     } catch (const std::exception& e) {
         std::string errorMsg = "Database error: " + std::string(e.what());
-        return rdws::utils::ResponseHelper::returnError(errorMsg, 500);
+        return rdws::types::UsersResult::error(errorMsg, 500);
     }
 }
 
-std::string UserService::getUserById(int id) {
+rdws::types::UserResult UserService::getUserById(int id) {
     try {
         auto user = userRepository.findById(id);
 
         if (user.has_value()) {
-            return rdws::utils::ResponseHelper::returnEntity(user.value(), "user");
+            return rdws::types::UserResult::success(user.value());
         } else {
-            return rdws::utils::ResponseHelper::returnError("User not found", 404);
+            return rdws::types::UserResult::error("User not found", 404);
         }
     } catch (const std::exception& e) {
         std::string errorMsg = "Database error: " + std::string(e.what());
-        return rdws::utils::ResponseHelper::returnError(errorMsg, 500);
+        return rdws::types::UserResult::error(errorMsg, 500);
     }
 }
 
-std::string UserService::getUsersCount() {
+rdws::types::CountResult UserService::getUsersCount() {
     try {
         auto count = userRepository.count();
-
-        ::rapidjson::Document doc;
-        doc.SetObject();
-        auto& allocator = doc.GetAllocator();
-
-        ::rapidjson::Value countData(::rapidjson::kObjectType);
-        countData.AddMember("count", ::rapidjson::Value(static_cast<int>(count)), allocator);
-
-        return rdws::utils::ResponseHelper::returnData(countData);
+        return rdws::types::CountResult::success(count);
     } catch (const std::exception& e) {
         std::string errorMsg = "Database error: " + std::string(e.what());
-        return rdws::utils::ResponseHelper::returnError(errorMsg, 500);
+        return rdws::types::CountResult::error(errorMsg, 500);
     }
 }
 
-std::string UserService::createUser(const std::string& jsonData) {
+rdws::types::UserResult UserService::createUser(const std::string& jsonData) {
     try {
         auto validator = rdws::validation::UserValidators::createUserValidator();
         auto errors = validator.validate(jsonData);
 
         if (!errors.empty()) {
-            // Convert validation errors to our standard format
-            ::rapidjson::Document doc;
-            doc.SetObject();
-            auto& allocator = doc.GetAllocator();
-
-            ::rapidjson::Value errorsArray(::rapidjson::kArrayType);
-            for (const auto& error : errors) {
-                ::rapidjson::Value errorObj(::rapidjson::kObjectType);
-                errorObj.AddMember("field", ::rapidjson::Value(error.field.c_str(), allocator),
-                                   allocator);
-                errorObj.AddMember("message", ::rapidjson::Value(error.message.c_str(), allocator),
-                                   allocator);
-                if (!error.context.empty()) {
-                    errorObj.AddMember(
-                        "context", ::rapidjson::Value(error.context.c_str(), allocator), allocator);
-                }
-                errorsArray.PushBack(errorObj, allocator);
-            }
-
-            return rdws::utils::ResponseHelper::returnError("Validation failed", 400, &errorsArray);
+            // Return validation error with first error message
+            std::string errorMsg = "Validation failed: " + errors[0].message;
+            return rdws::types::UserResult::error(errorMsg, 400);
         }
 
         Json::Value json;
         Json::Reader reader;
         if (!reader.parse(jsonData, json)) {
-            return rdws::utils::ResponseHelper::returnError("Invalid JSON format", 400);
+            return rdws::types::UserResult::error("Invalid JSON format", 400);
         }
 
         rdws::types::User newUser(json["name"].asString(), json["email"].asString());
@@ -93,37 +66,28 @@ std::string UserService::createUser(const std::string& jsonData) {
         if (success) {
             // Get the created user (assuming it's the last one with the same email)
             auto users = userRepository.findAll();
-            rdws::types::User* createdUser = nullptr;
             for (auto& user : users) {
                 if (user.email == newUser.email && user.name == newUser.name) {
-                    createdUser = &user;
-                    break;
+                    return rdws::types::UserResult::success(user);
                 }
             }
-
-            if (createdUser) {
-                return rdws::utils::ResponseHelper::returnEntity(*createdUser, "user",
-                                                                 "User created successfully", 201);
-            } else {
-                return rdws::utils::ResponseHelper::returnError(
-                    "User created but could not retrieve details", 500);
-            }
+            return rdws::types::UserResult::error("User created but could not retrieve details", 500);
         } else {
-            return rdws::utils::ResponseHelper::returnError("Failed to create user", 500);
+            return rdws::types::UserResult::error("Failed to create user", 500);
         }
     } catch (const std::exception& e) {
         std::string errorMsg = "Database error: " + std::string(e.what());
-        return rdws::utils::ResponseHelper::returnError(errorMsg, 500);
+        return rdws::types::UserResult::error(errorMsg, 500);
     }
 }
 
-std::string UserService::updateUser(int id, const std::string& jsonData) {
+rdws::types::UserResult UserService::updateUser(int id, const std::string& jsonData) {
     try {
         // Add id to JSON for validation
         Json::Value json;
         Json::Reader reader;
         if (!reader.parse(jsonData, json)) {
-            return rdws::utils::ResponseHelper::returnError("Invalid JSON format", 400);
+            return rdws::types::UserResult::error("Invalid JSON format", 400);
         }
         json["id"] = id;
 
@@ -131,33 +95,15 @@ std::string UserService::updateUser(int id, const std::string& jsonData) {
         auto errors = validator.validate(json);
 
         if (!errors.empty()) {
-            // Convert validation errors to our standard format
-            ::rapidjson::Document doc;
-            doc.SetObject();
-            auto& allocator = doc.GetAllocator();
-
-            ::rapidjson::Value errorsArray(::rapidjson::kArrayType);
-            for (const auto& error : errors) {
-                ::rapidjson::Value errorObj(::rapidjson::kObjectType);
-                errorObj.AddMember("field", ::rapidjson::Value(error.field.c_str(), allocator),
-                                   allocator);
-                errorObj.AddMember("message", ::rapidjson::Value(error.message.c_str(), allocator),
-                                   allocator);
-                if (!error.context.empty()) {
-                    errorObj.AddMember(
-                        "context", ::rapidjson::Value(error.context.c_str(), allocator), allocator);
-                }
-                errorsArray.PushBack(errorObj, allocator);
-            }
-
-            return rdws::utils::ResponseHelper::returnError("Validation failed", 400, &errorsArray);
+            std::string errorMsg = "Validation failed: " + errors[0].message;
+            return rdws::types::UserResult::error(errorMsg, 400);
         }
 
         // Get existing user
         auto existingUser = userRepository.findById(id);
 
         if (!existingUser.has_value()) {
-            return rdws::utils::ResponseHelper::returnError("User not found", 404);
+            return rdws::types::UserResult::error("User not found", 404);
         }
 
         // Update fields if provided
@@ -171,41 +117,36 @@ std::string UserService::updateUser(int id, const std::string& jsonData) {
 
         bool success = userRepository.update(updatedUser);
         if (success) {
-            return rdws::utils::ResponseHelper::returnEntity(updatedUser, "user",
-                                                             "User updated successfully");
+            return rdws::types::UserResult::success(updatedUser);
         } else {
-            return rdws::utils::ResponseHelper::returnError("Failed to update user", 500);
+            return rdws::types::UserResult::error("User not found or update failed", 404);
         }
     } catch (const std::exception& e) {
         std::string errorMsg = "Database error: " + std::string(e.what());
-        return rdws::utils::ResponseHelper::returnError(errorMsg, 500);
+        return rdws::types::UserResult::error(errorMsg, 500);
     }
 }
 
-std::string UserService::deleteUser(int id) {
+rdws::types::OperationResult UserService::deleteUser(int id) {
     try {
         auto existingUser = userRepository.findById(id);
 
         if (!existingUser.has_value()) {
-            return rdws::utils::ResponseHelper::returnError("User not found", 404);
+            auto status = rdws::types::OperationStatus::createError("User not found", 404);
+            return rdws::types::OperationResult::success(status);
         }
 
         bool success = userRepository.deleteById(id);
         if (success) {
-            ::rapidjson::Document doc;
-            doc.SetObject();
-            auto& allocator = doc.GetAllocator();
-
-            ::rapidjson::Value deleteData(::rapidjson::kObjectType);
-            deleteData.AddMember("userId", ::rapidjson::Value(id), allocator);
-
-            return rdws::utils::ResponseHelper::returnData(deleteData, "User deleted successfully");
+            auto status = rdws::types::OperationStatus::createSuccess("User deleted successfully");
+            return rdws::types::OperationResult::success(status);
         } else {
-            return rdws::utils::ResponseHelper::returnError("Failed to delete user", 500);
+            auto status = rdws::types::OperationStatus::createError("Failed to delete user", 500);
+            return rdws::types::OperationResult::success(status);
         }
     } catch (const std::exception& e) {
         std::string errorMsg = "Database error: " + std::string(e.what());
-        return rdws::utils::ResponseHelper::returnError(errorMsg, 500);
+        return rdws::types::OperationResult::error(errorMsg, 500);
     }
 }
 

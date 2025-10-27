@@ -21,6 +21,7 @@ include_directories(${LIBPQXX_INCLUDE_DIRS})
 include_directories(${JSONCPP_INCLUDE_DIRS})
 include_directories(../../../third_party/valijson/include)
 include_directories(/usr/include/rapidjson)
+include_directories(../../shared)  # Add shared directory to include path
 
 # Add executable
 add_executable(users_service
@@ -41,6 +42,14 @@ target_link_libraries(users_service
     ${LIBPQXX_LIBRARIES}
     ${JSONCPP_LIBRARIES}
 )
+
+# Link with static libgcc to reduce dependencies
+set_target_properties(users_service PROPERTIES
+    LINK_FLAGS "-static-libgcc"
+)
+
+# Install target
+install(TARGETS users_service DESTINATION bin)
 
 # Link with static libgcc to reduce dependencies
 set_target_properties(users_service PROPERTIES

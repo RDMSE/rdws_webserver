@@ -1,6 +1,7 @@
-#include "../../shared/types/lambda_event.h"
-#include "../../shared/types/lambda_context.h"
-#include "../../shared/common/database/postgresql_database.h"
+#include "common/database/postgresql_database.h"
+#include "types/lambda_event.h"
+#include "types/lambda_context.h"
+#include "controllers/order_controller.h"
 #include "order_service.h"
 
 #include <ctime>
@@ -12,6 +13,7 @@
 using namespace rdws::types;
 using namespace rdws::database;
 using namespace rdws::services::orders;
+using namespace rdws::controllers;
 
 int main(int argc, char* argv[]) {
     try {
@@ -23,7 +25,7 @@ int main(int argc, char* argv[]) {
             // New approach: API Gateway passes JSON strings
             std::string eventJson = argv[1];
             std::string contextJson = argv[2];
-            
+
             try {
                 event = LambdaEvent::fromJson(eventJson);
                 context = LambdaContext::fromJson(contextJson);
@@ -44,15 +46,15 @@ int main(int argc, char* argv[]) {
         auto db = std::make_shared<rdws::database::PostgreSQLDatabase>();
         if (!db->isConnected()) {
             context.log("Failed to connect to database", "ERROR");
-            std::cerr << "{\"error\":\"Failed to connect to database\"}" << std::endl;
+            std::cerr << OrderController::formatDatabaseError() << std::endl;
             return 1;
         }
 
-        // Initialize order service
+        // Initialize order service and controller
         OrderService orderService(db);
 
         // Extract path parameters for routes like /orders/{id} or /users/{userId}/orders
-        if (event.pathMatches("/orders/{id}")) {
+        if (event.pathMatches("/orders/{id}") || event.pathMatches("/orders/{action}")) {
             event.extractPathParameters("/orders/{id}");
         } else if (event.pathMatches("/users/{userId}/orders")) {
             event.extractPathParameters("/users/{userId}/orders");
@@ -65,109 +67,44 @@ int main(int argc, char* argv[]) {
             if (event.pathMatches("/orders") || event.pathMatches("/")) {
                 // List all orders
                 context.log("Fetching all orders", "INFO");
-                auto orders = orderService.getAllOrders();
-                
-                // Convert to JSON response format similar to original
-                std::ostringstream oss;
-                oss << "{\"orders\":[";
-                for (size_t i = 0; i < orders.size(); ++i) {
-                    rapidjson::Document doc;
-                    doc.SetObject();
-                    auto orderJson = orders[i].toJson(doc.GetAllocator());
-                    
-                    rapidjson::StringBuffer buffer;
-                    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                    orderJson.Accept(writer);
-                    
-                    oss << buffer.GetString();
-                    if (i < orders.size() - 1) {
-                        oss << ",";
-                    }
-                }
-                oss << "],\"total\":" << orders.size() 
-                    << ",\"source\":\"orders_service C++ executable\",\"endpoint\":\"/orders\""
-                    << ",\"timestamp\":" << std::time(nullptr) << "}";
-                
-                std::cout << oss.str() << std::endl;
-                return 0;
-                
+                auto result = orderService.getAllOrders();
+                std::cout << OrderController::formatOrdersResponse(result) << std::endl;
+                return result.isSuccess() ? 0 : 1;
             } else if (event.pathMatches("/orders/{id}")) {
-                // Fetch specific order
+                // Fetch specific order or handle special actions
                 std::string idParam = event.getPathParameter("id");
-                
+
+                if (idParam == "count") {
+                    context.log("Getting order count", "INFO");
+                    auto result = orderService.getOrderCount();
+                    std::cout << OrderController::formatCountResponse(result) << std::endl;
+                    return result.isSuccess() ? 0 : 1;
+                }
+
                 try {
                     int orderId = std::stoi(idParam);
                     context.log("Fetching order with ID: " + std::to_string(orderId), "INFO");
-                    
-                    auto order = orderService.getOrderById(orderId);
-                    if (order.has_value()) {
-                        rapidjson::Document doc;
-                        doc.SetObject();
-                        auto orderJson = order->toJson(doc.GetAllocator());
-                        
-                        rapidjson::StringBuffer buffer;
-                        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                        orderJson.Accept(writer);
-                        
-                        std::ostringstream oss;
-                        oss << "{\"order\":" << buffer.GetString()
-                            << ",\"source\":\"orders_service C++ executable\""
-                            << ",\"endpoint\":\"" << event.getPath() << "\""
-                            << ",\"timestamp\":" << std::time(nullptr) << "}";
-                        
-                        std::cout << oss.str() << std::endl;
-                        return 0;
-                    } else {
-                        context.log("Order not found: " + std::to_string(orderId), "WARN");
-                        std::cout << "{\"error\":\"Order not found\",\"orderId\":" << orderId
-                                  << ",\"source\":\"orders_service C++ executable\"}" << std::endl;
-                        return 1;
-                    }
+                    auto result = orderService.getOrderById(orderId);
+                    std::cout << OrderController::formatOrderResponse(result) << std::endl;
+                    return result.isSuccess() ? 0 : 1;
                 } catch (const std::exception& e) {
                     context.log("Invalid order ID: " + idParam, "ERROR");
-                    std::cout << "{\"error\":\"Invalid order ID\",\"path\":\"" << event.getPath()
-                              << "\",\"source\":\"orders_service C++ executable\"}" << std::endl;
+                    std::cout << OrderController::formatError("Invalid order ID", 400) << std::endl;
                     return 1;
                 }
-                
             } else if (event.pathMatches("/users/{userId}/orders")) {
-                // Handle /users/{userId}/orders - Get orders for a specific user
+                // Fetch orders for specific user
                 std::string userIdParam = event.getPathParameter("userId");
-                
+
                 try {
                     int userId = std::stoi(userIdParam);
                     context.log("Fetching orders for user ID: " + std::to_string(userId), "INFO");
-                    
-                    auto userOrders = orderService.getOrdersByUserId(userId);
-                    
-                    std::ostringstream oss;
-                    oss << "{\"userId\":" << userId << ",\"orders\":[";
-                    
-                    for (size_t i = 0; i < userOrders.size(); ++i) {
-                        rapidjson::Document doc;
-                        doc.SetObject();
-                        auto orderJson = userOrders[i].toJson(doc.GetAllocator());
-                        
-                        rapidjson::StringBuffer buffer;
-                        rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                        orderJson.Accept(writer);
-                        
-                        oss << buffer.GetString();
-                        if (i < userOrders.size() - 1) {
-                            oss << ",";
-                        }
-                    }
-                    
-                    oss << "],\"total\":" << userOrders.size()
-                        << ",\"source\":\"orders_service C++ executable\",\"endpoint\":\"" << event.getPath()
-                        << "\",\"timestamp\":" << std::time(nullptr) << "}";
-                    
-                    std::cout << oss.str() << std::endl;
-                    return 0;
+                    auto result = orderService.getOrdersByUserId(userId);
+                    std::cout << OrderController::formatOrdersResponse(result) << std::endl;
+                    return result.isSuccess() ? 0 : 1;
                 } catch (const std::exception& e) {
                     context.log("Invalid user ID: " + userIdParam, "ERROR");
-                    std::cout << "{\"error\":\"Invalid user ID or path format\",\"path\":\""
-                              << event.getPath() << "\",\"source\":\"orders_service C++ executable\"}" << std::endl;
+                    std::cout << OrderController::formatError("Invalid user ID", 400) << std::endl;
                     return 1;
                 }
             }
@@ -175,59 +112,67 @@ int main(int argc, char* argv[]) {
             if (event.pathMatches("/orders") || event.pathMatches("/")) {
                 // Create order
                 std::string jsonData = event.getBody();
-                
+
                 if (jsonData.empty()) {
                     context.log("No JSON data provided for order creation", "ERROR");
-                    std::cout << "{\"error\":\"No JSON data provided for order creation\"}" << std::endl;
+                    std::cout << OrderController::formatNoDataProvidedError("order creation") << std::endl;
                     return 1;
                 }
 
                 context.log("Creating new order", "INFO");
-                
-                // Parse JSON and create order
-                if (event.hasJsonBody()) {
-                    const auto& json = event.getJsonBody();
-                    if (json.HasMember("userId") && json.HasMember("product") && 
-                        json.HasMember("amount") && json.HasMember("status")) {
-                        
-                        Order newOrder(
-                            json["userId"].GetInt(),
-                            json["product"].GetString(),
-                            json["amount"].GetDouble(),
-                            json["status"].GetString()
-                        );
-                        
-                        auto createdOrder = orderService.createOrder(newOrder);
-                        if (createdOrder.has_value()) {
-                            rapidjson::Document doc;
-                            doc.SetObject();
-                            auto orderJson = createdOrder->toJson(doc.GetAllocator());
-                            
-                            rapidjson::StringBuffer buffer;
-                            rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-                            orderJson.Accept(writer);
-                            
-                            std::cout << "{\"order\":" << buffer.GetString()
-                                      << ",\"source\":\"orders_service C++ executable\"}" << std::endl;
-                            return 0;
-                        }
+                auto result = orderService.createOrder(jsonData);
+                std::cout << OrderController::formatOrderResponse(result) << std::endl;
+                return result.isSuccess() ? 0 : 1;
+            }
+        } else if (event.isPut()) {
+            if (event.pathMatches("/orders/{id}")) {
+                std::string idParam = event.getPathParameter("id");
+
+                try {
+                    int orderId = std::stoi(idParam);
+                    std::string jsonData = event.getBody();
+
+                    if (jsonData.empty()) {
+                        context.log("No JSON data provided for order update", "ERROR");
+                        std::cout << OrderController::formatNoDataProvidedError("order update") << std::endl;
+                        return 1;
                     }
+
+                    context.log("Updating order with ID: " + std::to_string(orderId), "INFO");
+                    auto result = orderService.updateOrder(orderId, jsonData);
+                    std::cout << OrderController::formatOrderResponse(result) << std::endl;
+                    return result.isSuccess() ? 0 : 1;
+                } catch (const std::exception& e) {
+                    context.log("Invalid order ID: " + idParam, "ERROR");
+                    std::cout << OrderController::formatError("Invalid order ID", 400) << std::endl;
+                    return 1;
                 }
-                
-                std::cout << "{\"error\":\"Failed to create order\"}" << std::endl;
-                return 1;
+            }
+        } else if (event.isDelete()) {
+            if (event.pathMatches("/orders/{id}")) {
+                std::string idParam = event.getPathParameter("id");
+
+                try {
+                    int orderId = std::stoi(idParam);
+                    context.log("Deleting order with ID: " + std::to_string(orderId), "INFO");
+                    auto result = orderService.deleteOrder(orderId);
+                    std::cout << OrderController::formatOperationResponse(result) << std::endl;
+                    return result.isSuccess() ? 0 : 1;
+                } catch (const std::exception& e) {
+                    context.log("Invalid order ID: " + idParam, "ERROR");
+                    std::cout << OrderController::formatError("Invalid order ID", 400) << std::endl;
+                    return 1;
+                }
             }
         }
 
         // Method not supported
         context.log("Method not allowed: " + event.getHttpMethod() + " " + event.getPath(), "WARN");
-        std::cout << "{\"error\":\"Method not allowed\",\"method\":\"" << event.getHttpMethod()
-                  << "\",\"path\":\"" << event.getPath() << "\",\"source\":\"orders_service C++ executable\"}"
-                  << std::endl;
+        std::cout << OrderController::formatMethodNotAllowedError(event.getHttpMethod(), event.getPath()) << std::endl;
         return 1;
 
     } catch (const std::exception& e) {
-        std::cerr << "{\"error\":\"Service error: " << e.what() << "\"}" << std::endl;
+        std::cerr << OrderController::formatServiceError(e.what()) << std::endl;
         return 1;
     }
 }
