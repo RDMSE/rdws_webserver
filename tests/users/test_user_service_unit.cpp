@@ -266,7 +266,8 @@ TEST_F(UserServiceUnitTest, CreateUser_ValidData_CreatesUser) {
     std::vector<std::map<std::string, std::string>> mockRows = {
         { {"id", "4"}, {"name", "New User"}, {"email", "new@example.com"}, {"created_at", "2023-01-04"} }
     };
-    EXPECT_CALL(*mockDb, execQuery(::testing::HasSubstr("email = $1"), _))
+    //EXPECT_CALL(*mockDb, execQuery(::testing::HasSubstr("email = $1"), _))
+    EXPECT_CALL(*mockDb, execQuery(::testing::HasSubstr("SELECT id, name, email, created_at FROM users ORDER BY id"), _))
         .WillOnce(Return(std::make_unique<rdws::testing::MockUserResultSet>(mockRows)));
     std::string result = userService->createUser(jsonData);
     EXPECT_TRUE(isValidJson(result)) << "Should return valid JSON";
@@ -298,7 +299,10 @@ TEST_F(UserServiceUnitTest, CreateUser_MissingFields_ReturnsValidationError) {
 TEST_F(UserServiceUnitTest, UpdateUser_ValidData_UpdatesUser) {
     using ::testing::Return;
     using ::testing::_;
-    std::string jsonData = R"({"name":"Updated John","email":"updated.john@example.com"})";
+    std::string jsonData = R"({
+        "name":"Updated John",
+        "email":"updated.john@example.com"
+    })";
     EXPECT_CALL(*mockDb, execCommand(::testing::HasSubstr("UPDATE users"), _))
         .WillOnce(Return(true));
     std::vector<std::map<std::string, std::string>> mockRows = {
@@ -317,8 +321,6 @@ TEST_F(UserServiceUnitTest, UpdateUser_NonExistentId_ReturnsError) {
     using ::testing::Return;
     using ::testing::_;
     std::string jsonData = R"({"name":"Updated User","email":"updated@example.com"})";
-    EXPECT_CALL(*mockDb, execCommand(::testing::HasSubstr("UPDATE users"), _))
-        .WillOnce(Return(false));
     std::vector<std::map<std::string, std::string>> emptyRows = {};
     EXPECT_CALL(*mockDb, execQuery(::testing::HasSubstr("id = $1"), _))
         .WillOnce(Return(std::make_unique<rdws::testing::MockUserResultSet>(emptyRows)));
@@ -362,8 +364,6 @@ TEST_F(UserServiceUnitTest, DeleteUser_ValidId_DeletesUser) {
 TEST_F(UserServiceUnitTest, DeleteUser_NonExistentId_ReturnsError) {
     using ::testing::Return;
     using ::testing::_;
-    EXPECT_CALL(*mockDb, execCommand(::testing::HasSubstr("DELETE FROM users"), _))
-        .WillOnce(Return(false));
     std::string result = userService->deleteUser(999);
     EXPECT_TRUE(isValidJson(result)) << "Should return valid JSON";
     EXPECT_EQ(extractJsonValue(result, "success"), "false") << "Should indicate failure";

@@ -2,9 +2,11 @@
 
 #include "../../shared/common/database/idatabase.h"
 #include "../../shared/types/order.h"
+#include "order_repository.h"
+
 #include <memory>
-#include <vector>
 #include <optional>
+#include <vector>
 
 namespace rdws {
 namespace services {
@@ -15,10 +17,10 @@ namespace orders {
  * Provides business logic layer for order management with dependency injection
  */
 class OrderService {
-private:
-    std::shared_ptr<rdws::database::IDatabase> db_;
+  private:
+    OrderRepository orderRepository;
 
-public:
+  public:
     /**
      * Constructor with dependency injection
      * @param db Database interface for order operations
