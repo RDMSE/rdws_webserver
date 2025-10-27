@@ -11,6 +11,27 @@
 // Load environment variables first
 import { config as dotenvConfig } from 'dotenv';
 import { resolve } from 'path';
+import express, { Request, Response, NextFunction, Application } from 'express';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+
+// Import modular routes and types
+import {
+  UsersRouter,
+  OrdersRouter,
+  UserOrdersRouter,
+  Config,
+  ServiceResponse,
+  ErrorResponse,
+  HealthResponse,
+  ApiDocsResponse,
+  MicroserviceRouter,
+  createLambdaEvent,
+  createLambdaContext,
+} from '../routes';
 
 // Determine which .env file to load based on NODE_ENV
 const environment = process.env.NODE_ENV || 'development';
@@ -36,30 +57,6 @@ if (envResult.error) {
   console.log(`   DB_NAME: ${process.env.DB_NAME || 'not set'}`);
   console.log(`   ENVIRONMENT: ${process.env.ENVIRONMENT || 'not set'}`);
 }
-
-import express, { Request, Response, NextFunction, Application } from 'express';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
-
-// Import modular routes and types
-import {
-  UsersRouter,
-  OrdersRouter,
-  UserOrdersRouter,
-  Config,
-  ServiceResponse,
-  ErrorResponse,
-  HealthResponse,
-  ApiDocsResponse,
-  MicroserviceRouter,
-  LambdaEvent,
-  LambdaContext,
-  createLambdaEvent,
-  createLambdaContext,
-} from '../routes';
 
 const execAsync = promisify(exec);
 

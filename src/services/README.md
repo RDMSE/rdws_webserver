@@ -109,8 +109,40 @@ echo "add_subdirectory(products)" >> src/services/CMakeLists.txt
 cd build && make
 
 # Test executable directly
-./build/src/services/users/users_service "GET" "/users"
-./build/src/services/users/users_service "GET" "/users/1"
+# 1. GET /users (list all)
+./users_service \
+    '{"httpMethod":"GET","path":"/users","resource":"/users","headers":{"Content-Type":"application/json"},"queryStringParameters":{},"pathParameters":{},"body":"","isBase64Encoded":false}' \
+    '{"requestId":"test-123","functionName":"users-service","functionVersion":"1.0","timeout":30000,"memoryLimitMB":128}'
+
+# 2. GET /users/1 (find user) 
+./users_service \
+    '{"httpMethod":"GET","path":"/users/1","resource":"/users/{id}","headers":{},"queryStringParameters":{},"pathParameters":{"id":"1"},"body":"","isBase64Encoded":false}' \
+    '{"requestId":"test-456","functionName":"users-service","functionVersion":"1.0","timeout":30000,"memoryLimitMB":128}'
+    
+# 3. GET /users/count (count users)
+./users_service \
+    '{"httpMethod":"GET","path":"/users/count","resource":"/users/{id}","headers":{},"queryStringParameters":{},"pathParameters":{"id":"count"},"body":"","isBase64Encoded":false}' \
+    '{"requestId":"test-789","functionName":"users-service","functionVersion":"1.0","timeout":30000,"memoryLimitMB":128}'
+
+# 4. POST /users (create new user)
+./users_service \
+    '{"httpMethod":"POST","path":"/users","resource":"/users","headers":{"Content-Type":"application/json"},"queryStringParameters":{},"pathParameters":{},"body":"{\"name\":\"João Silva\",\"email\":\"joao@example.com\"}","isBase64Encoded":false}' \
+    '{"requestId":"test-create","functionName":"users-service","functionVersion":"1.0","timeout":30000,"memoryLimitMB":128}'
+
+# 5. PUT /users/1 (update user)
+./users_service \
+    '{"httpMethod":"PUT","path":"/users/1","resource":"/users/{id}","headers":{"Content-Type":"application/json"},"queryStringParameters":{},"pathParameters":{"id":"1"},"body":"{\"name\":\"João Santos\",\"email\":\"joao.santos@example.com\"}","isBase64Encoded":false}' \
+    '{"requestId":"test-update","functionName":"users-service","functionVersion":"1.0","timeout":30000,"memoryLimitMB":128}'
+    
+# 6. DELETE /users/1 (delete user)
+./users_service \
+    '{"httpMethod":"DELETE","path":"/users/1","resource":"/users/{id}","headers":{},"queryStringParameters":{},"pathParameters":{"id":"1"},"body":"","isBase64Encoded":false}' \
+    '{"requestId":"test-delete","functionName":"users-service","functionVersion":"1.0","timeout":30000,"memoryLimitMB":128}'
+    
+# 7. Error test (invalid ID)
+./users_service \
+    '{"httpMethod":"GET","path":"/users/abc","resource":"/users/{id}","headers":{},"queryStringParameters":{},"pathParameters":{"id":"abc"},"body":"","isBase64Encoded":false}' \
+    '{"requestId":"test-error","functionName":"users-service","functionVersion":"1.0","timeout":30000,"memoryLimitMB":128}'
 
 # Result: Pure JSON from C++
 {"users":[...],"source":"users_service C++ executable"}
