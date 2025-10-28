@@ -38,7 +38,6 @@ class BaseController {
     }
 
   protected:
-
     // Helper method to format error responses
     static std::string formatErrorResponse(const std::string& errorMessage, int statusCode) {
         rapidjson::Document doc;
@@ -59,9 +58,9 @@ class BaseController {
         return buffer.GetString();
     }
 
-
     // Helper method to format error responses with custom JSON data
-    static std::string formatErrorResponse(const std::string& errorMessage, const rapidjson::Value& jsonData, int statusCode) {
+    static std::string formatErrorResponse(const std::string& errorMessage,
+                                           const rapidjson::Value& jsonData, int statusCode) {
         rapidjson::Document errorDoc;
         errorDoc.SetObject();
         auto& allocator = errorDoc.GetAllocator();
@@ -75,7 +74,7 @@ class BaseController {
 
         // Append all members from jsonData to errorDoc
         if (jsonData.IsObject()) {
-            for (const auto&[name, value] : jsonData.GetObject()) {
+            for (const auto& [name, value] : jsonData.GetObject()) {
                 rapidjson::Value keyMember(name, allocator);
                 rapidjson::Value valueMember(value, allocator);
                 errorDoc.AddMember(keyMember, valueMember, allocator);
@@ -91,4 +90,3 @@ class BaseController {
 };
 
 } // namespace rdws::controllers
-

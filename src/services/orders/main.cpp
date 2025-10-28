@@ -1,8 +1,8 @@
 #include "common/database/postgresql_database.h"
-#include "types/lambda_event.h"
-#include "types/lambda_context.h"
 #include "controllers/order_controller.h"
 #include "order_service.h"
+#include "types/lambda_context.h"
+#include "types/lambda_event.h"
 
 #include <iostream>
 #include <memory>
@@ -15,7 +15,7 @@ using namespace rdws::controllers;
 
 int main(int argc, char* argv[]) {
     try {
-        LambdaEvent event("GET", "/", ""); // Initialize with defaults
+        LambdaEvent event("GET", "/", "");                  // Initialize with defaults
         LambdaContext context("unknown", "orders-service"); // Initialize with defaults
 
         // Check if we have JSON parameters (new API Gateway approach)
@@ -58,7 +58,8 @@ int main(int argc, char* argv[]) {
             event.extractPathParameters("/users/{userId}/orders");
         }
 
-        context.log("Processing " + event.getHttpMethod() + " request to " + event.getPath(), "INFO");
+        context.log("Processing " + event.getHttpMethod() + " request to " + event.getPath(),
+                    "INFO");
 
         // Process request based on method and path
         if (event.isGet()) {
@@ -113,7 +114,8 @@ int main(int argc, char* argv[]) {
 
                 if (jsonData.empty()) {
                     context.log("No JSON data provided for order creation", "ERROR");
-                    std::cout << OrderController::formatNoDataProvidedError("order creation") << std::endl;
+                    std::cout << OrderController::formatNoDataProvidedError("order creation")
+                              << std::endl;
                     return 1;
                 }
 
@@ -132,7 +134,8 @@ int main(int argc, char* argv[]) {
 
                     if (jsonData.empty()) {
                         context.log("No JSON data provided for order update", "ERROR");
-                        std::cout << OrderController::formatNoDataProvidedError("order update") << std::endl;
+                        std::cout << OrderController::formatNoDataProvidedError("order update")
+                                  << std::endl;
                         return 1;
                     }
 
@@ -166,7 +169,9 @@ int main(int argc, char* argv[]) {
 
         // Method not supported
         context.log("Method not allowed: " + event.getHttpMethod() + " " + event.getPath(), "WARN");
-        std::cout << OrderController::formatMethodNotAllowedError(event.getHttpMethod(), event.getPath()) << std::endl;
+        std::cout << OrderController::formatMethodNotAllowedError(event.getHttpMethod(),
+                                                                  event.getPath())
+                  << std::endl;
         return 1;
 
     } catch (const std::exception& e) {

@@ -1,10 +1,11 @@
 #include "config.h"
 
-#include <filesystem>
-#include <sstream>
-#include <iostream>
-#include <fstream>
 #include "dotenv.h"
+
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <sstream>
 
 namespace rdws {
 
@@ -44,10 +45,8 @@ std::string Config::getDatabasePassword() const {
 
 std::string Config::getConnectionString() const {
     std::ostringstream oss;
-    oss << "host=" << getDatabaseHost()
-        << " port=" << getDatabasePort()
-        << " dbname=" << getDatabaseName()
-        << " user=" << getDatabaseUser()
+    oss << "host=" << getDatabaseHost() << " port=" << getDatabasePort()
+        << " dbname=" << getDatabaseName() << " user=" << getDatabaseUser()
         << " password=" << getDatabasePassword();
     return oss.str();
 }
@@ -74,7 +73,8 @@ void Config::loadEnvironmentVariables() {
     settings["DB_HOST"] = getEnvVar("DB_HOST").value_or("test-server");
     settings["DB_USER"] = getEnvVar("DB_USER").value_or("db_user");
     settings["DB_PASSWORD"] = getEnvVar("DB_PASSWORD").value_or("db_psswd");
-    settings["DB_NAME"] = getEnvVar("DB_NAME").value_or("db_name"); // Will be set by getDatabaseName()
+    settings["DB_NAME"] =
+        getEnvVar("DB_NAME").value_or("db_name"); // Will be set by getDatabaseName()
 }
 
 std::optional<std::string> Config::getEnvVar(const std::string& name) {

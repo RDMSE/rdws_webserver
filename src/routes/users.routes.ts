@@ -16,15 +16,15 @@ export class UsersRouter extends BaseRouter {
       {
         path: '',
         method: 'GET',
-        handler: 'getAllUsers'
+        handler: 'getAllUsers',
       },
       {
         path: '/:id',
         method: 'GET',
         handler: 'getUserById',
-        validation: (req: Request) => this.validateNumericId(req.params.id, 'User ID')
-      }
-    ]
+        validation: (req: Request) => this.validateNumericId(req.params.id, 'User ID'),
+      },
+    ],
   };
 
   public setupRoutes(
@@ -39,10 +39,8 @@ export class UsersRouter extends BaseRouter {
 
     // GET /users/:id - Get user by ID
     this.router.get('/:id', async (req: Request, res: Response): Promise<void> => {
-      const handler = this.createRouteHandler(
-        'GET',
-        '/users/:id',
-        (req: Request) => this.validateNumericId(req.params.id, 'User ID')
+      const handler = this.createRouteHandler('GET', '/users/:id', (req: Request) =>
+        this.validateNumericId(req.params.id, 'User ID')
       );
       await handler(req, res, callMicroservice, handleServiceError);
     });

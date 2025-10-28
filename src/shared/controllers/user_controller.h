@@ -1,11 +1,11 @@
 #pragma once
 
-#include "../types/user.h"
-#include "../types/service_result.h"
 #include "../common/utils/response_helper.h"
+#include "../types/service_result.h"
+#include "../types/user.h"
 #include "base_controller.h"
-#include <string>
 
+#include <string>
 
 namespace rdws::controllers {
 
@@ -13,8 +13,8 @@ namespace rdws::controllers {
  * UserController - Handles JSON serialization and HTTP response formatting
  * Separates presentation logic from business logic
  */
-class UserController: public rdws::controllers::BaseController {
-public:
+class UserController : public rdws::controllers::BaseController {
+  public:
     /**
      * Convert UsersResult to JSON response
      */
@@ -22,7 +22,8 @@ public:
         if (result.isSuccess()) {
             return rdws::utils::ResponseHelper::returnEntities(result.getData(), "users");
         } else {
-            return rdws::utils::ResponseHelper::returnError(result.getErrorMessage(), result.getStatusCode());
+            return rdws::utils::ResponseHelper::returnError(result.getErrorMessage(),
+                                                            result.getStatusCode());
         }
     }
 
@@ -33,7 +34,8 @@ public:
         if (result.isSuccess()) {
             return rdws::utils::ResponseHelper::returnEntity(result.getData(), "user");
         } else {
-            return rdws::utils::ResponseHelper::returnError(result.getErrorMessage(), result.getStatusCode());
+            return rdws::utils::ResponseHelper::returnError(result.getErrorMessage(),
+                                                            result.getStatusCode());
         }
     }
 
@@ -47,11 +49,13 @@ public:
             auto& allocator = doc.GetAllocator();
 
             ::rapidjson::Value countData(::rapidjson::kObjectType);
-            countData.AddMember("count", ::rapidjson::Value(static_cast<int>(result.getData())), allocator);
+            countData.AddMember("count", ::rapidjson::Value(static_cast<int>(result.getData())),
+                                allocator);
 
             return rdws::utils::ResponseHelper::returnData(countData);
         } else {
-            return rdws::utils::ResponseHelper::returnError(result.getErrorMessage(), result.getStatusCode());
+            return rdws::utils::ResponseHelper::returnError(result.getErrorMessage(),
+                                                            result.getStatusCode());
         }
     }
 
@@ -63,11 +67,10 @@ public:
             const auto& status = result.getData();
             return rdws::utils::ResponseHelper::returnSuccess(status.message);
         } else {
-            return rdws::utils::ResponseHelper::returnError(result.getErrorMessage(), result.getStatusCode());
+            return rdws::utils::ResponseHelper::returnError(result.getErrorMessage(),
+                                                            result.getStatusCode());
         }
     }
-
 };
 
 } // namespace rdws::controllers
-

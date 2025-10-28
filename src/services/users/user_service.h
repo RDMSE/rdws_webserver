@@ -3,9 +3,9 @@
 #include "common/database/idatabase.h"
 #include "repository/user_repository.h"
 #include "types/service_result.h"
+
 #include <memory>
 #include <string>
-
 
 namespace rdws::users {
 
@@ -14,10 +14,10 @@ namespace rdws::users {
  * Returns structured data instead of JSON for better separation of concerns
  */
 class UserService {
-private:
+  private:
     rdws::repository::UserRepository userRepository;
 
-public:
+  public:
     explicit UserService(std::shared_ptr<rdws::database::IDatabase> db);
 
     // Business logic methods returning structured data
@@ -30,4 +30,3 @@ public:
 };
 
 } // namespace rdws::users
-
