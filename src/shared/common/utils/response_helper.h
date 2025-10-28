@@ -2,13 +2,11 @@
 
 #include <string>
 #include <vector>
-#include <ctime>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
-#include <rapidjson/stringbuffer.h>
 
-namespace rdws {
-namespace utils {
+
+namespace rdws::utils {
 
 class ResponseHelper {
 public:
@@ -82,5 +80,4 @@ std::string ResponseHelper::returnEntities(const std::vector<T>& entities, const
     return documentToString(doc);
 }
 
-} // namespace utils
-} // namespace rdws
+} // namespace rdws::utils

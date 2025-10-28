@@ -3,19 +3,19 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
-#include <variant>
 
 // Forward declarations
-namespace rdws {
-namespace types {
-    struct User;
-    struct Order;
-}
+
+namespace rdws::types {
+    class User;
+    class Order;
 }
 
-namespace rdws {
-namespace types {
+
+
+namespace rdws::types {
 
 /**
  * Generic result type for service operations
@@ -39,8 +39,8 @@ public:
     }
 
     // Accessors
-    bool isSuccess() const { return success_; }
-    bool isError() const { return !success_; }
+    [[nodiscard]] bool isSuccess() const { return success_; }
+    [[nodiscard]] bool isError() const { return !success_; }
 
     const T& getData() const {
         if (!data_.has_value()) {
@@ -49,16 +49,16 @@ public:
         return data_.value();
     }
 
-    const std::string& getErrorMessage() const { return errorMessage_; }
-    int getStatusCode() const { return statusCode_; }
+    [[nodiscard]] const std::string& getErrorMessage() const { return errorMessage_; }
+    [[nodiscard]] int getStatusCode() const { return statusCode_; }
 
     // Optional-like access
-    bool hasData() const { return data_.has_value(); }
+    [[nodiscard]] bool hasData() const { return data_.has_value(); }
     const std::optional<T>& getOptionalData() const { return data_; }
 
 private:
-    ServiceResult(std::optional<T> data, bool success, const std::string& errorMessage, int statusCode)
-        : data_(std::move(data)), success_(success), errorMessage_(errorMessage), statusCode_(statusCode) {}
+    ServiceResult(std::optional<T> data, bool success, std::string  errorMessage, const int statusCode)
+        : data_(std::move(data)), success_(success), errorMessage_(std::move(errorMessage)), statusCode_(statusCode) {}
 
     std::optional<T> data_;
     bool success_;
@@ -87,12 +87,12 @@ struct OperationStatus {
         return {true, message, 200};
     }
 
-    static OperationStatus createError(const std::string& message, int statusCode = 500) {
+    static OperationStatus createError(const std::string& message, const int statusCode = 500) {
         return {false, message, statusCode};
     }
 };
 
 using OperationResult = ServiceResult<OperationStatus>;
 
-} // namespace types
-} // namespace rdws
+} // namespace rdws::types
+

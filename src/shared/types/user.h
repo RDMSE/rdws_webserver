@@ -3,11 +3,11 @@
 #include <iomanip>
 #include <json/json.h>
 #include <rapidjson/document.h>
-#include <sstream>
 #include <string>
+#include <utility>
 
-namespace rdws {
-namespace types {
+
+namespace rdws::types {
 
 struct User {
     int id = 0;
@@ -17,12 +17,12 @@ struct User {
 
     // Constructors
     User() = default;
-    User(const std::string& n, const std::string& e) : name(n), email(e) {}
-    User(int i, const std::string& n, const std::string& e, const std::string& c)
-        : id(i), name(n), email(e), created_at(c) {}
+    User(std::string  n, std::string  e) : name(std::move(n)), email(std::move(e)) {}
+    User(const int i, std::string  n, std::string  e, std::string  c)
+        : id(i), name(std::move(n)), email(std::move(e)), created_at(std::move(c)) {}
 
     // Convert to JSON string using jsoncpp (for backward compatibility)
-    std::string toJsonString() const {
+    [[nodiscard]] std::string toJsonString() const {
         Json::Value json;
         json["id"] = id;
         json["name"] = name;
@@ -48,5 +48,5 @@ struct User {
     }
 };
 
-} // namespace types
-} // namespace rdws
+} // namespace rdws::types
+

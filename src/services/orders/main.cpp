@@ -4,10 +4,8 @@
 #include "controllers/order_controller.h"
 #include "order_service.h"
 
-#include <ctime>
 #include <iostream>
 #include <memory>
-#include <sstream>
 #include <string>
 
 using namespace rdws::types;
@@ -29,7 +27,7 @@ int main(int argc, char* argv[]) {
             try {
                 event = LambdaEvent::fromJson(eventJson);
                 context = LambdaContext::fromJson(contextJson);
-            } catch (const std::exception& e) {
+            } catch (...) {
                 // Fallback to old approach if JSON parsing fails
                 event = LambdaEvent(argc, argv);
                 context = LambdaContext(event.getRequestContext().requestId, "orders-service");
@@ -87,7 +85,7 @@ int main(int argc, char* argv[]) {
                     auto result = orderService.getOrderById(orderId);
                     std::cout << OrderController::formatOrderResponse(result) << std::endl;
                     return result.isSuccess() ? 0 : 1;
-                } catch (const std::exception& e) {
+                } catch (...) {
                     context.log("Invalid order ID: " + idParam, "ERROR");
                     std::cout << OrderController::formatError("Invalid order ID", 400) << std::endl;
                     return 1;
@@ -102,7 +100,7 @@ int main(int argc, char* argv[]) {
                     auto result = orderService.getOrdersByUserId(userId);
                     std::cout << OrderController::formatOrdersResponse(result) << std::endl;
                     return result.isSuccess() ? 0 : 1;
-                } catch (const std::exception& e) {
+                } catch (...) {
                     context.log("Invalid user ID: " + userIdParam, "ERROR");
                     std::cout << OrderController::formatError("Invalid user ID", 400) << std::endl;
                     return 1;
@@ -111,7 +109,7 @@ int main(int argc, char* argv[]) {
         } else if (event.isPost()) {
             if (event.pathMatches("/orders") || event.pathMatches("/")) {
                 // Create order
-                std::string jsonData = event.getBody();
+                const std::string& jsonData = event.getBody();
 
                 if (jsonData.empty()) {
                     context.log("No JSON data provided for order creation", "ERROR");
@@ -130,7 +128,7 @@ int main(int argc, char* argv[]) {
 
                 try {
                     int orderId = std::stoi(idParam);
-                    std::string jsonData = event.getBody();
+                    const std::string& jsonData = event.getBody();
 
                     if (jsonData.empty()) {
                         context.log("No JSON data provided for order update", "ERROR");
@@ -142,7 +140,7 @@ int main(int argc, char* argv[]) {
                     auto result = orderService.updateOrder(orderId, jsonData);
                     std::cout << OrderController::formatOrderResponse(result) << std::endl;
                     return result.isSuccess() ? 0 : 1;
-                } catch (const std::exception& e) {
+                } catch (...) {
                     context.log("Invalid order ID: " + idParam, "ERROR");
                     std::cout << OrderController::formatError("Invalid order ID", 400) << std::endl;
                     return 1;
@@ -158,7 +156,7 @@ int main(int argc, char* argv[]) {
                     auto result = orderService.deleteOrder(orderId);
                     std::cout << OrderController::formatOperationResponse(result) << std::endl;
                     return result.isSuccess() ? 0 : 1;
-                } catch (const std::exception& e) {
+                } catch (...) {
                     context.log("Invalid order ID: " + idParam, "ERROR");
                     std::cout << OrderController::formatError("Invalid order ID", 400) << std::endl;
                     return 1;

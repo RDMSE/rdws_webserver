@@ -4,21 +4,22 @@
 #include <sstream>
 #include <ctime>
 #include <stdexcept>
+#include <utility>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
 
-namespace rdws {
-namespace types {
 
-LambdaContext::LambdaContext(const std::string& requestId, 
-                             const std::string& functionName, 
-                             const std::string& functionVersion,
-                             std::chrono::milliseconds timeoutMs,
-                             int memoryLimitMB)
-    : requestId_(requestId), 
-      functionName_(functionName), 
-      functionVersion_(functionVersion),
+namespace rdws::types {
+
+LambdaContext::LambdaContext(std::string  requestId,
+                             std::string  functionName,
+                             std::string  functionVersion,
+                             const std::chrono::milliseconds timeoutMs,
+                             const int memoryLimitMB)
+    : requestId_(std::move(requestId)),
+      functionName_(std::move(functionName)),
+      functionVersion_(std::move(functionVersion)),
       timeoutMs_(timeoutMs),
       startTime_(std::chrono::steady_clock::now()),
       memoryLimitMB_(memoryLimitMB) {
@@ -115,5 +116,4 @@ std::string LambdaContext::toJson() const {
     return buffer.GetString();
 }
 
-} // namespace types
-} // namespace rdws
+} // namespace rdws::types

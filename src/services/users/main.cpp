@@ -4,10 +4,8 @@
 #include "controllers/user_controller.h"
 #include "user_service.h"
 
-#include <ctime>
 #include <iostream>
 #include <memory>
-#include <sstream>
 #include <string>
 
 using namespace rdws::types;
@@ -29,7 +27,7 @@ int main(int argc, char* argv[]) {
             try {
                 event = LambdaEvent::fromJson(eventJson);
                 context = LambdaContext::fromJson(contextJson);
-            } catch (const std::exception& e) {
+            } catch (...) {
                 // Fallback to old approach if JSON parsing fails
                 event = LambdaEvent(argc, argv);
                 context = LambdaContext(event.getRequestContext().requestId, "users-service");
@@ -85,9 +83,9 @@ int main(int argc, char* argv[]) {
                     auto result = userService.getUserById(userId);
                     std::cout << UserController::formatUserResponse(result) << std::endl;
                     return 0;
-                } catch (const std::exception& e) {
+                } catch (...) {
                     context.log("Invalid user ID: " + idParam, "ERROR");
-                    std::cout << "{\"error\":\"Invalid user ID\",\"path\":\"" << event.getPath() << "\"}"
+                    std::cout << R"({"error":"Invalid user ID","path":")" << event.getPath() << "\"}"
                               << std::endl;
                     return 1;
                 }
@@ -95,7 +93,7 @@ int main(int argc, char* argv[]) {
         } else if (event.isPost()) {
             if (event.pathMatches("/users") || event.pathMatches("/")) {
                 // Create user
-                std::string jsonData = event.getBody();
+                const std::string& jsonData = event.getBody();
 
                 if (jsonData.empty()) {
                     context.log("No JSON data provided for user creation", "ERROR");
@@ -114,7 +112,7 @@ int main(int argc, char* argv[]) {
 
                 try {
                     int userId = std::stoi(idParam);
-                    std::string jsonData = event.getBody();
+                    const std::string& jsonData = event.getBody();
 
                     if (jsonData.empty()) {
                         context.log("No JSON data provided for user update", "ERROR");
@@ -126,7 +124,7 @@ int main(int argc, char* argv[]) {
                     auto result = userService.updateUser(userId, jsonData);
                     std::cout << UserController::formatUserResponse(result) << std::endl;
                     return 0;
-                } catch (const std::exception& e) {
+                } catch (...) {
                     context.log("Invalid user ID: " + idParam, "ERROR");
                     std::cout << UserController::formatError("Invalid user ID", 400) << std::endl;
                     return 1;
@@ -142,7 +140,7 @@ int main(int argc, char* argv[]) {
                     auto result = userService.deleteUser(userId);
                     std::cout << UserController::formatOperationResponse(result) << std::endl;
                     return 0;
-                } catch (const std::exception& e) {
+                } catch (...) {
                     context.log("Invalid user ID: " + idParam, "ERROR");
                     std::cout << UserController::formatError("Invalid user ID", 400) << std::endl;
                     return 1;

@@ -1,11 +1,10 @@
 #include "order.h"
 #include <rapidjson/writer.h>
-#include <rapidjson/stringbuffer.h>
 #include <sstream>
 #include <iomanip>
 
-namespace rdws {
-namespace types {
+
+namespace rdws::types {
 
 // Default constructor
 Order::Order() : id(0), userId(0), product(""), amount(0.0), status("pending"), createdAt("") {}
@@ -95,5 +94,4 @@ bool Order::operator!=(const Order& other) const {
     return !(*this == other);
 }
 
-} // namespace types
-} // namespace rdws
+} // namespace rdws::types

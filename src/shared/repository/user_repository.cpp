@@ -1,9 +1,8 @@
 #include "user_repository.h"
 #include <stdexcept>
-#include <sstream>
 
-namespace rdws {
-namespace repository {
+
+namespace rdws::repository {
 
 UserRepository::UserRepository(std::shared_ptr<rdws::database::IDatabase> database) 
     : db(std::move(database)) {
@@ -12,7 +11,7 @@ UserRepository::UserRepository(std::shared_ptr<rdws::database::IDatabase> databa
     }
 }
 
-std::optional<rdws::types::User> UserRepository::findById(int id) {
+std::optional<rdws::types::User> UserRepository::findById(int id) const {
     try {
         auto result = db->execQuery("SELECT id, name, email, created_at FROM users WHERE id = $1", {std::to_string(id)});
         
@@ -26,13 +25,11 @@ std::optional<rdws::types::User> UserRepository::findById(int id) {
     }
 }
 
-std::vector<rdws::types::User> UserRepository::findAll() {
-    std::vector<rdws::types::User> users;
-    
+std::vector<rdws::types::User> UserRepository::findAll() const {
     try {
-        auto result = db->execQuery("SELECT id, name, email, created_at FROM users ORDER BY id");
-        
-        if (result) {
+        std::vector<rdws::types::User> users;
+
+        if (auto result = db->execQuery("SELECT id, name, email, created_at FROM users ORDER BY id")) {
             while (result->next()) {
                 users.push_back(mapResultToUser(*result));
             }
@@ -44,13 +41,11 @@ std::vector<rdws::types::User> UserRepository::findAll() {
     }
 }
 
-std::vector<rdws::types::User> UserRepository::findByEmail(const std::string& email) {
-    std::vector<rdws::types::User> users;
-    
+std::vector<rdws::types::User> UserRepository::findByEmail(const std::string& email) const {
     try {
-        auto result = db->execQuery("SELECT id, name, email, created_at FROM users WHERE email = $1", {email});
-        
-        if (result) {
+        std::vector<rdws::types::User> users;
+
+        if (auto result = db->execQuery("SELECT id, name, email, created_at FROM users WHERE email = $1", {email})) {
             while (result->next()) {
                 users.push_back(mapResultToUser(*result));
             }
@@ -62,25 +57,25 @@ std::vector<rdws::types::User> UserRepository::findByEmail(const std::string& em
     }
 }
 
-bool UserRepository::create(const rdws::types::User& user) {
+bool UserRepository::create(const rdws::types::User& user) const {
     try {
-        auto parameters = userToParameters(user);
+        const auto parameters = userToParameters(user);
         return db->execCommand(buildInsertQuery(), parameters);
     } catch (const std::exception& e) {
         throw std::runtime_error("Failed to create user: " + std::string(e.what()));
     }
 }
 
-bool UserRepository::update(const rdws::types::User& user) {
+bool UserRepository::update(const rdws::types::User& user) const {
     try {
-        auto parameters = userToParametersWithId(user);
+        const auto parameters = userToParametersWithId(user);
         return db->execCommand(buildUpdateQuery(), parameters);
     } catch (const std::exception& e) {
         throw std::runtime_error("Failed to update user: " + std::string(e.what()));
     }
 }
 
-bool UserRepository::deleteById(int id) {
+bool UserRepository::deleteById(int id) const {
     try {
         return db->execCommand("DELETE FROM users WHERE id = $1", {std::to_string(id)});
     } catch (const std::exception& e) {
@@ -88,7 +83,7 @@ bool UserRepository::deleteById(int id) {
     }
 }
 
-bool UserRepository::createBatch(const std::vector<rdws::types::User>& users) {
+bool UserRepository::createBatch(const std::vector<rdws::types::User>& users) const {
     if (users.empty()) {
         return true;
     }
@@ -108,7 +103,7 @@ bool UserRepository::createBatch(const std::vector<rdws::types::User>& users) {
     }
 }
 
-bool UserRepository::updateBatch(const std::vector<rdws::types::User>& users) {
+bool UserRepository::updateBatch(const std::vector<rdws::types::User>& users) const {
     if (users.empty()) {
         return true;
     }
@@ -128,7 +123,7 @@ bool UserRepository::updateBatch(const std::vector<rdws::types::User>& users) {
     }
 }
 
-bool UserRepository::deleteBatch(const std::vector<int>& ids) {
+bool UserRepository::deleteBatch(const std::vector<int>& ids) const {
     if (ids.empty()) {
         return true;
     }
@@ -137,8 +132,8 @@ bool UserRepository::deleteBatch(const std::vector<int>& ids) {
         std::vector<std::string> queries;
         std::vector<std::vector<std::string>> parameterSets;
         
-        for (int id : ids) {
-            queries.push_back("DELETE FROM users WHERE id = $1");
+        for (const int id : ids) {
+            queries.emplace_back("DELETE FROM users WHERE id = $1");
             parameterSets.push_back({std::to_string(id)});
         }
         
@@ -148,11 +143,9 @@ bool UserRepository::deleteBatch(const std::vector<int>& ids) {
     }
 }
 
-void UserRepository::findAllWithCallback(std::function<void(const rdws::types::User&)> callback) {
+void UserRepository::findAllWithCallback(const std::function<void(const rdws::types::User&)>& callback) const {
     try {
-        auto result = db->execQuery("SELECT id, name, email, created_at FROM users ORDER BY id");
-        
-        if (result) {
+        if (const auto result = db->execQuery("SELECT id, name, email, created_at FROM users ORDER BY id")) {
             while (result->next()) {
                 auto user = mapResultToUser(*result);
                 callback(user);
@@ -166,13 +159,12 @@ void UserRepository::findAllWithCallback(std::function<void(const rdws::types::U
 void UserRepository::findByConditionWithCallback(
     const std::string& whereClause,
     const std::vector<std::string>& parameters,
-    std::function<void(const rdws::types::User&)> callback
-) {
+    const std::function<void(const rdws::types::User&)>& callback
+) const {
     try {
         std::string query = "SELECT id, name, email, created_at FROM users WHERE " + whereClause + " ORDER BY id";
-        auto result = db->execQuery(query, parameters);
-        
-        if (result) {
+
+        if (auto result = db->execQuery(query, parameters)) {
             while (result->next()) {
                 auto user = mapResultToUser(*result);
                 callback(user);
@@ -183,11 +175,9 @@ void UserRepository::findByConditionWithCallback(
     }
 }
 
-size_t UserRepository::count() {
+size_t UserRepository::count() const {
     try {
-        auto result = db->execQuery("SELECT COUNT(*) as total FROM users");
-        
-        if (result && result->next()) {
+        if (auto result = db->execQuery("SELECT COUNT(*) as total FROM users"); result && result->next()) {
             return static_cast<size_t>(result->getInt("total"));
         }
         
@@ -197,18 +187,18 @@ size_t UserRepository::count() {
     }
 }
 
-bool UserRepository::exists(int id) {
+bool UserRepository::exists(const int id) const {
     try {
-        auto result = db->execQuery("SELECT 1 FROM users WHERE id = $1 LIMIT 1", {std::to_string(id)});
+        const auto result = db->execQuery("SELECT 1 FROM users WHERE id = $1 LIMIT 1", {std::to_string(id)});
         return result && result->next();
     } catch (const std::exception& e) {
         throw std::runtime_error("Failed to check user existence: " + std::string(e.what()));
     }
 }
 
-bool UserRepository::existsByEmail(const std::string& email) {
+bool UserRepository::existsByEmail(const std::string& email) const {
     try {
-        auto result = db->execQuery("SELECT 1 FROM users WHERE email = $1 LIMIT 1", {email});
+        const auto result = db->execQuery("SELECT 1 FROM users WHERE email = $1 LIMIT 1", {email});
         return result && result->next();
     } catch (const std::exception& e) {
         throw std::runtime_error("Failed to check user existence by email: " + std::string(e.what()));
@@ -226,21 +216,20 @@ rdws::types::User UserRepository::mapResultToUser(rdws::database::IResultSet& re
     return user;
 }
 
-std::string UserRepository::buildInsertQuery() const {
+std::string UserRepository::buildInsertQuery() {
     return "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id";
 }
 
-std::string UserRepository::buildUpdateQuery() const {
+std::string UserRepository::buildUpdateQuery() {
     return "UPDATE users SET name = $1, email = $2 WHERE id = $3";
 }
 
-std::vector<std::string> UserRepository::userToParameters(const rdws::types::User& user) const {
+std::vector<std::string> UserRepository::userToParameters(const rdws::types::User& user) {
     return {user.name, user.email};
 }
 
-std::vector<std::string> UserRepository::userToParametersWithId(const rdws::types::User& user) const {
+std::vector<std::string> UserRepository::userToParametersWithId(const rdws::types::User& user) {
     return {user.name, user.email, std::to_string(user.id)};
 }
 
-} // namespace repository
-} // namespace rdws
+} // namespace rdws::repository

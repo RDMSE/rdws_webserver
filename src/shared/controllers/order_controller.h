@@ -8,8 +8,8 @@
 #include <string>
 #include <vector>
 
-namespace rdws {
-namespace controllers {
+
+namespace rdws::controllers {
 
 /**
  * Order Controller for handling JSON serialization and HTTP response formatting
@@ -141,5 +141,5 @@ class OrderController: public rdws::controllers::BaseController {
     }
 };
 
-} // namespace controllers
-} // namespace rdws
+} // namespace rdws::controllers
+
