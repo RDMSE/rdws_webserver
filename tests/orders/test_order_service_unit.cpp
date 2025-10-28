@@ -1,13 +1,14 @@
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
-#include <memory>
 #include "../../src/services/orders/order_service.h"
 #include "../../src/shared/controllers/order_controller.h"
 #include "../mocks/mock_database.h"
 #include "../mocks/mock_order_result_set.h"
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
+#include <memory>
+
 class OrderServiceUnitTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         mockDb = std::make_shared<rdws::testing::MockDatabase>();
         orderService = std::make_unique<rdws::services::orders::OrderService>(mockDb);
@@ -30,10 +31,18 @@ protected:
 TEST_F(OrderServiceUnitTest, GetAllOrders_ServiceReturnsSuccessResult) {
     using ::testing::Return;
 
-    std::vector<std::map<std::string, std::string>> mockRows = {
-        { {"id", "1"}, {"user_id", "1"}, {"product", "Laptop"}, {"amount", "2500.00"}, {"status", "completed"}, {"created_at", "2023-01-01"} },
-        { {"id", "2"}, {"user_id", "2"}, {"product", "Mouse"}, {"amount", "150.00"}, {"status", "pending"}, {"created_at", "2023-01-02"} }
-    };
+    std::vector<std::map<std::string, std::string>> mockRows = {{{"id", "1"},
+                                                                 {"user_id", "1"},
+                                                                 {"product", "Laptop"},
+                                                                 {"amount", "2500.00"},
+                                                                 {"status", "completed"},
+                                                                 {"created_at", "2023-01-01"}},
+                                                                {{"id", "2"},
+                                                                 {"user_id", "2"},
+                                                                 {"product", "Mouse"},
+                                                                 {"amount", "150.00"},
+                                                                 {"status", "pending"},
+                                                                 {"created_at", "2023-01-02"}}};
 
     EXPECT_CALL(*mockDb, execQuery(testing::HasSubstr("SELECT"), testing::IsEmpty()))
         .WillOnce(Return(std::make_unique<rdws::testing::MockOrderResultSet>(mockRows)));
@@ -48,8 +57,7 @@ TEST_F(OrderServiceUnitTest, GetAllOrders_ServiceReturnsSuccessResult) {
 TEST_F(OrderServiceUnitTest, GetAllOrders_ControllerFormatsJsonCorrectly) {
     std::vector<rdws::types::Order> orders = {
         rdws::types::Order(1, 1, "Laptop", 2500.00, "completed", "2023-01-01"),
-        rdws::types::Order(2, 2, "Mouse", 150.00, "pending", "2023-01-02")
-    };
+        rdws::types::Order(2, 2, "Mouse", 150.00, "pending", "2023-01-02")};
 
     auto successResult = rdws::types::OrdersResult::success(orders);
     std::string json = orderController->formatOrdersResponse(successResult);
@@ -63,9 +71,12 @@ TEST_F(OrderServiceUnitTest, GetAllOrders_ControllerFormatsJsonCorrectly) {
 TEST_F(OrderServiceUnitTest, GetOrderById_ValidId_ReturnsOrder) {
     using ::testing::Return;
 
-    std::vector<std::map<std::string, std::string>> mockRows = {
-        { {"id", "1"}, {"user_id", "1"}, {"product", "Laptop"}, {"amount", "2500.00"}, {"status", "completed"}, {"created_at", "2023-01-01"} }
-    };
+    std::vector<std::map<std::string, std::string>> mockRows = {{{"id", "1"},
+                                                                 {"user_id", "1"},
+                                                                 {"product", "Laptop"},
+                                                                 {"amount", "2500.00"},
+                                                                 {"status", "completed"},
+                                                                 {"created_at", "2023-01-01"}}};
 
     EXPECT_CALL(*mockDb, execQuery(testing::HasSubstr("SELECT"), testing::ElementsAre("1")))
         .WillOnce(Return(std::make_unique<rdws::testing::MockOrderResultSet>(mockRows)));
@@ -96,9 +107,7 @@ TEST_F(OrderServiceUnitTest, GetOrderById_NonExistentId_ReturnsError) {
 TEST_F(OrderServiceUnitTest, GetOrderCount_ReturnsCorrectCount) {
     using ::testing::Return;
 
-    std::vector<std::map<std::string, std::string>> countRows = {
-        { {"total", "5"} }
-    };
+    std::vector<std::map<std::string, std::string>> countRows = {{{"total", "5"}}};
 
     EXPECT_CALL(*mockDb, execQuery(testing::HasSubstr("COUNT"), testing::IsEmpty()))
         .WillOnce(Return(std::make_unique<rdws::testing::MockOrderResultSet>(countRows)));
@@ -111,15 +120,19 @@ TEST_F(OrderServiceUnitTest, GetOrderCount_ReturnsCorrectCount) {
 
 // Test createOrder with valid JSON
 TEST_F(OrderServiceUnitTest, CreateOrder_ValidData_CreatesOrder) {
-    using ::testing::Return;
     using ::testing::_;
+    using ::testing::Return;
 
-    std::string jsonData = R"({"userId": 1, "product": "New Product", "amount": 299.99, "status": "pending"})";
+    std::string jsonData =
+        R"({"userId": 1, "product": "New Product", "amount": 299.99, "status": "pending"})";
 
     // Mock the INSERT query with RETURNING clause
-    std::vector<std::map<std::string, std::string>> mockRows = {
-        { {"id", "4"}, {"user_id", "1"}, {"product", "New Product"}, {"amount", "299.99"}, {"status", "pending"}, {"created_at", "2023-01-04"} }
-    };
+    std::vector<std::map<std::string, std::string>> mockRows = {{{"id", "4"},
+                                                                 {"user_id", "1"},
+                                                                 {"product", "New Product"},
+                                                                 {"amount", "299.99"},
+                                                                 {"status", "pending"},
+                                                                 {"created_at", "2023-01-04"}}};
 
     EXPECT_CALL(*mockDb, execQuery(testing::HasSubstr("INSERT INTO orders"), _))
         .WillOnce(Return(std::make_unique<rdws::testing::MockOrderResultSet>(mockRows)));
@@ -143,24 +156,34 @@ TEST_F(OrderServiceUnitTest, CreateOrder_InvalidJson_ReturnsError) {
 
 // Test updateOrder
 TEST_F(OrderServiceUnitTest, UpdateOrder_ValidData_UpdatesOrder) {
-    using ::testing::Return;
     using ::testing::_;
+    using ::testing::Return;
 
     std::string jsonData = R"({"product": "Updated Product"})";
 
     // Mock finding existing order
     std::vector<std::map<std::string, std::string>> existingOrder = {
-        { {"id", "1"}, {"user_id", "1"}, {"product", "Old Product"}, {"amount", "100.00"}, {"status", "pending"}, {"created_at", "2023-01-01"} }
-    };
+        {{"id", "1"},
+         {"user_id", "1"},
+         {"product", "Old Product"},
+         {"amount", "100.00"},
+         {"status", "pending"},
+         {"created_at", "2023-01-01"}}};
 
-    EXPECT_CALL(*mockDb, execQuery("SELECT id, user_id, product, amount, status, created_at FROM orders WHERE id = $1",
-                                   std::vector<std::string>{"1"}))
+    EXPECT_CALL(
+        *mockDb,
+        execQuery(
+            "SELECT id, user_id, product, amount, status, created_at FROM orders WHERE id = $1",
+            std::vector<std::string>{"1"}))
         .WillOnce(Return(std::make_unique<rdws::testing::MockOrderResultSet>(existingOrder)));
 
     // Mock the UPDATE query with RETURNING clause
-    std::vector<std::map<std::string, std::string>> updatedOrder = {
-        { {"id", "1"}, {"user_id", "1"}, {"product", "Updated Product"}, {"amount", "100.00"}, {"status", "pending"}, {"created_at", "2023-01-01"} }
-    };
+    std::vector<std::map<std::string, std::string>> updatedOrder = {{{"id", "1"},
+                                                                     {"user_id", "1"},
+                                                                     {"product", "Updated Product"},
+                                                                     {"amount", "100.00"},
+                                                                     {"status", "pending"},
+                                                                     {"created_at", "2023-01-01"}}};
 
     EXPECT_CALL(*mockDb, execQuery(testing::HasSubstr("UPDATE orders"), _))
         .WillOnce(Return(std::make_unique<rdws::testing::MockOrderResultSet>(updatedOrder)));
@@ -173,17 +196,18 @@ TEST_F(OrderServiceUnitTest, UpdateOrder_ValidData_UpdatesOrder) {
 
 // Test deleteOrder
 TEST_F(OrderServiceUnitTest, DeleteOrder_ValidId_DeletesOrder) {
-    using ::testing::Return;
     using ::testing::_;
+    using ::testing::Return;
 
-    EXPECT_CALL(*mockDb, execCommand("DELETE FROM orders WHERE id = $1",
-                                   std::vector<std::string>{"1"}))
+    EXPECT_CALL(*mockDb,
+                execCommand("DELETE FROM orders WHERE id = $1", std::vector<std::string>{"1"}))
         .WillOnce(Return(true));
 
     auto result = orderService->deleteOrder(1);
 
     EXPECT_TRUE(result.isSuccess()) << "Service should return success";
-    EXPECT_EQ(result.getData().message, "Order deleted successfully") << "Should return success message";
+    EXPECT_EQ(result.getData().message, "Order deleted successfully")
+        << "Should return success message";
 }
 
 // Test that controllers format error responses correctly
@@ -193,5 +217,6 @@ TEST_F(OrderServiceUnitTest, Controller_FormatsErrorResponseCorrectly) {
 
     EXPECT_FALSE(json.empty()) << "Controller should return non-empty JSON";
     EXPECT_TRUE(json.find("error") != std::string::npos) << "JSON should indicate error";
-    EXPECT_TRUE(json.find("Test error message") != std::string::npos) << "JSON should contain error message";
+    EXPECT_TRUE(json.find("Test error message") != std::string::npos)
+        << "JSON should contain error message";
 }

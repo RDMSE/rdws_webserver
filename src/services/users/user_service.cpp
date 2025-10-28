@@ -1,7 +1,8 @@
 #include "user_service.h"
-#include "validation/schema_validator.h"
-#include <json/json.h>
 
+#include "validation/schema_validator.h"
+
+#include <json/json.h>
 
 namespace rdws::users {
 
@@ -55,7 +56,8 @@ rdws::types::UserResult UserService::createUser(const std::string& jsonData) con
             return rdws::types::UserResult::error("Invalid JSON format", 400);
         }
 
-        if (rdws::types::User newUser(json["name"].asString(), json["email"].asString()); userRepository.create(newUser)) {
+        if (rdws::types::User newUser(json["name"].asString(), json["email"].asString());
+            userRepository.create(newUser)) {
             // Get the created user (assuming it's the last one with the same email)
             auto users = userRepository.findAll();
             for (auto& user : users) {
@@ -63,7 +65,8 @@ rdws::types::UserResult UserService::createUser(const std::string& jsonData) con
                     return rdws::types::UserResult::success(user);
                 }
             }
-            return rdws::types::UserResult::error("User created but could not retrieve details", 500);
+            return rdws::types::UserResult::error("User created but could not retrieve details",
+                                                  500);
         } else {
             return rdws::types::UserResult::error("Failed to create user", 500);
         }
@@ -123,9 +126,10 @@ rdws::types::OperationResult UserService::deleteUser(const int id) const {
             return rdws::types::OperationResult::success(status);
         }
 
-        const auto status = userRepository.deleteById(id) ?
-            rdws::types::OperationStatus::createSuccess("User deleted successfully") :
-            rdws::types::OperationStatus::createError("Failed to delete user", 500);
+        const auto status =
+            userRepository.deleteById(id)
+                ? rdws::types::OperationStatus::createSuccess("User deleted successfully")
+                : rdws::types::OperationStatus::createError("Failed to delete user", 500);
 
         return rdws::types::OperationResult::success(status);
     } catch (const std::exception& e) {
@@ -135,4 +139,3 @@ rdws::types::OperationResult UserService::deleteUser(const int id) const {
 }
 
 } // namespace rdws::users
-

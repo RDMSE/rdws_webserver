@@ -4,9 +4,9 @@
 #include "../types/order.h"
 #include "../types/service_result.h"
 #include "base_controller.h"
+
 #include <string>
 #include <vector>
-
 
 namespace rdws::controllers {
 
@@ -14,7 +14,7 @@ namespace rdws::controllers {
  * Order Controller for handling JSON serialization and HTTP response formatting
  * Separates presentation concerns from business logic
  */
-class OrderController: public rdws::controllers::BaseController {
+class OrderController : public rdws::controllers::BaseController {
   public:
     /**
      * Format a successful orders list response
@@ -141,4 +141,3 @@ class OrderController: public rdws::controllers::BaseController {
 };
 
 } // namespace rdws::controllers
-

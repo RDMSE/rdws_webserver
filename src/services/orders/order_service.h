@@ -1,12 +1,11 @@
 #pragma once
 
+#include "../../shared/repository/order_repository.h"
 #include "common/database/idatabase.h"
 #include "types/order.h"
 #include "types/service_result.h"
-#include "../../shared/repository/order_repository.h"
 
 #include <memory>
-
 
 namespace rdws::services::orders {
 
@@ -82,5 +81,3 @@ class OrderService {
 };
 
 } // namespace rdws::services::orders
-
-

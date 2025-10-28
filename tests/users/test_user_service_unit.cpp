@@ -1,15 +1,17 @@
-#include <gtest/gtest.h>
 #include "../mocks/mock_database.h"
+
+#include <gtest/gtest.h>
 using rdws::testing::MockDatabase;
 #include "../../src/services/users/user_service.h"
 #include "controllers/user_controller.h"
+
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 // Include MockUserResultSet for user service unit tests
 #include "../mocks/mock_user_result_set.h"
 
 class UserServiceUnitTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         mockDb = std::make_shared<MockDatabase>();
         mockDb->reset(); // Ensure clean state
@@ -21,17 +23,18 @@ protected:
     }
 
     void setupDefaultExpectations() {
-        using ::testing::Return;
         using ::testing::_;
+        using ::testing::Return;
 
         // Default fallback: return empty result set for any unmatched query
-        EXPECT_CALL(*mockDb, execQuery(_, _)).WillRepeatedly(testing::Invoke(
-            [](const std::string& query, const std::vector<std::string>& params) {
-                (void)query;
-                (void)params;
-                return std::make_unique<rdws::testing::MockUserResultSet>(
-                    std::vector<std::map<std::string, std::string>>{});
-            }));
+        EXPECT_CALL(*mockDb, execQuery(_, _))
+            .WillRepeatedly(testing::Invoke(
+                [](const std::string& query, const std::vector<std::string>& params) {
+                    (void)query;
+                    (void)params;
+                    return std::make_unique<rdws::testing::MockUserResultSet>(
+                        std::vector<std::map<std::string, std::string>>{});
+                }));
     }
 
     std::shared_ptr<MockDatabase> mockDb;
@@ -47,7 +50,8 @@ protected:
     // Helper to extract value from JSON response
     std::string extractJsonValue(const std::string& json, const std::string& key) {
         rapidjson::Document doc;
-        if (doc.Parse(json.c_str()).HasParseError()) return "";
+        if (doc.Parse(json.c_str()).HasParseError())
+            return "";
 
         if (doc.HasMember(key.c_str())) {
             const auto& value = doc[key.c_str()];
@@ -65,13 +69,17 @@ protected:
 
 // Test UserService returns correct ServiceResult for getAllUsers
 TEST_F(UserServiceUnitTest, GetAllUsers_ServiceReturnsSuccessResult) {
-    using ::testing::Return;
     using ::testing::_;
+    using ::testing::Return;
 
-    std::vector<std::map<std::string, std::string>> mockRows = {
-        { {"id", "1"}, {"name", "John Doe"}, {"email", "john@example.com"}, {"created_at", "2023-01-01"} },
-        { {"id", "2"}, {"name", "Jane Smith"}, {"email", "jane@example.com"}, {"created_at", "2023-01-02"} }
-    };
+    std::vector<std::map<std::string, std::string>> mockRows = {{{"id", "1"},
+                                                                 {"name", "John Doe"},
+                                                                 {"email", "john@example.com"},
+                                                                 {"created_at", "2023-01-01"}},
+                                                                {{"id", "2"},
+                                                                 {"name", "Jane Smith"},
+                                                                 {"email", "jane@example.com"},
+                                                                 {"created_at", "2023-01-02"}}};
 
     EXPECT_CALL(*mockDb, execQuery("SELECT id, name, email, created_at FROM users ORDER BY id", _))
         .WillOnce(Return(std::make_unique<rdws::testing::MockUserResultSet>(mockRows)));
@@ -86,12 +94,13 @@ TEST_F(UserServiceUnitTest, GetAllUsers_ServiceReturnsSuccessResult) {
 
 // Test UserController formats ServiceResult correctly
 TEST_F(UserServiceUnitTest, GetAllUsers_ControllerFormatsJsonCorrectly) {
-    using ::testing::Return;
     using ::testing::_;
+    using ::testing::Return;
 
-    std::vector<std::map<std::string, std::string>> mockRows = {
-        { {"id", "1"}, {"name", "John Doe"}, {"email", "john@example.com"}, {"created_at", "2023-01-01"} }
-    };
+    std::vector<std::map<std::string, std::string>> mockRows = {{{"id", "1"},
+                                                                 {"name", "John Doe"},
+                                                                 {"email", "john@example.com"},
+                                                                 {"created_at", "2023-01-01"}}};
 
     EXPECT_CALL(*mockDb, execQuery("SELECT id, name, email, created_at FROM users ORDER BY id", _))
         .WillOnce(Return(std::make_unique<rdws::testing::MockUserResultSet>(mockRows)));
@@ -106,12 +115,13 @@ TEST_F(UserServiceUnitTest, GetAllUsers_ControllerFormatsJsonCorrectly) {
 
 // Test getUserById with valid ID
 TEST_F(UserServiceUnitTest, GetUserById_ValidId_ReturnsUser) {
-    using ::testing::Return;
     using ::testing::_;
+    using ::testing::Return;
 
-    std::vector<std::map<std::string, std::string>> mockRows = {
-        { {"id", "1"}, {"name", "John Doe"}, {"email", "john@example.com"}, {"created_at", "2023-01-01"} }
-    };
+    std::vector<std::map<std::string, std::string>> mockRows = {{{"id", "1"},
+                                                                 {"name", "John Doe"},
+                                                                 {"email", "john@example.com"},
+                                                                 {"created_at", "2023-01-01"}}};
 
     EXPECT_CALL(*mockDb, execQuery("SELECT id, name, email, created_at FROM users WHERE id = $1",
                                    std::vector<std::string>{"1"}))
@@ -126,8 +136,8 @@ TEST_F(UserServiceUnitTest, GetUserById_ValidId_ReturnsUser) {
 
 // Test getUserById with non-existent ID
 TEST_F(UserServiceUnitTest, GetUserById_NonExistentId_ReturnsError) {
-    using ::testing::Return;
     using ::testing::_;
+    using ::testing::Return;
 
     EXPECT_CALL(*mockDb, execQuery("SELECT id, name, email, created_at FROM users WHERE id = $1",
                                    std::vector<std::string>{"999"}))
@@ -137,17 +147,16 @@ TEST_F(UserServiceUnitTest, GetUserById_NonExistentId_ReturnsError) {
     auto result = userService->getUserById(999);
 
     EXPECT_FALSE(result.isSuccess()) << "Service should return error";
-    EXPECT_EQ(result.getErrorMessage(), "User not found") << "Should return appropriate error message";
+    EXPECT_EQ(result.getErrorMessage(), "User not found")
+        << "Should return appropriate error message";
 }
 
 // Test getUsersCount
 TEST_F(UserServiceUnitTest, GetUsersCount_ReturnsCorrectCount) {
-    using ::testing::Return;
     using ::testing::_;
+    using ::testing::Return;
 
-    std::vector<std::map<std::string, std::string>> mockRows = {
-        { {"total", "3"} }
-    };
+    std::vector<std::map<std::string, std::string>> mockRows = {{{"total", "3"}}};
 
     EXPECT_CALL(*mockDb, execQuery("SELECT COUNT(*) as total FROM users", _))
         .WillOnce(Return(std::make_unique<rdws::testing::MockUserResultSet>(mockRows)));
@@ -160,8 +169,8 @@ TEST_F(UserServiceUnitTest, GetUsersCount_ReturnsCorrectCount) {
 
 // Test createUser with valid JSON
 TEST_F(UserServiceUnitTest, CreateUser_ValidData_CreatesUser) {
-    using ::testing::Return;
     using ::testing::_;
+    using ::testing::Return;
 
     std::string jsonData = R"({"name": "New User", "email": "new@example.com"})";
 
@@ -170,9 +179,10 @@ TEST_F(UserServiceUnitTest, CreateUser_ValidData_CreatesUser) {
         .WillOnce(Return(true));
 
     // Mock the subsequent findAll query to return the created user
-    std::vector<std::map<std::string, std::string>> mockRows = {
-        { {"id", "4"}, {"name", "New User"}, {"email", "new@example.com"}, {"created_at", "2023-01-04"} }
-    };
+    std::vector<std::map<std::string, std::string>> mockRows = {{{"id", "4"},
+                                                                 {"name", "New User"},
+                                                                 {"email", "new@example.com"},
+                                                                 {"created_at", "2023-01-04"}}};
 
     EXPECT_CALL(*mockDb, execQuery(testing::HasSubstr("SELECT"), testing::IsEmpty()))
         .WillOnce(Return(std::make_unique<rdws::testing::MockUserResultSet>(mockRows)));
@@ -196,26 +206,27 @@ TEST_F(UserServiceUnitTest, CreateUser_InvalidJson_ReturnsError) {
 
 // Test updateUser
 TEST_F(UserServiceUnitTest, UpdateUser_ValidData_UpdatesUser) {
-    using ::testing::Return;
     using ::testing::_;
+    using ::testing::Return;
 
     std::string jsonData = R"({"name": "Updated User"})";
 
     // Mock finding existing user
-    std::vector<std::map<std::string, std::string>> existingUser = {
-        { {"id", "1"}, {"name", "John Doe"}, {"email", "john@example.com"}, {"created_at", "2023-01-01"} }
-    };
+    std::vector<std::map<std::string, std::string>> existingUser = {{{"id", "1"},
+                                                                     {"name", "John Doe"},
+                                                                     {"email", "john@example.com"},
+                                                                     {"created_at", "2023-01-01"}}};
 
-    std::vector<std::map<std::string, std::string>> updatedUser = {
-        { {"id", "1"}, {"name", "Updated User"}, {"email", "john@example.com"}, {"created_at", "2023-01-01"} }
-    };
+    std::vector<std::map<std::string, std::string>> updatedUser = {{{"id", "1"},
+                                                                    {"name", "Updated User"},
+                                                                    {"email", "john@example.com"},
+                                                                    {"created_at", "2023-01-01"}}};
 
     EXPECT_CALL(*mockDb, execQuery("SELECT id, name, email, created_at FROM users WHERE id = $1",
                                    std::vector<std::string>{"1"}))
         .WillOnce(Return(std::make_unique<rdws::testing::MockUserResultSet>(existingUser)));
 
-    EXPECT_CALL(*mockDb, execCommand(testing::HasSubstr("UPDATE users"), _))
-        .WillOnce(Return(true));
+    EXPECT_CALL(*mockDb, execCommand(testing::HasSubstr("UPDATE users"), _)).WillOnce(Return(true));
 
     auto result = userService->updateUser(1, jsonData);
 
@@ -225,26 +236,28 @@ TEST_F(UserServiceUnitTest, UpdateUser_ValidData_UpdatesUser) {
 
 // Test deleteUser
 TEST_F(UserServiceUnitTest, DeleteUser_ValidId_DeletesUser) {
-    using ::testing::Return;
     using ::testing::_;
+    using ::testing::Return;
 
     // Mock finding existing user first
-    std::vector<std::map<std::string, std::string>> existingUser = {
-        { {"id", "1"}, {"name", "John Doe"}, {"email", "john@example.com"}, {"created_at", "2023-01-01"} }
-    };
+    std::vector<std::map<std::string, std::string>> existingUser = {{{"id", "1"},
+                                                                     {"name", "John Doe"},
+                                                                     {"email", "john@example.com"},
+                                                                     {"created_at", "2023-01-01"}}};
 
     EXPECT_CALL(*mockDb, execQuery("SELECT id, name, email, created_at FROM users WHERE id = $1",
                                    std::vector<std::string>{"1"}))
         .WillOnce(Return(std::make_unique<rdws::testing::MockUserResultSet>(existingUser)));
 
-    EXPECT_CALL(*mockDb, execCommand("DELETE FROM users WHERE id = $1",
-                                   std::vector<std::string>{"1"}))
+    EXPECT_CALL(*mockDb,
+                execCommand("DELETE FROM users WHERE id = $1", std::vector<std::string>{"1"}))
         .WillOnce(Return(true));
 
     auto result = userService->deleteUser(1);
 
     EXPECT_TRUE(result.isSuccess()) << "Service should return success";
-    EXPECT_EQ(result.getData().message, "User deleted successfully") << "Should return success message";
+    EXPECT_EQ(result.getData().message, "User deleted successfully")
+        << "Should return success message";
 }
 
 // Test that controllers format error responses correctly
@@ -254,5 +267,6 @@ TEST_F(UserServiceUnitTest, Controller_FormatsErrorResponseCorrectly) {
 
     EXPECT_TRUE(isValidJson(json)) << "Should return valid JSON even for errors";
     EXPECT_EQ(extractJsonValue(json, "success"), "false") << "Should indicate failure";
-    EXPECT_EQ(extractJsonValue(json, "error"), "Test error message") << "Should include error message";
+    EXPECT_EQ(extractJsonValue(json, "error"), "Test error message")
+        << "Should include error message";
 }

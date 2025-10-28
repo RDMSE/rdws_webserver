@@ -1,11 +1,11 @@
 #include "order_service.h"
+
 #include "types/order.h"
+
 #include <iostream>
-#include <utility>
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
-
-
+#include <utility>
 
 namespace rdws::services::orders {
 
@@ -30,7 +30,7 @@ rdws::types::OrderResult OrderService::getOrderById(int orderId) {
         }
 
         auto order = orderRepository.findById(orderId);
-        
+
         if (order.has_value()) {
             return rdws::types::ServiceResult<rdws::types::Order>::success(order.value());
         } else {
@@ -38,15 +38,16 @@ rdws::types::OrderResult OrderService::getOrderById(int orderId) {
         }
     } catch (const std::exception& e) {
         std::cerr << "Error in getOrderById: " << e.what() << std::endl;
-        return rdws::types::ServiceResult<rdws::types::Order>::error(
-            "Failed to retrieve order: " + std::string(e.what()));
+        return rdws::types::ServiceResult<rdws::types::Order>::error("Failed to retrieve order: " +
+                                                                     std::string(e.what()));
     }
 }
 
 rdws::types::OrdersResult OrderService::getOrdersByUserId(int userId) {
     try {
         if (userId <= 0) {
-            return rdws::types::ServiceResult<std::vector<rdws::types::Order>>::error("Invalid user ID");
+            return rdws::types::ServiceResult<std::vector<rdws::types::Order>>::error(
+                "Invalid user ID");
         }
 
         auto orders = orderRepository.findByUserId(userId);
@@ -64,60 +65,63 @@ rdws::types::CountResult OrderService::getOrderCount() {
         return rdws::types::ServiceResult<size_t>::success(static_cast<size_t>(count));
     } catch (const std::exception& e) {
         std::cerr << "Error in getOrderCount: " << e.what() << std::endl;
-        return rdws::types::ServiceResult<size_t>::error(
-            "Failed to get order count: " + std::string(e.what()));
+        return rdws::types::ServiceResult<size_t>::error("Failed to get order count: " +
+                                                         std::string(e.what()));
     }
 }
 
 rdws::types::OrderResult OrderService::createOrder(const std::string& jsonData) {
     try {
         if (jsonData.empty()) {
-            return rdws::types::ServiceResult<rdws::types::Order>::error("Empty JSON data provided");
+            return rdws::types::ServiceResult<rdws::types::Order>::error(
+                "Empty JSON data provided");
         }
 
         // Parse JSON
         rapidjson::Document doc;
         doc.Parse(jsonData.c_str());
-        
+
         if (doc.HasParseError()) {
             return rdws::types::ServiceResult<rdws::types::Order>::error(
-                "Invalid JSON format: " + std::string(rapidjson::GetParseError_En(doc.GetParseError())));
+                "Invalid JSON format: " +
+                std::string(rapidjson::GetParseError_En(doc.GetParseError())));
         }
 
         // Validate required fields
         if (!doc.HasMember("userId") || !doc["userId"].IsInt()) {
-            return rdws::types::ServiceResult<rdws::types::Order>::error("Missing or invalid userId field");
+            return rdws::types::ServiceResult<rdws::types::Order>::error(
+                "Missing or invalid userId field");
         }
         if (!doc.HasMember("product") || !doc["product"].IsString()) {
-            return rdws::types::ServiceResult<rdws::types::Order>::error("Missing or invalid product field");
+            return rdws::types::ServiceResult<rdws::types::Order>::error(
+                "Missing or invalid product field");
         }
         if (!doc.HasMember("amount") || !doc["amount"].IsNumber()) {
-            return rdws::types::ServiceResult<rdws::types::Order>::error("Missing or invalid amount field");
+            return rdws::types::ServiceResult<rdws::types::Order>::error(
+                "Missing or invalid amount field");
         }
         if (!doc.HasMember("status") || !doc["status"].IsString()) {
-            return rdws::types::ServiceResult<rdws::types::Order>::error("Missing or invalid status field");
+            return rdws::types::ServiceResult<rdws::types::Order>::error(
+                "Missing or invalid status field");
         }
 
         // Create Order object
-        rdws::types::Order newOrder(
-            doc["userId"].GetInt(),
-            doc["product"].GetString(),
-            doc["amount"].GetDouble(),
-            doc["status"].GetString()
-        );
+        rdws::types::Order newOrder(doc["userId"].GetInt(), doc["product"].GetString(),
+                                    doc["amount"].GetDouble(), doc["status"].GetString());
 
         // Save to database
         auto createdOrder = orderRepository.create(newOrder);
-        
+
         if (createdOrder.has_value()) {
             return rdws::types::ServiceResult<rdws::types::Order>::success(createdOrder.value());
         } else {
-            return rdws::types::ServiceResult<rdws::types::Order>::error("Failed to create order in database");
+            return rdws::types::ServiceResult<rdws::types::Order>::error(
+                "Failed to create order in database");
         }
     } catch (const std::exception& e) {
         std::cerr << "Error in createOrder: " << e.what() << std::endl;
-        return rdws::types::ServiceResult<rdws::types::Order>::error(
-            "Failed to create order: " + std::string(e.what()));
+        return rdws::types::ServiceResult<rdws::types::Order>::error("Failed to create order: " +
+                                                                     std::string(e.what()));
     }
 }
 
@@ -128,28 +132,30 @@ rdws::types::OrderResult OrderService::updateOrder(int orderId, const std::strin
         }
 
         if (jsonData.empty()) {
-            return rdws::types::ServiceResult<rdws::types::Order>::error("Empty JSON data provided");
+            return rdws::types::ServiceResult<rdws::types::Order>::error(
+                "Empty JSON data provided");
         }
 
         // Parse JSON
         rapidjson::Document doc;
         doc.Parse(jsonData.c_str());
-        
+
         if (doc.HasParseError()) {
             return rdws::types::ServiceResult<rdws::types::Order>::error(
-                "Invalid JSON format: " + std::string(rapidjson::GetParseError_En(doc.GetParseError())));
+                "Invalid JSON format: " +
+                std::string(rapidjson::GetParseError_En(doc.GetParseError())));
         }
 
         // Get existing order first
         auto existingOrder = orderRepository.findById(orderId);
-        
+
         if (!existingOrder.has_value()) {
             return rdws::types::ServiceResult<rdws::types::Order>::error("Order not found");
         }
 
         // Update fields if provided
         rdws::types::Order updatedOrder = existingOrder.value();
-        
+
         if (doc.HasMember("product") && doc["product"].IsString()) {
             updatedOrder.product = doc["product"].GetString();
         }
@@ -162,30 +168,33 @@ rdws::types::OrderResult OrderService::updateOrder(int orderId, const std::strin
 
         // Save updated order
         auto result = orderRepository.update(updatedOrder);
-        
+
         if (result.has_value()) {
             return rdws::types::ServiceResult<rdws::types::Order>::success(result.value());
         } else {
-            return rdws::types::ServiceResult<rdws::types::Order>::error("Failed to update order in database");
+            return rdws::types::ServiceResult<rdws::types::Order>::error(
+                "Failed to update order in database");
         }
     } catch (const std::exception& e) {
         std::cerr << "Error in updateOrder: " << e.what() << std::endl;
-        return rdws::types::ServiceResult<rdws::types::Order>::error(
-            "Failed to update order: " + std::string(e.what()));
+        return rdws::types::ServiceResult<rdws::types::Order>::error("Failed to update order: " +
+                                                                     std::string(e.what()));
     }
 }
 
 rdws::types::OperationResult OrderService::deleteOrder(int orderId) {
     try {
         if (orderId <= 0) {
-            return rdws::types::ServiceResult<rdws::types::OperationStatus>::error("Invalid order ID");
+            return rdws::types::ServiceResult<rdws::types::OperationStatus>::error(
+                "Invalid order ID");
         }
 
         if (orderRepository.deleteById(orderId)) {
             return rdws::types::ServiceResult<rdws::types::OperationStatus>::success(
                 rdws::types::OperationStatus::createSuccess("Order deleted successfully"));
         } else {
-            return rdws::types::ServiceResult<rdws::types::OperationStatus>::error("Failed to delete order");
+            return rdws::types::ServiceResult<rdws::types::OperationStatus>::error(
+                "Failed to delete order");
         }
     } catch (const std::exception& e) {
         std::cerr << "Error in deleteOrder: " << e.what() << std::endl;
@@ -204,10 +213,9 @@ rdws::types::CountResult OrderService::getOrderCountByUserId(int userId) {
         return rdws::types::ServiceResult<size_t>::success(static_cast<size_t>(count));
     } catch (const std::exception& e) {
         std::cerr << "Error in getOrderCountByUserId: " << e.what() << std::endl;
-        return rdws::types::ServiceResult<size_t>::error(
-            "Failed to get order count for user: " + std::string(e.what()));
+        return rdws::types::ServiceResult<size_t>::error("Failed to get order count for user: " +
+                                                         std::string(e.what()));
     }
 }
 
 } // namespace rdws::services::orders
-

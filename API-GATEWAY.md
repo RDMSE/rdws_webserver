@@ -83,15 +83,15 @@ curl http://localhost:8080/health
 
 ### Base URL: `http://localhost:8080`
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/health` | Service status and gateway health |
-| `GET` | `/api-docs` | API documentation |
-| `GET` | `/users` | List all users |
-| `GET` | `/users/:id` | Get user by ID |
-| `GET` | `/orders` | List all orders |
-| `GET` | `/orders/:id` | Get order by ID |
-| `GET` | `/users/:userId/orders` | Get orders for a user |
+| Method | Endpoint                | Description                       |
+| ------ | ----------------------- | --------------------------------- |
+| `GET`  | `/health`               | Service status and gateway health |
+| `GET`  | `/api-docs`             | API documentation                 |
+| `GET`  | `/users`                | List all users                    |
+| `GET`  | `/users/:id`            | Get user by ID                    |
+| `GET`  | `/orders`               | List all orders                   |
+| `GET`  | `/orders/:id`           | Get order by ID                   |
+| `GET`  | `/users/:userId/orders` | Get orders for a user             |
 
 ### Responses
 
@@ -195,10 +195,10 @@ const response = await fetch('http://localhost:8080/users');
 const data = await response.json();
 
 if (data.error) {
-    console.error('Error:', data.message);
+  console.error('Error:', data.message);
 } else {
-    console.log('Users:', data.users);
-    console.log('Request ID:', data.gateway.requestId);
+  console.log('Users:', data.users);
+  console.log('Request ID:', data.gateway.requestId);
 }
 ```
 
@@ -220,12 +220,12 @@ else:
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `8080` | Server port |
-| `BUILD_PATH` | `./build` | Path to compiled executables |
-| `NODE_ENV` | `development` | Environment (development/production) |
-| `SERVICE_TIMEOUT` | `5000` | Timeout in ms for microservices |
+| Variable          | Default       | Description                          |
+| ----------------- | ------------- | ------------------------------------ |
+| `PORT`            | `8080`        | Server port                          |
+| `BUILD_PATH`      | `./build`     | Path to compiled executables         |
+| `NODE_ENV`        | `development` | Environment (development/production) |
+| `SERVICE_TIMEOUT` | `5000`        | Timeout in ms for microservices      |
 
 ### Example
 
@@ -369,7 +369,7 @@ npm run dev
 4. Run `npm test` to verify
 5. Submit a pull request
 
-## 📝 License
+## License
 
 MIT License - see LICENSE file for details.
 

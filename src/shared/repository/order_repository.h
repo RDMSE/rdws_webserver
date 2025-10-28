@@ -2,11 +2,10 @@
 
 #include "common/database/idatabase.h"
 #include "types/order.h"
+
 #include <memory>
-#include <vector>
 #include <optional>
-
-
+#include <vector>
 
 namespace rdws::services::orders {
 
@@ -15,7 +14,7 @@ namespace rdws::services::orders {
  * Handles all database interactions for order entities
  */
 class OrderRepository {
-private:
+  private:
     std::shared_ptr<rdws::database::IDatabase> db_;
 
     /**
@@ -23,9 +22,9 @@ private:
      * @param result Database result containing order data
      * @return Order object created from database row
      */
-    static types::Order resultToOrder(rdws::database::IResultSet& result) ;
+    static types::Order resultToOrder(rdws::database::IResultSet& result);
 
-public:
+  public:
     /**
      * Constructor with database dependency injection
      * @param db Database interface for order operations
@@ -96,4 +95,3 @@ public:
 };
 
 } // namespace rdws::services::orders
-

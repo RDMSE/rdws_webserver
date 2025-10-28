@@ -1,6 +1,6 @@
 #include "postgresql_database.h"
-#include <stdexcept>
 
+#include <stdexcept>
 
 namespace rdws::database {
 
@@ -87,8 +87,7 @@ PostgreSQLDatabase::PostgreSQLDatabase() {
     PostgreSQLDatabase::connect();
 }
 
-PostgreSQLDatabase::PostgreSQLDatabase(const rdws::Config& dbConfig)
-    : config(dbConfig) {
+PostgreSQLDatabase::PostgreSQLDatabase(const rdws::Config& dbConfig) : config(dbConfig) {
     PostgreSQLDatabase::connect();
 }
 
@@ -99,10 +98,9 @@ PostgreSQLDatabase::~PostgreSQLDatabase() {
     PostgreSQLDatabase::disconnect();
 }
 
-std::unique_ptr<IResultSet> PostgreSQLDatabase::execQuery(
-    const std::string& query,
-    const std::vector<std::string>& parameters
-) {
+std::unique_ptr<IResultSet>
+PostgreSQLDatabase::execQuery(const std::string& query,
+                              const std::vector<std::string>& parameters) {
     try {
         ensureConnection();
 
@@ -117,7 +115,8 @@ std::unique_ptr<IResultSet> PostgreSQLDatabase::execQuery(
                 } else if (parameters.size() == 2) {
                     result = currentTransaction->exec_params(query, parameters[0], parameters[1]);
                 } else if (parameters.size() == 3) {
-                    result = currentTransaction->exec_params(query, parameters[0], parameters[1], parameters[2]);
+                    result = currentTransaction->exec_params(query, parameters[0], parameters[1],
+                                                             parameters[2]);
                 } else {
                     result = currentTransaction->exec_params(query, parameters);
                 }
@@ -147,10 +146,9 @@ std::unique_ptr<IResultSet> PostgreSQLDatabase::execQuery(
         lastError = e.what();
         throw std::runtime_error("Query execution failed: " + std::string(e.what()));
     }
-}bool PostgreSQLDatabase::execCommand(
-    const std::string& command,
-    const std::vector<std::string>& parameters
-) {
+}
+bool PostgreSQLDatabase::execCommand(const std::string& command,
+                                     const std::vector<std::string>& parameters) {
     try {
         ensureConnection();
 
@@ -164,7 +162,8 @@ std::unique_ptr<IResultSet> PostgreSQLDatabase::execQuery(
                 } else if (parameters.size() == 2) {
                     currentTransaction->exec_params(command, parameters[0], parameters[1]);
                 } else if (parameters.size() == 3) {
-                    currentTransaction->exec_params(command, parameters[0], parameters[1], parameters[2]);
+                    currentTransaction->exec_params(command, parameters[0], parameters[1],
+                                                    parameters[2]);
                 } else {
                     currentTransaction->exec_params(command, parameters);
                 }
@@ -195,10 +194,8 @@ std::unique_ptr<IResultSet> PostgreSQLDatabase::execQuery(
     }
 }
 
-bool PostgreSQLDatabase::execBatch(
-    const std::vector<std::string>& commands,
-    const std::vector<std::vector<std::string>>& parameterSets
-) {
+bool PostgreSQLDatabase::execBatch(const std::vector<std::string>& commands,
+                                   const std::vector<std::vector<std::string>>& parameterSets) {
     if (commands.size() != parameterSets.size()) {
         lastError = "Commands and parameter sets size mismatch";
         return false;
@@ -289,4 +286,3 @@ void PostgreSQLDatabase::ensureConnection() {
 }
 
 } // namespace rdws::database
-
