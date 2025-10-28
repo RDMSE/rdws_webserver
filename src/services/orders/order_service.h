@@ -3,7 +3,7 @@
 #include "common/database/idatabase.h"
 #include "types/order.h"
 #include "types/service_result.h"
-#include "order_repository.h"
+#include "../../shared/repository/order_repository.h"
 
 #include <memory>
 #include <optional>

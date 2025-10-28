@@ -1,7 +1,10 @@
 #include "config.h"
+
+#include <filesystem>
 #include <sstream>
 #include <iostream>
 #include <fstream>
+#include "dotenv.h"
 
 namespace rdws {
 
@@ -9,12 +12,9 @@ Config::Config() {
     loadEnvironmentVariables();
 }
 
-std::string Config::get(const std::string& key, const std::string& defaultValue) const {
+std::optional<std::string> Config::get(const std::string& key) const {
     auto it = settings.find(key);
-    if (it != settings.end()) {
-        return it->second;
-    }
-    return defaultValue;
+    return it != settings.end() ? std::optional<std::string>{it->second} : std::nullopt;
 }
 
 void Config::set(const std::string& key, const std::string& value) {
@@ -22,32 +22,24 @@ void Config::set(const std::string& key, const std::string& value) {
 }
 
 std::string Config::getDatabaseHost() const {
-    return get("DB_HOST", "fedora-server.local");
+    return get("DB_HOST").value_or("fedora-server.local");
 }
 
 std::string Config::getDatabasePort() const {
-    return get("DB_PORT", "5432");
+    return get("DB_PORT").value_or("5432");
 }
 
 std::string Config::getDatabaseName() const {
-    std::string dbName = get("DB_NAME", "");
-    if (dbName.empty()) {
-        std::string env = getEnvironment();
-        if (env == "production") {
-            return "rdws_production";
-        } else {
-            return "rdws_development";
-        }
-    }
+    std::string dbName = get("DB_NAME").value_or("");
     return dbName;
 }
 
 std::string Config::getDatabaseUser() const {
-    return get("DB_USER", "rdws_user");
+    return get("DB_USER").value_or("");
 }
 
 std::string Config::getDatabasePassword() const {
-    return get("DB_PASSWORD", "rdws_pass123");
+    return get("DB_PASSWORD").value_or("");
 }
 
 std::string Config::getConnectionString() const {
@@ -61,7 +53,7 @@ std::string Config::getConnectionString() const {
 }
 
 std::string Config::getEnvironment() const {
-    return get("RDWS_ENVIRONMENT", "development");
+    return get("RDWS_ENVIRONMENT").value_or("development");
 }
 
 bool Config::isDevelopment() const {
@@ -73,58 +65,26 @@ bool Config::isProduction() const {
 }
 
 void Config::loadEnvironmentVariables() {
-    // Load from environment variables
-    settings["RDWS_ENVIRONMENT"] = getEnvVar("RDWS_ENVIRONMENT", "test");
-    settings["DB_PORT"] = getEnvVar("DB_PORT", "1234");
-    settings["DB_HOST"] = getEnvVar("DB_HOST", "test-server");
-    settings["DB_USER"] = getEnvVar("DB_USER", "db_user");
-    settings["DB_PASSWORD"] = getEnvVar("DB_PASSWORD", "db_psswd");
-    settings["DB_NAME"] = getEnvVar("DB_NAME", ""); // Will be set by getDatabaseName()
-    
-    // Try to load environment-specific .env file
-    std::string env = getEnvironment();
-    std::string envFile = ".env." + env;
-    loadEnvFile(envFile);
-    
     // Also try generic .env file
-    loadEnvFile(".env");
+    loadEnvFile("../.env");
+
+    // Load from environment variables
+    settings["RDWS_ENVIRONMENT"] = getEnvVar("RDWS_ENVIRONMENT").value_or("test");
+    settings["DB_PORT"] = getEnvVar("DB_PORT").value_or("1234");
+    settings["DB_HOST"] = getEnvVar("DB_HOST").value_or("test-server");
+    settings["DB_USER"] = getEnvVar("DB_USER").value_or("db_user");
+    settings["DB_PASSWORD"] = getEnvVar("DB_PASSWORD").value_or("db_psswd");
+    settings["DB_NAME"] = getEnvVar("DB_NAME").value_or("db_name"); // Will be set by getDatabaseName()
 }
 
-std::string Config::getEnvVar(const std::string& name, const std::string& defaultValue) {
+std::optional<std::string> Config::getEnvVar(const std::string& name) {
     const char* value = std::getenv(name.c_str());
-    return value ? std::string(value) : defaultValue;
+    return value != nullptr ? std::optional<std::string>{value} : std::nullopt;
 }
 
 void Config::loadEnvFile(const std::string& filename) {
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        return; // File doesn't exist, that's ok
-    }
-    
-    std::string line;
-    while (std::getline(file, line)) {
-        // Skip empty lines and comments
-        if (line.empty() || line[0] == '#') {
-            continue;
-        }
-        
-        // Find the = separator
-        size_t pos = line.find('=');
-        if (pos != std::string::npos) {
-            std::string key = line.substr(0, pos);
-            std::string value = line.substr(pos + 1);
-            
-            // Remove quotes if present
-            if (value.length() >= 2 && value.front() == '"' && value.back() == '"') {
-                value = value.substr(1, value.length() - 2);
-            }
-            
-            // Only override if not already set by environment variables
-            if (settings.find(key) == settings.end() || settings[key].empty()) {
-                settings[key] = value;
-            }
-        }
-    }
+    std::string filePath = (std::filesystem::current_path() / filename).string();
+    dotenv::init(filePath.c_str());
 }
 
 } // namespace rdws

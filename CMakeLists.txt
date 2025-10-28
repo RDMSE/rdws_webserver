@@ -12,6 +12,38 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+# identify the environment
+if(DEFINED ENV{RDWS_ENVIRONMENT})
+    set(ENVIRONMENT $END{RDWS_ENVIRONMENT})
+else ()
+    set(ENVIRONMENT "development")
+endif ()
+
+message(STATUS "We are on '${ENVIRONMENT}' environment")
+
+# define .env paths
+set(SOURCE_ENV_FILE "${CMAKE_SOURCE_DIR}/.env.${ENVIRONMENT}")
+set(DEST_ENV_DIR "${CMAKE_BINARY_DIR}/src/services")
+set(DEST_ENV_FILE "${DEST_ENV_DIR}/.env")
+
+# verify if file exist
+if(EXISTS ${SOURCE_ENV_FILE})
+    message(STATUS "Using env file: ${SOURCE_ENV_FILE}")
+else ()
+    message(FATAL_ERROR "Env file not found for environment '${ENVIRONMENT}': ${SOURCE_ENV_FILE}")
+endif ()
+
+# make sure destination directory exists
+file(MAKE_DIRECTORY "${DEST_ENV_DIR}")
+
+# copy env file
+add_custom_target(copy_env ALL
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${SOURCE_ENV_FILE} ${DEST_ENV_FILE}
+        COMMENT "Copying ${SOURCE_ENV_FILE} to ${DEST_ENV_FILE}"
+)
+
+
 # Add compile flags for better debugging and warnings
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wextra")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -Wall -Wextra")
@@ -32,6 +64,7 @@ set(PQXX_INCLUDES ${PQXX_INCLUDE_DIRS})
 
 # Add dotenv-cpp third-party library
 add_subdirectory(src/third_party/dotenv-cpp)
+add_subdirectory(src/third_party/valijson)
 
 # Make dotenv include available globally
 include_directories(src/third_party/dotenv-cpp/include/laserpants/dotenv)
