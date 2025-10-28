@@ -75,10 +75,10 @@ class BaseController {
 
         // Append all members from jsonData to errorDoc
         if (jsonData.IsObject()) {
-            for (auto& member : jsonData.GetObject()) {
-                rapidjson::Value key(member.name, allocator);
-                rapidjson::Value value(member.value, allocator);
-                errorDoc.AddMember(key, value, allocator);
+            for (const auto&[name, value] : jsonData.GetObject()) {
+                rapidjson::Value keyMember(name, allocator);
+                rapidjson::Value valueMember(value, allocator);
+                errorDoc.AddMember(keyMember, valueMember, allocator);
             }
         }
 

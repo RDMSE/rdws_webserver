@@ -45,10 +45,6 @@ public:
 private:
     // Helper methods
     static rdws::types::User mapResultToUser(rdws::database::IResultSet& result);
-    [[nodiscard]]static std::string buildInsertQuery() ;
-    [[nodiscard]] static std::string buildUpdateQuery() ;
-    [[nodiscard]] static std::vector<std::string> userToParameters(const rdws::types::User& user) ;
-    [[nodiscard]] static std::vector<std::string> userToParametersWithId(const rdws::types::User& user) ;
 };
 
 } // namespace rdws::repository

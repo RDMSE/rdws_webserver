@@ -34,7 +34,7 @@ class SchemaValidator {
     [[nodiscard]] bool loadSchemaFromFile(const std::string& filePath) const;
     [[nodiscard]] bool loadSchemaFromString(const std::string& schemaString) const;
     [[nodiscard]] static std::vector<ValidationError>
-    convertValidationResults(const valijson::ValidationResults& results) ;
+        convertValidationResults(const valijson::ValidationResults& results) ;
 
   public:
     // Constructor for file-based schemas (legacy)

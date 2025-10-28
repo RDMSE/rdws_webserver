@@ -3,11 +3,11 @@ cmake_minimum_required(VERSION 3.10)
 project(UsersService VERSION 1.0.0 LANGUAGES CXX)
 
 # Specify the C++ standard
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
+#set(CMAKE_CXX_STANDARD 17)
+#set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Add compile flags
-set(CMAKE_CXX_FLAGS "-O2 -Wall -Wextra")
+#set(CMAKE_CXX_FLAGS "-O2 -Wall -Wextra")
 
 # Find required packages
 find_package(PkgConfig REQUIRED)

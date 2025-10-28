@@ -78,12 +78,12 @@ void Config::loadEnvironmentVariables() {
 }
 
 std::optional<std::string> Config::getEnvVar(const std::string& name) {
-    const char* value = std::getenv(name.c_str());
+    const auto value = std::getenv(name.c_str());
     return value != nullptr ? std::optional<std::string>{value} : std::nullopt;
 }
 
 void Config::loadEnvFile(const std::string& filename) {
-    std::string filePath = (std::filesystem::current_path() / filename).string();
+    const auto filePath = (std::filesystem::current_path() / filename).string();
     dotenv::init(filePath.c_str());
 }
 
