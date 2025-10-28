@@ -6,12 +6,9 @@
 #include "../../shared/repository/order_repository.h"
 
 #include <memory>
-#include <optional>
-#include <vector>
 
-namespace rdws {
-namespace services {
-namespace orders {
+
+namespace rdws::services::orders {
 
 /**
  * Service class for managing order operations
@@ -84,6 +81,6 @@ class OrderService {
     rdws::types::CountResult getOrderCountByUserId(int userId);
 };
 
-} // namespace orders
-} // namespace services
-} // namespace rdws
+} // namespace rdws::services::orders
+
+

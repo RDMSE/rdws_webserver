@@ -1,14 +1,16 @@
 #include "lambda_event.h"
 #include <algorithm>
+#include <chrono>
 #include <sstream>
 #include <random>
 #include <regex>
+#include <utility>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
 
-namespace rdws {
-namespace types {
+
+namespace rdws::types {
 
 // Helper function to generate request ID
 std::string generateRequestId() {
@@ -31,8 +33,8 @@ std::string generateRequestId() {
 }
 
 // HttpRequestInfo implementation
-HttpRequestInfo::HttpRequestInfo(const std::string& method, const std::string& path, const std::string& body)
-    : method(method), path(path), resource(path), body(body) {
+HttpRequestInfo::HttpRequestInfo(std::string  method, const std::string& path, std::string  body)
+    : method(std::move(method)), path(path), resource(path), body(std::move(body)) {
 }
 
 // RequestContext implementation
@@ -42,8 +44,8 @@ RequestContext::RequestContext()
       protocol("HTTP/1.1"),
       sourceIp("127.0.0.1"),
       userAgent("rdws-microservice/1.0") {
-    
-    auto now = std::chrono::system_clock::now();
+
+    const auto now = std::chrono::system_clock::now();
     requestTimeEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
 }
 
@@ -161,7 +163,7 @@ LambdaEvent::LambdaEvent(int argc, char* argv[]) {
     // Default values
     std::string method = "GET";
     std::string path = "/";
-    std::string body = "";
+    std::string body;
     
     // Parse command line arguments
     if (argc > 1) {
@@ -299,7 +301,7 @@ bool LambdaEvent::pathMatches(const std::string& pattern) const {
     }
     
     // Simple wildcard matching
-    if (pattern.find("*") != std::string::npos) {
+    if (pattern.find('*') != std::string::npos) {
         std::string regexPattern = pattern;
         std::replace(regexPattern.begin(), regexPattern.end(), '*', '.');
         regexPattern = "^" + regexPattern + "$";
@@ -308,7 +310,7 @@ bool LambdaEvent::pathMatches(const std::string& pattern) const {
     }
     
     // Parameter matching
-    if (pattern.find("{") != std::string::npos) {
+    if (pattern.find('{') != std::string::npos) {
         std::regex paramRegex(R"(\{[^}]+\})");
         std::string regexPattern = std::regex_replace(pattern, paramRegex, "[^/]+");
         regexPattern = "^" + regexPattern + "$";
@@ -394,5 +396,4 @@ std::string LambdaEvent::toJson() const {
     return buffer.GetString();
 }
 
-} // namespace types
-} // namespace rdws
+} // namespace rdws::types

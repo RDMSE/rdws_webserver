@@ -1,7 +1,7 @@
 #include "response_helper.h"
+#include <ctime>
 
-namespace rdws {
-namespace utils {
+namespace rdws::utils {
 
 std::string ResponseHelper::returnSuccess(const std::string& message, int statusCode, const ::rapidjson::Value* data) {
     ::rapidjson::Document doc;
@@ -77,5 +77,4 @@ std::string ResponseHelper::documentToString(const ::rapidjson::Document& doc) {
     return buffer.GetString();
 }
 
-} // namespace utils
-} // namespace rdws
+} // namespace rdws::utils

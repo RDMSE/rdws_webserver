@@ -6,8 +6,8 @@
 #include <optional>
 #include <functional>
 
-namespace rdws {
-namespace repository {
+
+namespace rdws::repository {
 
 class UserRepository {
 private:
@@ -17,39 +17,38 @@ public:
     explicit UserRepository(std::shared_ptr<rdws::database::IDatabase> database);
     
     // Basic CRUD operations
-    std::optional<rdws::types::User> findById(int id);
-    std::vector<rdws::types::User> findAll();
-    std::vector<rdws::types::User> findByEmail(const std::string& email);
-    bool create(const rdws::types::User& user);
-    bool update(const rdws::types::User& user);
-    bool deleteById(int id);
+    [[nodiscard]] std::optional<rdws::types::User> findById(int id) const;
+    [[nodiscard]] std::vector<rdws::types::User> findAll() const;
+    [[nodiscard]] std::vector<rdws::types::User> findByEmail(const std::string& email) const;
+    [[nodiscard]] bool create(const rdws::types::User& user) const;
+    [[nodiscard]] bool update(const rdws::types::User& user) const;
+    [[nodiscard]] bool deleteById(int id) const;
     
     // Batch operations
-    bool createBatch(const std::vector<rdws::types::User>& users);
-    bool updateBatch(const std::vector<rdws::types::User>& users);
-    bool deleteBatch(const std::vector<int>& ids);
+    [[nodiscard]] bool createBatch(const std::vector<rdws::types::User>& users) const;
+    [[nodiscard]] bool updateBatch(const std::vector<rdws::types::User>& users) const;
+    [[nodiscard]] bool deleteBatch(const std::vector<int>& ids) const;
     
     // Query with callback for large datasets
-    void findAllWithCallback(std::function<void(const rdws::types::User&)> callback);
+    void findAllWithCallback(const std::function<void(const rdws::types::User&)>& callback) const;
     void findByConditionWithCallback(
         const std::string& whereClause,
         const std::vector<std::string>& parameters,
-        std::function<void(const rdws::types::User&)> callback
-    );
+        const std::function<void(const rdws::types::User&)>& callback
+    ) const;
     
     // Utility methods
-    size_t count();
-    bool exists(int id);
-    bool existsByEmail(const std::string& email);
+    [[nodiscard]] size_t count() const;
+    [[nodiscard]] bool exists(int id) const;
+    [[nodiscard]] bool existsByEmail(const std::string& email) const;
 
 private:
     // Helper methods
-    rdws::types::User mapResultToUser(rdws::database::IResultSet& result);
-    std::string buildInsertQuery() const;
-    std::string buildUpdateQuery() const;
-    std::vector<std::string> userToParameters(const rdws::types::User& user) const;
-    std::vector<std::string> userToParametersWithId(const rdws::types::User& user) const;
+    static rdws::types::User mapResultToUser(rdws::database::IResultSet& result);
+    [[nodiscard]]static std::string buildInsertQuery() ;
+    [[nodiscard]] static std::string buildUpdateQuery() ;
+    [[nodiscard]] static std::vector<std::string> userToParameters(const rdws::types::User& user) ;
+    [[nodiscard]] static std::vector<std::string> userToParametersWithId(const rdws::types::User& user) ;
 };
 
-} // namespace repository
-} // namespace rdws
+} // namespace rdws::repository

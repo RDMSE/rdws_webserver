@@ -1,11 +1,11 @@
 #pragma once
 
-namespace rdws {
-namespace validation {
-namespace schemas {
+
+
+namespace rdws::validation::schemas {
 
 // User schemas as constant strings
-constexpr const char* USER_CREATE_SCHEMA = R"({
+constexpr auto USER_CREATE_SCHEMA = R"({
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "title": "Create User Schema",
@@ -28,7 +28,7 @@ constexpr const char* USER_CREATE_SCHEMA = R"({
     "additionalProperties": false
 })";
 
-constexpr const char* USER_UPDATE_SCHEMA = R"({
+constexpr auto USER_UPDATE_SCHEMA = R"({
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "title": "Update User Schema",
@@ -54,7 +54,7 @@ constexpr const char* USER_UPDATE_SCHEMA = R"({
     "required": ["id"]
 })";
 
-constexpr const char* USER_QUERY_SCHEMA = R"({
+constexpr auto USER_QUERY_SCHEMA = R"({
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "title": "Query User Schema",
@@ -89,7 +89,7 @@ constexpr const char* USER_QUERY_SCHEMA = R"({
 })";
 
 // Order schemas (for future use)
-constexpr const char* ORDER_CREATE_SCHEMA = R"({
+constexpr auto ORDER_CREATE_SCHEMA = R"({
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "title": "Create Order Schema",
@@ -123,7 +123,7 @@ constexpr const char* ORDER_CREATE_SCHEMA = R"({
     "additionalProperties": false
 })";
 
-constexpr const char* ORDER_UPDATE_SCHEMA = R"({
+constexpr auto ORDER_UPDATE_SCHEMA = R"({
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "title": "Update Order Schema",
@@ -156,6 +156,6 @@ constexpr const char* ORDER_UPDATE_SCHEMA = R"({
     "additionalProperties": false
 })";
 
-} // namespace schemas
-} // namespace validation
-} // namespace rdws
+} // namespace rdws::validation::schemas
+
+

@@ -1,18 +1,22 @@
 #include "schema_validator.h"
-
 #include "schemas.h"
-
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <sstream>
+#include <utility>
+#include <valijson/adapters/jsoncpp_adapter.hpp>
+#include <valijson/schema.hpp>
+#include <valijson/schema_parser.hpp>
+#include <valijson/utils/jsoncpp_utils.hpp>
+#include <valijson/validation_results.hpp>
+#include <valijson/validator.hpp>
 
-namespace rdws {
-namespace validation {
+
+namespace rdws::validation {
 
 // SchemaValidator Implementation
-SchemaValidator::SchemaValidator(const std::string& name, const std::string& schemaFile)
-    : schemaName(name), schema(std::make_unique<valijson::Schema>()),
+SchemaValidator::SchemaValidator(std::string  name, const std::string& schemaFile)
+    : schemaName(std::move(name)), schema(std::make_unique<valijson::Schema>()),
       validator(std::make_unique<valijson::Validator>()) {
 
     if (!loadSchemaFromFile(getSchemaPath(schemaFile))) {
@@ -48,7 +52,7 @@ SchemaValidator& SchemaValidator::operator=(SchemaValidator&& other) noexcept {
     return *this;
 }
 
-std::string SchemaValidator::getSchemaPath(const std::string& schemaFile) const {
+std::string SchemaValidator::getSchemaPath(const std::string& schemaFile) {
     // Try relative to current directory first (new location in src)
     std::string relativePath = "src/schemas/" + schemaFile;
     if (std::filesystem::exists(relativePath)) {
@@ -70,7 +74,7 @@ std::string SchemaValidator::getSchemaPath(const std::string& schemaFile) const 
     return relativePath;
 }
 
-bool SchemaValidator::loadSchemaFromFile(const std::string& filePath) {
+bool SchemaValidator::loadSchemaFromFile(const std::string& filePath) const {
     try {
         Json::Value schemaDoc;
         if (!valijson::utils::loadDocument(filePath, schemaDoc)) {
@@ -89,7 +93,7 @@ bool SchemaValidator::loadSchemaFromFile(const std::string& filePath) {
     }
 }
 
-bool SchemaValidator::loadSchemaFromString(const std::string& schemaString) {
+bool SchemaValidator::loadSchemaFromString(const std::string& schemaString) const {
     try {
         // Parse schema string to Json::Value
         Json::Value schemaDoc;
@@ -140,11 +144,11 @@ std::vector<ValidationError> SchemaValidator::validate(const std::string& jsonSt
 }
 
 std::vector<ValidationError>
-SchemaValidator::convertValidationResults(const valijson::ValidationResults& results) const {
+SchemaValidator::convertValidationResults(const valijson::ValidationResults& results) {
     std::vector<ValidationError> errors;
 
     // Note: results.popError modifies the object, so we need non-const
-    valijson::ValidationResults& mutableResults = const_cast<valijson::ValidationResults&>(results);
+    auto& mutableResults = const_cast<valijson::ValidationResults&>(results);
 
     valijson::ValidationResults::Error error;
     while (mutableResults.popError(error)) {
@@ -214,12 +218,12 @@ SchemaValidator updateOrderValidator() {
 } // namespace OrderValidators
 
 // SchemaManager Implementation
-SchemaManager::SchemaManager(const std::string& path) : schemasPath(path) {}
+SchemaManager::SchemaManager(std::string  path) : schemasPath(std::move(path)) {}
 
 std::shared_ptr<valijson::Schema> SchemaManager::getSchema(const std::string& schemaFile) const {
     auto it = schemaCache.find(schemaFile);
     if (it != schemaCache.end()) {
-        return std::shared_ptr<valijson::Schema>(it->second.get(), [](valijson::Schema*) {});
+        return {it->second.get(), [](valijson::Schema*) {}};
     }
 
     // Load schema
@@ -238,17 +242,17 @@ std::shared_ptr<valijson::Schema> SchemaManager::getSchema(const std::string& sc
     auto rawPtr = schema.get();
     schemaCache[schemaFile] = std::move(schema);
 
-    return std::shared_ptr<valijson::Schema>(rawPtr, [](valijson::Schema*) {});
+    return {rawPtr, [](valijson::Schema*) {}};
 }
 
-void SchemaManager::clearCache() {
+void SchemaManager::clearCache() const {
     schemaCache.clear();
 }
 
-bool SchemaManager::reloadSchema(const std::string& schemaFile) {
+bool SchemaManager::reloadSchema(const std::string& schemaFile) const {
     schemaCache.erase(schemaFile);
     return getSchema(schemaFile) != nullptr;
 }
 
-} // namespace validation
-} // namespace rdws
+} // namespace rdws::validation
+

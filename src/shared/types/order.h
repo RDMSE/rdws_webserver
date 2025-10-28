@@ -3,8 +3,8 @@
 #include <string>
 #include <rapidjson/document.h>
 
-namespace rdws {
-namespace types {
+
+namespace rdws::types {
 
 class Order {
 public:
@@ -25,13 +25,12 @@ public:
     void fromJson(const rapidjson::Value& json);
 
     // Utility methods
-    bool isValid() const;
-    std::string toString() const;
+    [[nodiscard]] bool isValid() const;
+    [[nodiscard]] std::string toString() const;
 
     // Operators
     bool operator==(const Order& other) const;
     bool operator!=(const Order& other) const;
 };
 
-} // namespace types
-} // namespace rdws
+} // namespace rdws::types

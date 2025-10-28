@@ -1,9 +1,8 @@
-#include "../common/utils/response_helper.h"
+#pragma once
 
 #include <string>
 
-namespace rdws {
-namespace controllers {
+namespace rdws::controllers {
 
 class BaseController {
   public:
@@ -91,5 +90,5 @@ class BaseController {
     }
 };
 
-} // namespace controllers
-} // namespace rdws
+} // namespace rdws::controllers
+

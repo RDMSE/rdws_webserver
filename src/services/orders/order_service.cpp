@@ -1,15 +1,16 @@
 #include "order_service.h"
 #include "types/order.h"
 #include <iostream>
+#include <utility>
 #include <rapidjson/document.h>
 #include <rapidjson/error/en.h>
 
-namespace rdws {
-namespace services {
-namespace orders {
+
+
+namespace rdws::services::orders {
 
 OrderService::OrderService(std::shared_ptr<rdws::database::IDatabase> db)
-    : orderRepository(db) {}
+    : orderRepository(std::move(db)) {}
 
 rdws::types::OrdersResult OrderService::getAllOrders() {
     try {
@@ -180,9 +181,7 @@ rdws::types::OperationResult OrderService::deleteOrder(int orderId) {
             return rdws::types::ServiceResult<rdws::types::OperationStatus>::error("Invalid order ID");
         }
 
-        bool success = orderRepository.deleteById(orderId);
-        
-        if (success) {
+        if (orderRepository.deleteById(orderId)) {
             return rdws::types::ServiceResult<rdws::types::OperationStatus>::success(
                 rdws::types::OperationStatus::createSuccess("Order deleted successfully"));
         } else {
@@ -210,6 +209,5 @@ rdws::types::CountResult OrderService::getOrderCountByUserId(int userId) {
     }
 }
 
-} // namespace orders
-} // namespace services
-} // namespace rdws
+} // namespace rdws::services::orders
+

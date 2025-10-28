@@ -6,8 +6,8 @@
 #include "base_controller.h"
 #include <string>
 
-namespace rdws {
-namespace controllers {
+
+namespace rdws::controllers {
 
 /**
  * UserController - Handles JSON serialization and HTTP response formatting
@@ -69,5 +69,5 @@ public:
 
 };
 
-} // namespace controllers
-} // namespace rdws
+} // namespace rdws::controllers
+

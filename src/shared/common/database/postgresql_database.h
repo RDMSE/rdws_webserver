@@ -5,13 +5,13 @@
 #include <pqxx/pqxx>
 #include <memory>
 
-namespace rdws {
-namespace database {
+
+namespace rdws::database {
 
 class PostgreSQLResultSet : public IResultSet {
 private:
     pqxx::result result;
-    size_t currentRow;
+    pqxx::result::size_type currentRow;
     
 public:
     explicit PostgreSQLResultSet(pqxx::result res);
@@ -44,7 +44,7 @@ private:
 public:
     PostgreSQLDatabase(); // Default constructor
     explicit PostgreSQLDatabase(const rdws::Config& dbConfig);
-    ~PostgreSQLDatabase();
+    ~PostgreSQLDatabase() override;
     
     // Query execution
     std::unique_ptr<IResultSet> execQuery(
@@ -79,8 +79,6 @@ public:
 
 private:
     void ensureConnection();
-    std::string formatQuery(const std::string& query, const std::vector<std::string>& parameters);
 };
 
-} // namespace database
-} // namespace rdws
+} // namespace rdws::database

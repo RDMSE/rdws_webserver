@@ -5,8 +5,8 @@
 #include <memory>
 #include <optional>
 
-namespace rdws {
-namespace database {
+
+namespace rdws::database {
 
 class IResultSet {
 public:
@@ -66,5 +66,4 @@ public:
     virtual std::string getLastError() = 0;
 };
 
-} // namespace database
-} // namespace rdws
+} // namespace rdws::database

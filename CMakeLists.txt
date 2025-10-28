@@ -14,7 +14,7 @@ endif()
 
 # identify the environment
 if(DEFINED ENV{RDWS_ENVIRONMENT})
-    set(ENVIRONMENT $END{RDWS_ENVIRONMENT})
+    set(ENVIRONMENT $ENV{RDWS_ENVIRONMENT})
 else ()
     set(ENVIRONMENT "development")
 endif ()

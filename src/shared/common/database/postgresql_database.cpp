@@ -1,10 +1,8 @@
 #include "postgresql_database.h"
 #include <stdexcept>
-#include <sstream>
-#include <functional>
 
-namespace rdws {
-namespace database {
+
+namespace rdws::database {
 
 // PostgreSQLResultSet Implementation
 
@@ -12,9 +10,9 @@ PostgreSQLResultSet::PostgreSQLResultSet(pqxx::result res)
     : result(std::move(res)), currentRow(0) {}
 
 bool PostgreSQLResultSet::next() {
-    if (currentRow < (size_t)result.size()) {
+    if (currentRow < (pqxx::result::size_type)result.size()) {
         ++currentRow;
-        return currentRow <= (size_t)result.size();
+        return currentRow <= (pqxx::result::size_type)result.size();
     }
     return false;
 }
@@ -32,35 +30,35 @@ void PostgreSQLResultSet::reset() {
 }
 
 std::string PostgreSQLResultSet::getString(const std::string& columnName) {
-    if (currentRow == 0 || currentRow > (size_t)result.size()) {
+    if (currentRow == 0 || currentRow > (pqxx::result::size_type)result.size()) {
         throw std::runtime_error("Invalid row position");
     }
     return result[currentRow - 1][columnName].as<std::string>();
 }
 
 int PostgreSQLResultSet::getInt(const std::string& columnName) {
-    if (currentRow == 0 || currentRow > (size_t)result.size()) {
+    if (currentRow == 0 || currentRow > (pqxx::result::size_type)result.size()) {
         throw std::runtime_error("Invalid row position");
     }
     return result[currentRow - 1][columnName].as<int>();
 }
 
 double PostgreSQLResultSet::getDouble(const std::string& columnName) {
-    if (currentRow == 0 || currentRow > (size_t)result.size()) {
+    if (currentRow == 0 || currentRow > (pqxx::result::size_type)result.size()) {
         throw std::runtime_error("Invalid row position");
     }
     return result[currentRow - 1][columnName].as<double>();
 }
 
 bool PostgreSQLResultSet::getBool(const std::string& columnName) {
-    if (currentRow == 0 || currentRow > (size_t)result.size()) {
+    if (currentRow == 0 || currentRow > (pqxx::result::size_type)result.size()) {
         throw std::runtime_error("Invalid row position");
     }
     return result[currentRow - 1][columnName].as<bool>();
 }
 
 bool PostgreSQLResultSet::isNull(const std::string& columnName) {
-    if (currentRow == 0 || currentRow > (size_t)result.size()) {
+    if (currentRow == 0 || currentRow > (pqxx::result::size_type)result.size()) {
         throw std::runtime_error("Invalid row position");
     }
     return result[currentRow - 1][columnName].is_null();
@@ -72,8 +70,8 @@ size_t PostgreSQLResultSet::getColumnCount() {
 
 std::vector<std::string> PostgreSQLResultSet::getColumnNames() {
     std::vector<std::string> names;
-    for (size_t i = 0; i < (size_t)result.columns(); ++i) {
-        names.push_back(result.column_name(i));
+    for (auto i = 0; i < (pqxx::result::size_type)result.columns(); ++i) {
+        names.emplace_back(result.column_name(i));
     }
     return names;
 }
@@ -290,5 +288,5 @@ void PostgreSQLDatabase::ensureConnection() {
     }
 }
 
-} // namespace database
-} // namespace rdws
+} // namespace rdws::database
+
