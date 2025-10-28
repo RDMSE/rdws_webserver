@@ -17,12 +17,12 @@ std::string generateRequestId() {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis(0, 15);
-    
-    std::string chars = "0123456789abcdef";
+
     std::string requestId;
     requestId.reserve(32);
     
     for (int i = 0; i < 32; ++i) {
+        const auto chars = "0123456789abcdef";
         requestId += chars[dis(gen)];
         if (i == 7 || i == 11 || i == 15 || i == 19) {
             requestId += '-';
@@ -57,8 +57,7 @@ LambdaEvent::LambdaEvent(const std::string& method, const std::string& path, con
     requestContext_.resourcePath = path;
     
     // Parse query string from path if present
-    size_t queryPos = path.find('?');
-    if (queryPos != std::string::npos) {
+    if (const size_t queryPos = path.find('?'); queryPos != std::string::npos) {
         httpRequest_.path = path.substr(0, queryPos);
         httpRequest_.resource = httpRequest_.path;
         requestContext_.resourcePath = httpRequest_.path;
@@ -95,22 +94,22 @@ LambdaEvent::LambdaEvent(const std::string& jsonString) {
     
     // Extract headers
     if (doc.HasMember("headers") && doc["headers"].IsObject()) {
-        for (auto& member : doc["headers"].GetObject()) {
-            httpRequest_.headers[member.name.GetString()] = member.value.GetString();
+        for (auto&[name, value] : doc["headers"].GetObject()) {
+            httpRequest_.headers[name.GetString()] = value.GetString();
         }
     }
     
     // Extract query parameters
     if (doc.HasMember("queryStringParameters") && doc["queryStringParameters"].IsObject()) {
-        for (auto& member : doc["queryStringParameters"].GetObject()) {
-            httpRequest_.queryStringParameters[member.name.GetString()] = member.value.GetString();
+        for (auto&[name, value] : doc["queryStringParameters"].GetObject()) {
+            httpRequest_.queryStringParameters[name.GetString()] = value.GetString();
         }
     }
     
     // Extract path parameters
     if (doc.HasMember("pathParameters") && doc["pathParameters"].IsObject()) {
-        for (auto& member : doc["pathParameters"].GetObject()) {
-            httpRequest_.pathParameters[member.name.GetString()] = member.value.GetString();
+        for (auto&[name, value] : doc["pathParameters"].GetObject()) {
+            httpRequest_.pathParameters[name.GetString()] = value.GetString();
         }
     }
     
@@ -153,13 +152,13 @@ LambdaEvent::LambdaEvent(const std::string& jsonString) {
     
     // Extract stage variables
     if (doc.HasMember("stageVariables") && doc["stageVariables"].IsObject()) {
-        for (auto& member : doc["stageVariables"].GetObject()) {
-            stageVariables_[member.name.GetString()] = member.value.GetString();
+        for (auto&[name, value] : doc["stageVariables"].GetObject()) {
+            stageVariables_[name.GetString()] = value.GetString();
         }
     }
 }
 
-LambdaEvent::LambdaEvent(int argc, char* argv[]) {
+LambdaEvent::LambdaEvent(const int argc, char* argv[]) {
     // Default values
     std::string method = "GET";
     std::string path = "/";
@@ -182,8 +181,7 @@ LambdaEvent::LambdaEvent(int argc, char* argv[]) {
     requestContext_.resourcePath = path;
     
     // Parse query string from path if present
-    size_t queryPos = path.find('?');
-    if (queryPos != std::string::npos) {
+    if (size_t queryPos = path.find('?'); queryPos != std::string::npos) {
         httpRequest_.path = path.substr(0, queryPos);
         httpRequest_.resource = httpRequest_.path;
         requestContext_.resourcePath = httpRequest_.path;
@@ -196,7 +194,7 @@ LambdaEvent LambdaEvent::fromJson(const std::string& jsonString) {
 }
 
 std::string LambdaEvent::getHeader(const std::string& name) const {
-    auto it = httpRequest_.headers.find(name);
+    const auto it = httpRequest_.headers.find(name);
     return (it != httpRequest_.headers.end()) ? it->second : "";
 }
 
@@ -205,7 +203,7 @@ void LambdaEvent::setHeader(const std::string& name, const std::string& value) {
 }
 
 std::string LambdaEvent::getQueryParameter(const std::string& name) const {
-    auto it = httpRequest_.queryStringParameters.find(name);
+    const auto it = httpRequest_.queryStringParameters.find(name);
     return (it != httpRequest_.queryStringParameters.end()) ? it->second : "";
 }
 
@@ -214,7 +212,7 @@ void LambdaEvent::setQueryParameter(const std::string& name, const std::string& 
 }
 
 std::string LambdaEvent::getPathParameter(const std::string& name) const {
-    auto it = httpRequest_.pathParameters.find(name);
+    const auto it = httpRequest_.pathParameters.find(name);
     return (it != httpRequest_.pathParameters.end()) ? it->second : "";
 }
 
@@ -223,7 +221,7 @@ void LambdaEvent::setPathParameter(const std::string& name, const std::string& v
 }
 
 std::string LambdaEvent::getStageVariable(const std::string& name) const {
-    auto it = stageVariables_.find(name);
+    const auto it = stageVariables_.find(name);
     return (it != stageVariables_.end()) ? it->second : "";
 }
 
@@ -250,29 +248,27 @@ const rapidjson::Document& LambdaEvent::getJsonBody() {
 }
 
 void LambdaEvent::extractPathParameters(const std::string& pattern) {
-    std::regex paramRegex(R"(\{([^}]+)\})");
+    const std::regex paramRegex(R"(\{([^}]+)\})");
     std::string regexPattern = pattern;
     std::vector<std::string> paramNames;
     
     // Extract parameter names and build regex pattern
     std::sregex_iterator iter(pattern.begin(), pattern.end(), paramRegex);
-    std::sregex_iterator end;
-    
+
     size_t offset = 0;
-    for (; iter != end; ++iter) {
+    for (const std::sregex_iterator end; iter != end; ++iter) {
         const std::smatch& match = *iter;
         paramNames.push_back(match[1].str());
-        
-        size_t pos = match.position() - offset;
+
+        const size_t pos = match.position() - offset;
         regexPattern.replace(pos, match.length(), "([^/]+)");
         offset += match.length() - 7; // 7 is length of "([^/]+)"
     }
     
     // Match against actual path
-    std::regex pathRegex(regexPattern);
-    std::smatch pathMatch;
-    
-    if (std::regex_match(httpRequest_.path, pathMatch, pathRegex)) {
+    const std::regex pathRegex(regexPattern);
+
+    if (std::smatch pathMatch; std::regex_match(httpRequest_.path, pathMatch, pathRegex)) {
         for (size_t i = 0; i < paramNames.size() && i + 1 < pathMatch.size(); ++i) {
             httpRequest_.pathParameters[paramNames[i]] = pathMatch[i + 1].str();
         }
@@ -284,8 +280,7 @@ void LambdaEvent::parseQueryString(const std::string& queryString) {
     std::string pair;
     
     while (std::getline(qs, pair, '&')) {
-        size_t eqPos = pair.find('=');
-        if (eqPos != std::string::npos) {
+        if (size_t eqPos = pair.find('='); eqPos != std::string::npos) {
             std::string key = pair.substr(0, eqPos);
             std::string value = pair.substr(eqPos + 1);
             httpRequest_.queryStringParameters[key] = value;
@@ -305,16 +300,16 @@ bool LambdaEvent::pathMatches(const std::string& pattern) const {
         std::string regexPattern = pattern;
         std::replace(regexPattern.begin(), regexPattern.end(), '*', '.');
         regexPattern = "^" + regexPattern + "$";
-        std::regex regex(regexPattern);
+        const std::regex regex(regexPattern);
         return std::regex_match(httpRequest_.path, regex);
     }
     
     // Parameter matching
     if (pattern.find('{') != std::string::npos) {
-        std::regex paramRegex(R"(\{[^}]+\})");
+        const std::regex paramRegex(R"(\{[^}]+\})");
         std::string regexPattern = std::regex_replace(pattern, paramRegex, "[^/]+");
         regexPattern = "^" + regexPattern + "$";
-        std::regex regex(regexPattern);
+        const std::regex regex(regexPattern);
         return std::regex_match(httpRequest_.path, regex);
     }
     
@@ -334,10 +329,10 @@ std::string LambdaEvent::toJson() const {
     
     // Add headers
     rapidjson::Value headers(rapidjson::kObjectType);
-    for (const auto& pair : httpRequest_.headers) {
+    for (const auto&[fst, snd] : httpRequest_.headers) {
         headers.AddMember(
-            rapidjson::Value(pair.first.c_str(), allocator),
-            rapidjson::Value(pair.second.c_str(), allocator),
+            rapidjson::Value(fst.c_str(), allocator),
+            rapidjson::Value(snd.c_str(), allocator),
             allocator
         );
     }
@@ -345,10 +340,10 @@ std::string LambdaEvent::toJson() const {
     
     // Add query string parameters
     rapidjson::Value queryParams(rapidjson::kObjectType);
-    for (const auto& pair : httpRequest_.queryStringParameters) {
+    for (const auto&[fst, snd] : httpRequest_.queryStringParameters) {
         queryParams.AddMember(
-            rapidjson::Value(pair.first.c_str(), allocator),
-            rapidjson::Value(pair.second.c_str(), allocator),
+            rapidjson::Value(fst.c_str(), allocator),
+            rapidjson::Value(snd.c_str(), allocator),
             allocator
         );
     }
@@ -356,10 +351,10 @@ std::string LambdaEvent::toJson() const {
     
     // Add path parameters
     rapidjson::Value pathParams(rapidjson::kObjectType);
-    for (const auto& pair : httpRequest_.pathParameters) {
+    for (const auto&[fst, snd] : httpRequest_.pathParameters) {
         pathParams.AddMember(
-            rapidjson::Value(pair.first.c_str(), allocator),
-            rapidjson::Value(pair.second.c_str(), allocator),
+            rapidjson::Value(fst.c_str(), allocator),
+            rapidjson::Value(snd.c_str(), allocator),
             allocator
         );
     }

@@ -17,8 +17,8 @@ public:
 
     // Constructors
     Order();
-    Order(int userId, const std::string& product, double amount, const std::string& status = "pending");
-    Order(int id, int userId, const std::string& product, double amount, const std::string& status, const std::string& createdAt);
+    Order(int userId, std::string  product, double amount, std::string  status = "pending");
+    Order(int id, int userId, std::string  product, double amount, std::string  status, std::string  createdAt);
 
     // JSON serialization
     rapidjson::Value toJson(rapidjson::Document::AllocatorType& allocator) const;

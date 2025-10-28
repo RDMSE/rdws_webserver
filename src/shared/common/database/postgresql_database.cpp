@@ -84,19 +84,19 @@ size_t PostgreSQLResultSet::getRowCount() {
 
 PostgreSQLDatabase::PostgreSQLDatabase() {
     // Uses default Config constructor that loads from environment
-    connect();
+    PostgreSQLDatabase::connect();
 }
 
 PostgreSQLDatabase::PostgreSQLDatabase(const rdws::Config& dbConfig)
     : config(dbConfig) {
-    connect();
+    PostgreSQLDatabase::connect();
 }
 
 PostgreSQLDatabase::~PostgreSQLDatabase() {
     if (currentTransaction) {
-        rollbackTransaction();
+        PostgreSQLDatabase::rollbackTransaction();
     }
-    disconnect();
+    PostgreSQLDatabase::disconnect();
 }
 
 std::unique_ptr<IResultSet> PostgreSQLDatabase::execQuery(

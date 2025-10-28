@@ -13,8 +13,6 @@ namespace rdws::types {
     class Order;
 }
 
-
-
 namespace rdws::types {
 
 /**
@@ -57,7 +55,7 @@ public:
     const std::optional<T>& getOptionalData() const { return data_; }
 
 private:
-    ServiceResult(std::optional<T> data, bool success, std::string  errorMessage, const int statusCode)
+    ServiceResult(std::optional<T> data, const bool success, std::string  errorMessage, const int statusCode)
         : data_(std::move(data)), success_(success), errorMessage_(std::move(errorMessage)), statusCode_(statusCode) {}
 
     std::optional<T> data_;

@@ -1,8 +1,6 @@
 #include "order_repository.h"
 #include <sstream>
 
-
-
 namespace rdws::services::orders {
 
 OrderRepository::OrderRepository(std::shared_ptr<rdws::database::IDatabase> db) : db_(std::move(db)) {}
@@ -35,7 +33,7 @@ std::vector<types::Order> OrderRepository::findAll() const {
     return orders;
 }
 
-std::optional<types::Order> OrderRepository::findById(int orderId) const {
+std::optional<types::Order> OrderRepository::findById(const int orderId) const {
     if (!db_) return std::nullopt;
 
     const std::string query = "SELECT id, user_id, product, amount, status, created_at FROM orders WHERE id = $1";
@@ -48,7 +46,7 @@ std::optional<types::Order> OrderRepository::findById(int orderId) const {
     return resultToOrder(*result);
 }
 
-std::vector<types::Order> OrderRepository::findByUserId(int userId) const {
+std::vector<types::Order> OrderRepository::findByUserId(const int userId) const {
     std::vector<types::Order> orders;
     
     if (!db_) return orders;
@@ -56,7 +54,7 @@ std::vector<types::Order> OrderRepository::findByUserId(int userId) const {
     const std::string query = "SELECT id, user_id, product, amount, status, created_at FROM orders WHERE user_id = $1 ORDER BY created_at DESC";
     const auto result = db_->execQuery(query, {std::to_string(userId)});
     
-    if (!result) return orders;
+    if (!result) return {};
     
     while (result->next()) {
         orders.push_back(resultToOrder(*result));
@@ -68,9 +66,10 @@ std::vector<types::Order> OrderRepository::findByUserId(int userId) const {
 std::optional<types::Order> OrderRepository::create(const types::Order& order) const {
     if (!db_) return std::nullopt;
 
-    const std::string query = "INSERT INTO orders (user_id, product, amount, status) VALUES ($1, $2, $3, $4) RETURNING id, user_id, product, amount, status, created_at";
-
-    const std::vector<std::string> params = {
+    const auto query =  "INSERT INTO orders (user_id, product, amount, status) " \
+                        "VALUES ($1, $2, $3, $4) " \
+                        "RETURNING id, user_id, product, amount, status, created_at";
+    const auto params = {
         std::to_string(order.userId),
         order.product,
         std::to_string(order.amount),
@@ -78,7 +77,7 @@ std::optional<types::Order> OrderRepository::create(const types::Order& order) c
     };
 
     const auto result = db_->execQuery(query, params);
-    
+
     if (!result || !result->next()) {
         return std::nullopt;
     }
@@ -89,9 +88,11 @@ std::optional<types::Order> OrderRepository::create(const types::Order& order) c
 std::optional<types::Order> OrderRepository::update(const types::Order& order) const {
     if (!db_) return std::nullopt;
 
-    const std::string query = "UPDATE orders SET user_id = $1, product = $2, amount = $3, status = $4 WHERE id = $5 RETURNING id, user_id, product, amount, status, created_at";
+    const auto query =  "UPDATE orders SET user_id = $1, product = $2, amount = $3, status = $4 "\
+                        "WHERE id = $5 " \
+                        "RETURNING id, user_id, product, amount, status, created_at";
 
-    const std::vector<std::string> params = {
+    const auto params = {
         std::to_string(order.userId),
         order.product,
         std::to_string(order.amount),
@@ -108,17 +109,17 @@ std::optional<types::Order> OrderRepository::update(const types::Order& order) c
     return resultToOrder(*result);
 }
 
-bool OrderRepository::deleteById(int orderId) const {
+bool OrderRepository::deleteById(const int orderId) const {
     if (!db_) return false;
 
-    const std::string query = "DELETE FROM orders WHERE id = $1";
+    const auto query = "DELETE FROM orders WHERE id = $1";
     return db_->execCommand(query, {std::to_string(orderId)});
 }
 
 int OrderRepository::count() const {
     if (!db_) return 0;
 
-    const std::string query = "SELECT COUNT(*) as total FROM orders";
+    const auto query = "SELECT COUNT(*) as total FROM orders";
     const auto result = db_->execQuery(query);
     
     if (!result || !result->next()) {
@@ -128,10 +129,10 @@ int OrderRepository::count() const {
     return result->getInt("total");
 }
 
-int OrderRepository::countByUserId(int userId) const {
+int OrderRepository::countByUserId(const int userId) const {
     if (!db_) return 0;
 
-    const std::string query = "SELECT COUNT(*) as total FROM orders WHERE user_id = $1";
+    const auto query = "SELECT COUNT(*) as total FROM orders WHERE user_id = $1";
     const auto result = db_->execQuery(query, {std::to_string(userId)});
     
     if (!result || !result->next()) {
@@ -144,7 +145,7 @@ int OrderRepository::countByUserId(int userId) const {
 bool OrderRepository::updateStatus(int orderId, const std::string& newStatus) const {
     if (!db_) return false;
 
-    const std::string query = "UPDATE orders SET status = $1 WHERE id = $2";
+    const auto query = "UPDATE orders SET status = $1 WHERE id = $2";
     return db_->execCommand(query, {newStatus, std::to_string(orderId)});
 }
 

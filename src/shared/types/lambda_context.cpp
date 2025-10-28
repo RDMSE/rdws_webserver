@@ -65,22 +65,22 @@ LambdaContext::LambdaContext(const std::string& jsonString)
 }
 
 std::chrono::milliseconds LambdaContext::getRemainingTimeMs() const {
-    auto elapsed = getElapsedTimeMs();
+    const auto elapsed = getElapsedTimeMs();
     return timeoutMs_ - elapsed;
 }
 
-bool LambdaContext::isTimeoutImminent(std::chrono::milliseconds bufferMs) const {
+bool LambdaContext::isTimeoutImminent(const std::chrono::milliseconds bufferMs) const {
     return getRemainingTimeMs() <= bufferMs;
 }
 
 std::chrono::milliseconds LambdaContext::getElapsedTimeMs() const {
-    auto now = std::chrono::steady_clock::now();
+    const auto now = std::chrono::steady_clock::now();
     return std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime_);
 }
 
 void LambdaContext::log(const std::string& message, const std::string& level) const {
-    auto now = std::chrono::system_clock::now();
-    auto time_t = std::chrono::system_clock::to_time_t(now);
+    const auto now = std::chrono::system_clock::now();
+    const auto time_t = std::chrono::system_clock::to_time_t(now);
     
     std::ostringstream oss;
     oss << "[" << std::put_time(std::gmtime(&time_t), "%Y-%m-%dT%H:%M:%SZ") << "] "

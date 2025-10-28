@@ -4,7 +4,6 @@
 #include "../types/order.h"
 #include "../types/service_result.h"
 #include "base_controller.h"
-
 #include <string>
 #include <vector>
 

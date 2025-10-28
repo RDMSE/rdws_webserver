@@ -2,6 +2,7 @@
 #include <rapidjson/writer.h>
 #include <sstream>
 #include <iomanip>
+#include <utility>
 
 
 namespace rdws::types {
@@ -10,12 +11,12 @@ namespace rdws::types {
 Order::Order() : id(0), userId(0), product(""), amount(0.0), status("pending"), createdAt("") {}
 
 // Constructor for new orders (without ID and timestamp)
-Order::Order(int userId, const std::string& product, double amount, const std::string& status)
-    : id(0), userId(userId), product(product), amount(amount), status(status), createdAt("") {}
+Order::Order(int userId, std::string  product, double amount, std::string  status)
+    : id(0), userId(userId), product(std::move(product)), amount(amount), status(std::move(status)){}
 
 // Full constructor
-Order::Order(int id, int userId, const std::string& product, double amount, const std::string& status, const std::string& createdAt)
-    : id(id), userId(userId), product(product), amount(amount), status(status), createdAt(createdAt) {}
+Order::Order(const int id, const int userId, std::string  product, const double amount, std::string  status, std::string  createdAt)
+    : id(id), userId(userId), product(std::move(product)), amount(amount), status(std::move(status)), createdAt(std::move(createdAt)) {}
 
 // JSON serialization
 rapidjson::Value Order::toJson(rapidjson::Document::AllocatorType& allocator) const {

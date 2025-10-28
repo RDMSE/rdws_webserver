@@ -60,8 +60,7 @@ std::string SchemaValidator::getSchemaPath(const std::string& schemaFile) {
     }
 
     // Try old schemas path for backward compatibility
-    std::string oldPath = "schemas/" + schemaFile;
-    if (std::filesystem::exists(oldPath)) {
+    if (std::string oldPath = "schemas/" + schemaFile; std::filesystem::exists(oldPath)) {
         return oldPath;
     }
 
@@ -83,7 +82,7 @@ bool SchemaValidator::loadSchemaFromFile(const std::string& filePath) const {
         }
 
         valijson::SchemaParser parser;
-        valijson::adapters::JsonCppAdapter schemaAdapter(schemaDoc);
+        const valijson::adapters::JsonCppAdapter schemaAdapter(schemaDoc);
         parser.populateSchema(schemaAdapter, *schema);
 
         return true;
@@ -99,18 +98,17 @@ bool SchemaValidator::loadSchemaFromString(const std::string& schemaString) cons
         Json::Value schemaDoc;
         Json::CharReaderBuilder builder;
         std::string errors;
-        std::unique_ptr<Json::CharReader> reader(builder.newCharReader());
-        
-        if (!reader->parse(schemaString.c_str(), 
-                          schemaString.c_str() + schemaString.length(), 
-                          &schemaDoc, &errors)) {
+
+        if (std::unique_ptr<Json::CharReader> reader(builder.newCharReader()); !reader->parse(schemaString.c_str(),
+                                                                                              schemaString.c_str() + schemaString.length(),
+                                                                                              &schemaDoc, &errors)) {
             std::cerr << "Schema parse error: " << errors << std::endl;
             return false;
         }
 
         // Create schema from parsed JSON
         valijson::SchemaParser parser;
-        valijson::adapters::JsonCppAdapter schemaAdapter(schemaDoc);
+        const valijson::adapters::JsonCppAdapter schemaAdapter(schemaDoc);
         parser.populateSchema(schemaAdapter, *schema);
 
         return true;
@@ -122,9 +120,8 @@ bool SchemaValidator::loadSchemaFromString(const std::string& schemaString) cons
 
 std::vector<ValidationError> SchemaValidator::validate(const Json::Value& json) const {
     valijson::ValidationResults results;
-    valijson::adapters::JsonCppAdapter targetAdapter(json);
 
-    if (validator->validate(*schema, targetAdapter, &results)) {
+    if (valijson::adapters::JsonCppAdapter targetAdapter(json); validator->validate(*schema, targetAdapter, &results)) {
         return {}; // No errors
     }
 
@@ -133,11 +130,11 @@ std::vector<ValidationError> SchemaValidator::validate(const Json::Value& json) 
 
 std::vector<ValidationError> SchemaValidator::validate(const std::string& jsonString) const {
     Json::Value json;
-    Json::Reader reader;
 
-    if (!reader.parse(jsonString, json)) {
+    if (Json::Reader reader; !reader.parse(jsonString, json)) {
         return {
-            ValidationError("root", "Invalid JSON format: " + reader.getFormattedErrorMessages())};
+            ValidationError("root", "Invalid JSON format: " + reader.getFormattedErrorMessages())
+        };
     }
 
     return validate(json);
@@ -221,14 +218,13 @@ SchemaValidator updateOrderValidator() {
 SchemaManager::SchemaManager(std::string  path) : schemasPath(std::move(path)) {}
 
 std::shared_ptr<valijson::Schema> SchemaManager::getSchema(const std::string& schemaFile) const {
-    auto it = schemaCache.find(schemaFile);
-    if (it != schemaCache.end()) {
+    if (auto it = schemaCache.find(schemaFile); it != schemaCache.end()) {
         return {it->second.get(), [](valijson::Schema*) {}};
     }
 
     // Load schema
     auto schema = std::make_unique<valijson::Schema>();
-    std::string filePath = schemasPath + "/" + schemaFile;
+    const std::string filePath = schemasPath + "/" + schemaFile;
 
     Json::Value schemaDoc;
     if (!valijson::utils::loadDocument(filePath, schemaDoc)) {
@@ -236,7 +232,7 @@ std::shared_ptr<valijson::Schema> SchemaManager::getSchema(const std::string& sc
     }
 
     valijson::SchemaParser parser;
-    valijson::adapters::JsonCppAdapter schemaAdapter(schemaDoc);
+    const valijson::adapters::JsonCppAdapter schemaAdapter(schemaDoc);
     parser.populateSchema(schemaAdapter, *schema);
 
     auto rawPtr = schema.get();

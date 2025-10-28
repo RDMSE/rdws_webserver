@@ -5,7 +5,8 @@ project(CppMicroservices VERSION 1.0.0 LANGUAGES CXX)
 
 # Specify the C++ standard
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS ON)
 
 # Set default build type if not specified
 if(NOT CMAKE_BUILD_TYPE)
