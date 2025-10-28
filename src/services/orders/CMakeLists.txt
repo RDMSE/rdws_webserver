@@ -26,7 +26,7 @@ include_directories(../../shared)  # Add shared directory to include path
 add_executable(orders_service
   main.cpp
   order_service.cpp
-  order_repository.cpp
+  ../../shared/repository/order_repository.cpp
   ../../shared/types/order.cpp
   ../../shared/types/lambda_event.cpp
   ../../shared/types/lambda_context.cpp

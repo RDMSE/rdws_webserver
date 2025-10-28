@@ -67,7 +67,7 @@ add_executable(orders_service_unit_tests
   test_main.cpp
   mocks/mock_database.cpp
   ../src/services/orders/order_service.cpp
-  ../src/services/orders/order_repository.cpp
+  ../src/shared/repository/order_repository.cpp
   ../src/shared/types/order.cpp
   ../src/shared/types/lambda_event.cpp
   ../src/shared/types/lambda_context.cpp

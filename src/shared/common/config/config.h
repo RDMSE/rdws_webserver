@@ -2,6 +2,7 @@
 
 #include <string>
 #include <map>
+#include <optional>
 
 namespace rdws {
 
@@ -13,7 +14,7 @@ public:
     Config();
     
     // Get configuration value
-    [[nodiscard]] std::string get(const std::string& key, const std::string& defaultValue = "") const;
+    [[nodiscard]] std::optional<std::string> get(const std::string& key) const;
     
     // Set configuration value
     void set(const std::string& key, const std::string& value);
@@ -33,8 +34,8 @@ public:
     
 private:
     void loadEnvironmentVariables();
-    void loadEnvFile(const std::string& filename);
-    [[nodiscard]] static std::string getEnvVar(const std::string& name, const std::string& defaultValue = "") ;
+    static void loadEnvFile(const std::string& filename);
+    [[nodiscard]] static std::optional<std::string> getEnvVar(const std::string& name) ;
 };
 
 } // namespace rdws
