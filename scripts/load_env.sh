@@ -79,25 +79,54 @@ if [ -n "$GITHUB_ACTIONS" ] || [ -n "$CI" ]; then
             echo "Using development database: $DB_NAME_DEV"
             ;;
     esac
-    
+
     # For CI/CD, prefer localhost for PostgreSQL connections to avoid IPv6 issues
     if [ -n "$GITHUB_ACTIONS" ] || [ -n "$CI" ]; then
         if [ "$DB_HOST" = "fedora-server.local" ] || [ "$DB_HOST" = "$(hostname)" ] || [ "$DB_HOST" = "$(hostname -f)" ]; then
             export DB_HOST="localhost"
             echo "Using localhost for PostgreSQL connection in CI/CD"
         fi
-        
+
         # Set PGHOST to ensure psql uses the correct host
         export PGHOST="$DB_HOST"
         export PGPORT="$DB_PORT"
         export PGUSER="$DB_USER"
         export PGPASSWORD="$DB_PASS"
+
+        # Create .env.$ENVIRONMENT file with the required variables for local tools
+        {
+            echo "DB_HOST=$DB_HOST"
+            echo "DB_PORT=$DB_PORT"
+            echo "DB_USER=$DB_USER"
+            echo "DB_PASS=$DB_PASS"
+            if [ "$ENVIRONMENT" = "production" ]; then
+                echo "DB_NAME=$DB_NAME_PROD"
+            else
+                echo "DB_NAME=$DB_NAME_DEV"
+            fi
+        } > "$ENV_FILE"
+        echo "Created $ENV_FILE for local tools"
     fi
 
     # Verify other required variables exist
     if [ -z "$DB_HOST" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASS" ] || [ -z "$DB_PORT" ]; then
         echo "ERROR: Required database environment variables not found in CI/CD"
         echo "Please set: DB_HOST, DB_USER, DB_PASS, DB_PORT, DB_NAME_DEV, DB_NAME_PROD"
+
+        if [ -z "$DB_HOST" ] ; then
+            echo " - DB_HOST is missing"
+        fi
+        if [ -z "$DB_USER" ] ; then
+            echo " - DB_USER is missing"
+        fi
+        if [ -z "$DB_PASS" ] ; then
+            echo " - DB_PASS is missing"
+        fi
+        if [ -z "$DB_PORT" ] ; then
+            echo " - DB_PORT is missing"
+        fi
+
+
         if is_sourced; then
             return 1
         else
