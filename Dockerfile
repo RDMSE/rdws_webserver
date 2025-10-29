@@ -44,19 +44,6 @@ RUN groupadd --gid $USER_GID $USERNAME && \
     echo "$USERNAME ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/$USERNAME && \
     chmod 0440 /etc/sudoers.d/$USERNAME
 
-# Install Pistache (same as on server)
-WORKDIR /tmp
-RUN git clone --depth=1 https://github.com/pistacheio/pistache.git && \
-    cd pistache && \
-    meson setup build \
-        --buildtype=release \
-        --prefix=/usr/local \
-        -Db_lto=true \
-        -DPISTACHE_USE_SSL=ON && \
-    meson compile -C build && \
-    meson install -C build && \
-    ldconfig && \
-    rm -rf /tmp/pistache
 
 # Set up library paths
 RUN echo "/usr/local/lib64" > /etc/ld.so.conf.d/local.conf && \

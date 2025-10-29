@@ -73,7 +73,7 @@ The workflows use self-hosted runner on Fedora Server with labels:
 - Google Test + GMock
 - PM2 (for production)
 
-## 📊 Workflow Status
+## Workflow Status
 
 ### CI Status
 - C++ microservices compiling

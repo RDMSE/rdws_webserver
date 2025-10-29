@@ -1,9 +1,9 @@
 ````markdown
-# 🚀 API Gateway - C++ Microservices
+# API Gateway - C++ Microservices
 
 A unified gateway to access C++ microservices through a simple and robust HTTP interface.
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
@@ -15,7 +15,7 @@ A unified gateway to access C++ microservices through a simple and robust HTTP i
 - [Testing](#testing)
 - [Monitoring](#monitoring)
 
-## 🎯 Overview
+## Overview
 
 The API Gateway provides a unified HTTP interface to access multiple C++ executable microservices. It centralizes:
 
@@ -36,19 +36,19 @@ Client → API Gateway (port 8080) → C++ Executables
     └─────────────────┴─────────────────┘
 ```
 
-## ✨ Features
+## Features
 
-- ✅ **Transparent proxy** for C++ microservices
-- ✅ **Robust error handling** with appropriate HTTP codes
-- ✅ **Request ID** for request tracing
-- ✅ **Automatic health checks** for services
-- ✅ **Input parameter validation**
-- ✅ **Configurable timeout** to prevent freezes
-- ✅ **CORS** and security headers
-- ✅ **Detailed logging** with timestamps
-- ✅ **Graceful shutdown** for zero-downtime deployments
+- **Transparent proxy** for C++ microservices
+- **Robust error handling** with appropriate HTTP codes
+- **Request ID** for request tracing
+- **Automatic health checks** for services
+- **Input parameter validation**
+- **Configurable timeout** to prevent freezes
+- **CORS** and security headers
+- **Detailed logging** with timestamps
+- **Graceful shutdown** for zero-downtime deployments
 
-## 🚀 Installation and Execution
+## Installation and Execution
 
 ### Requirements
 
@@ -79,19 +79,19 @@ npm run dev
 curl http://localhost:8080/health
 ```
 
-## 📡 API Endpoints
+## API Endpoints
 
 ### Base URL: `http://localhost:8080`
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/health` | Service status and gateway health |
-| `GET` | `/api-docs` | API documentation |
-| `GET` | `/users` | List all users |
-| `GET` | `/users/:id` | Get user by ID |
-| `GET` | `/orders` | List all orders |
-| `GET` | `/orders/:id` | Get order by ID |
-| `GET` | `/users/:userId/orders` | Get orders for a user |
+| Method | Endpoint                | Description                       |
+| ------ | ----------------------- | --------------------------------- |
+| `GET`  | `/health`               | Service status and gateway health |
+| `GET`  | `/api-docs`             | API documentation                 |
+| `GET`  | `/users`                | List all users                    |
+| `GET`  | `/users/:id`            | Get user by ID                    |
+| `GET`  | `/orders`               | List all orders                   |
+| `GET`  | `/orders/:id`           | Get order by ID                   |
+| `GET`  | `/users/:userId/orders` | Get orders for a user             |
 
 ### Responses
 
@@ -122,7 +122,7 @@ All responses include gateway metadata:
 }
 ```
 
-## 🧪 Usage Examples
+## Usage Examples
 
 ### 1. List Users
 
@@ -195,10 +195,10 @@ const response = await fetch('http://localhost:8080/users');
 const data = await response.json();
 
 if (data.error) {
-    console.error('Error:', data.message);
+  console.error('Error:', data.message);
 } else {
-    console.log('Users:', data.users);
-    console.log('Request ID:', data.gateway.requestId);
+  console.log('Users:', data.users);
+  console.log('Request ID:', data.gateway.requestId);
 }
 ```
 
@@ -216,16 +216,16 @@ else:
     print(f"Orders: {len(data['orders'])}")
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `8080` | Server port |
-| `BUILD_PATH` | `./build` | Path to compiled executables |
-| `NODE_ENV` | `development` | Environment (development/production) |
-| `SERVICE_TIMEOUT` | `5000` | Timeout in ms for microservices |
+| Variable          | Default       | Description                          |
+| ----------------- | ------------- | ------------------------------------ |
+| `PORT`            | `8080`        | Server port                          |
+| `BUILD_PATH`      | `./build`     | Path to compiled executables         |
+| `NODE_ENV`        | `development` | Environment (development/production) |
+| `SERVICE_TIMEOUT` | `5000`        | Timeout in ms for microservices      |
 
 ### Example
 
@@ -236,7 +236,7 @@ export SERVICE_TIMEOUT=10000
 npm start
 ```
 
-## 🐳 Docker
+## Docker
 
 ### Build Image
 
@@ -273,7 +273,7 @@ docker ps  # View health status
 docker logs api-gateway  # View logs
 ```
 
-## 🧪 Testing
+## Testing
 
 ### Run Tests
 
@@ -290,14 +290,14 @@ npm test -- --coverage
 
 ### Included Tests
 
-- ✅ Route validation
-- ✅ Error handling
-- ✅ Security headers
-- ✅ Request IDs
-- ✅ Microservice integration
-- ✅ Health checks
+- Route validation
+- Error handling
+- Security headers
+- Request IDs
+- Microservice integration
+- Health checks
 
-## 📊 Monitoring
+## Monitoring
 
 ### Logs
 
@@ -324,7 +324,7 @@ Each request receives a unique ID that can be used for tracing:
 - `requestId` field in JSON response
 - Logs with Request ID
 
-## 🔧 Development
+## Development
 
 ### Project Structure
 
@@ -361,7 +361,7 @@ DEBUG=* npm start
 npm run dev
 ```
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the project
 2. Create a branch for your feature
@@ -369,13 +369,13 @@ npm run dev
 4. Run `npm test` to verify
 5. Submit a pull request
 
-## 📝 License
+## License
 
 MIT License - see LICENSE file for details.
 
 ---
 
-**🚀 API Gateway is production ready!**
+**API Gateway is production ready!**
 
 For support or questions, check container logs and the `/health` endpoint for diagnostics.
 ````

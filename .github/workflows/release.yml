@@ -185,9 +185,9 @@ jobs:
         tag_name: ${{ steps.version.outputs.version }}
         release_name: ${{ steps.version.outputs.version }}
         body: |
-          # 🚀 RDWS Microservices API Gateway ${{ steps.version.outputs.version }}
+          # RDWS Microservices API Gateway ${{ steps.version.outputs.version }}
 
-          ## 📦 What's Included
+          ## What's Included
 
           - **C++ Microservices**: `users_service`, `orders_service`
           - **API Gateway**: Node.js Express server with proxy functionality
@@ -195,7 +195,7 @@ jobs:
           - **Docker Support**: Complete containerization setup
           - **Documentation**: Complete setup and API documentation
 
-          ## 📋 Quick Install
+          ## Quick Install
 
           ```bash
           # Download and extract
@@ -210,7 +210,7 @@ jobs:
           npm install && npm start
           ```
 
-          ## 🐳 Docker Install
+          ## Docker Install
 
           ```bash
           # Load Docker image
@@ -220,20 +220,20 @@ jobs:
           docker run -d -p 8080:8080 rdws-api-gateway:${{ steps.version.outputs.version_number }}
           ```
 
-          ## 📡 API Endpoints
+          ## API Endpoints
 
           - `GET /health` - Service health check
           - `GET /users` - List all users
           - `GET /orders` - List all orders
           - `GET /api-docs` - API documentation
 
-          ## 📖 Documentation
+          ## Documentation
 
           - [API Gateway Guide](API-GATEWAY.md)
           - [Fedora Deploy Guide](DEPLOY-FEDORA.md)
           - [Quick Deploy Guide](DEPLOY-QUICK.md)
 
-          ## 🔄 Changelog
+          ## Changelog
 
           ${{ steps.changelog.outputs.changelog }}
         draft: false
@@ -271,9 +271,9 @@ jobs:
 
     - name: Release summary
       run: |
-        echo "🎉 Release ${{ steps.version.outputs.version }} created successfully!"
+        echo "Release ${{ steps.version.outputs.version }} created successfully!"
         echo ""
-        echo "📦 Assets uploaded:"
+        echo "Assets uploaded:"
         echo "  - rdws-microservices-${{ steps.version.outputs.version }}.tar.gz"
         echo "  - rdws-microservices-${{ steps.version.outputs.version }}.zip"
         echo "  - rdws-api-gateway-${{ steps.version.outputs.version_number }}.tar.gz"

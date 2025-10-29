@@ -97,3 +97,14 @@ node_modules/
 # Coverage reports
 coverage/
 *.lcov
+
+# Lab executables (experimental tests)
+lab/test_dotenv
+lab/test_config
+
+# Deprecated files (old Pistache-based architecture)
+deprecated/
+
+# github actions local runner files
+.actrc
+.secrets

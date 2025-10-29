@@ -1,195 +1,181 @@
+#include "common/database/postgresql_database.h"
+#include "controllers/order_controller.h"
+#include "order_service.h"
+#include "types/lambda_context.h"
+#include "types/lambda_event.h"
+
 #include <iostream>
+#include <memory>
 #include <string>
-#include <vector>
-#include <ctime>
-#include <sstream>
 
-struct Order
-{
-    int id;
-    int userId;
-    std::string product;
-    double amount;
-    std::string status;
-};
+using namespace rdws::types;
+using namespace rdws::database;
+using namespace rdws::services::orders;
+using namespace rdws::controllers;
 
-std::string orderToJson(const Order &order)
-{
-    std::ostringstream oss;
-    oss << "{"
-        << "\"id\":" << order.id << ","
-        << "\"userId\":" << order.userId << ","
-        << "\"product\":\"" << order.product << "\","
-        << "\"amount\":" << order.amount << ","
-        << "\"status\":\"" << order.status << "\""
-        << "}";
-    return oss.str();
-}
+int main(int argc, char* argv[]) {
+    try {
+        LambdaEvent event("GET", "/", "");                  // Initialize with defaults
+        LambdaContext context("unknown", "orders-service"); // Initialize with defaults
 
-std::string ordersToJson(const std::vector<Order> &orders)
-{
-    std::ostringstream oss;
-    oss << "{"
-        << "\"orders\":[";
+        // Check if we have JSON parameters (new API Gateway approach)
+        if (argc >= 3) {
+            // New approach: API Gateway passes JSON strings
+            std::string eventJson = argv[1];
+            std::string contextJson = argv[2];
 
-    for (size_t i = 0; i < orders.size(); ++i)
-    {
-        oss << orderToJson(orders[i]);
-        if (i < orders.size() - 1)
-        {
-            oss << ",";
+            try {
+                event = LambdaEvent::fromJson(eventJson);
+                context = LambdaContext::fromJson(contextJson);
+            } catch (...) {
+                // Fallback to old approach if JSON parsing fails
+                event = LambdaEvent(argc, argv);
+                context = LambdaContext(event.getRequestContext().requestId, "orders-service");
+            }
+        } else {
+            // Fallback to old approach for backwards compatibility
+            event = LambdaEvent(argc, argv);
+            context = LambdaContext(event.getRequestContext().requestId, "orders-service");
         }
-    }
 
-    oss << "],"
-        << "\"total\":" << orders.size() << ","
-        << "\"source\":\"orders_service C++ executable\","
-        << "\"endpoint\":\"/orders\","
-        << "\"timestamp\":" << std::time(nullptr)
-        << "}";
+        context.log("Function started", "INFO");
 
-    return oss.str();
-}
-
-int main(int argc, char *argv[])
-{
-    // Simulate orders database
-    std::vector<Order> orders = {
-        {1, 1, "Laptop Dell", 2500.00, "completed"},
-        {2, 2, "Mouse Logitech", 150.00, "pending"},
-        {3, 1, "Teclado Mecânico", 400.00, "shipped"},
-        {4, 3, "Monitor 4K", 1200.00, "completed"}};
-
-    // Process command line arguments
-    std::string method = "GET";
-    std::string path = "/orders";
-
-    if (argc > 1)
-    {
-        method = argv[1];
-    }
-    if (argc > 2)
-    {
-        path = argv[2];
-    }
-
-    // Process request
-    if (method == "GET")
-    {
-        if (path == "/orders" || path == "/")
-        {
-            // List all orders
-            std::cout << ordersToJson(orders) << std::endl;
-            return 0;
+        // Initialize database connection
+        auto db = std::make_shared<rdws::database::PostgreSQLDatabase>();
+        if (!db->isConnected()) {
+            context.log("Failed to connect to database", "ERROR");
+            std::cerr << OrderController::formatDatabaseError() << std::endl;
+            return 1;
         }
-        else if (path.find("/orders/") == 0)
-        {
-            // Fetch specific order
-            try
-            {
-                int orderId = std::stoi(path.substr(8)); // Remove "/orders/"
 
-                for (const auto &order : orders)
-                {
-                    if (order.id == orderId)
-                    {
-                        std::cout << "{"
-                                  << "\"order\":" << orderToJson(order) << ","
-                                  << "\"source\":\"orders_service C++ executable\","
-                                  << "\"endpoint\":\"" << path << "\","
-                                  << "\"timestamp\":" << std::time(nullptr)
-                                  << "}" << std::endl;
-                        return 0;
+        // Initialize order service and controller
+        OrderService orderService(db);
+
+        // Extract path parameters for routes like /orders/{id} or /users/{userId}/orders
+        if (event.pathMatches("/orders/{id}") || event.pathMatches("/orders/{action}")) {
+            event.extractPathParameters("/orders/{id}");
+        } else if (event.pathMatches("/users/{userId}/orders")) {
+            event.extractPathParameters("/users/{userId}/orders");
+        }
+
+        context.log("Processing " + event.getHttpMethod() + " request to " + event.getPath(),
+                    "INFO");
+
+        // Process request based on method and path
+        if (event.isGet()) {
+            if (event.pathMatches("/orders") || event.pathMatches("/")) {
+                // List all orders
+                context.log("Fetching all orders", "INFO");
+                auto result = orderService.getAllOrders();
+                std::cout << OrderController::formatOrdersResponse(result) << std::endl;
+                return result.isSuccess() ? 0 : 1;
+            } else if (event.pathMatches("/orders/{id}")) {
+                // Fetch specific order or handle special actions
+                std::string idParam = event.getPathParameter("id");
+
+                if (idParam == "count") {
+                    context.log("Getting order count", "INFO");
+                    auto result = orderService.getOrderCount();
+                    std::cout << OrderController::formatCountResponse(result) << std::endl;
+                    return result.isSuccess() ? 0 : 1;
+                }
+
+                try {
+                    int orderId = std::stoi(idParam);
+                    context.log("Fetching order with ID: " + std::to_string(orderId), "INFO");
+                    auto result = orderService.getOrderById(orderId);
+                    std::cout << OrderController::formatOrderResponse(result) << std::endl;
+                    return result.isSuccess() ? 0 : 1;
+                } catch (...) {
+                    context.log("Invalid order ID: " + idParam, "ERROR");
+                    std::cout << OrderController::formatError("Invalid order ID", 400) << std::endl;
+                    return 1;
+                }
+            } else if (event.pathMatches("/users/{userId}/orders")) {
+                // Fetch orders for specific user
+                std::string userIdParam = event.getPathParameter("userId");
+
+                try {
+                    int userId = std::stoi(userIdParam);
+                    context.log("Fetching orders for user ID: " + std::to_string(userId), "INFO");
+                    auto result = orderService.getOrdersByUserId(userId);
+                    std::cout << OrderController::formatOrdersResponse(result) << std::endl;
+                    return result.isSuccess() ? 0 : 1;
+                } catch (...) {
+                    context.log("Invalid user ID: " + userIdParam, "ERROR");
+                    std::cout << OrderController::formatError("Invalid user ID", 400) << std::endl;
+                    return 1;
+                }
+            }
+        } else if (event.isPost()) {
+            if (event.pathMatches("/orders") || event.pathMatches("/")) {
+                // Create order
+                const std::string& jsonData = event.getBody();
+
+                if (jsonData.empty()) {
+                    context.log("No JSON data provided for order creation", "ERROR");
+                    std::cout << OrderController::formatNoDataProvidedError("order creation")
+                              << std::endl;
+                    return 1;
+                }
+
+                context.log("Creating new order", "INFO");
+                auto result = orderService.createOrder(jsonData);
+                std::cout << OrderController::formatOrderResponse(result) << std::endl;
+                return result.isSuccess() ? 0 : 1;
+            }
+        } else if (event.isPut()) {
+            if (event.pathMatches("/orders/{id}")) {
+                std::string idParam = event.getPathParameter("id");
+
+                try {
+                    int orderId = std::stoi(idParam);
+                    const std::string& jsonData = event.getBody();
+
+                    if (jsonData.empty()) {
+                        context.log("No JSON data provided for order update", "ERROR");
+                        std::cout << OrderController::formatNoDataProvidedError("order update")
+                                  << std::endl;
+                        return 1;
                     }
-                }
 
-                // Order not found
-                std::cout << "{"
-                          << "\"error\":\"Order not found\","
-                          << "\"orderId\":" << orderId << ","
-                          << "\"source\":\"orders_service C++ executable\""
-                          << "}" << std::endl;
-                return 1;
+                    context.log("Updating order with ID: " + std::to_string(orderId), "INFO");
+                    auto result = orderService.updateOrder(orderId, jsonData);
+                    std::cout << OrderController::formatOrderResponse(result) << std::endl;
+                    return result.isSuccess() ? 0 : 1;
+                } catch (...) {
+                    context.log("Invalid order ID: " + idParam, "ERROR");
+                    std::cout << OrderController::formatError("Invalid order ID", 400) << std::endl;
+                    return 1;
+                }
             }
-            catch (const std::exception &e)
-            {
-                std::cout << "{"
-                          << "\"error\":\"Invalid order ID\","
-                          << "\"path\":\"" << path << "\","
-                          << "\"source\":\"orders_service C++ executable\""
-                          << "}" << std::endl;
-                return 1;
-            }
-        }
-        else if (path.find("/users/") == 0 && path.find("/orders") != std::string::npos)
-        {
-            // Handle /users/{userId}/orders - Get orders for a specific user
-            try
-            {
-                // Extract userId from path like "/users/123/orders"
-                size_t userIdStart = path.find("/users/") + 7; // Skip "/users/"
-                size_t userIdEnd = path.find("/", userIdStart);
+        } else if (event.isDelete()) {
+            if (event.pathMatches("/orders/{id}")) {
+                std::string idParam = event.getPathParameter("id");
 
-                if (userIdEnd == std::string::npos)
-                {
-                    throw std::invalid_argument("Invalid path format");
+                try {
+                    int orderId = std::stoi(idParam);
+                    context.log("Deleting order with ID: " + std::to_string(orderId), "INFO");
+                    auto result = orderService.deleteOrder(orderId);
+                    std::cout << OrderController::formatOperationResponse(result) << std::endl;
+                    return result.isSuccess() ? 0 : 1;
+                } catch (...) {
+                    context.log("Invalid order ID: " + idParam, "ERROR");
+                    std::cout << OrderController::formatError("Invalid order ID", 400) << std::endl;
+                    return 1;
                 }
-
-                int userId = std::stoi(path.substr(userIdStart, userIdEnd - userIdStart));
-
-                // Filter orders by userId
-                std::vector<Order> userOrders;
-                for (const auto &order : orders)
-                {
-                    if (order.userId == userId)
-                    {
-                        userOrders.push_back(order);
-                    }
-                }
-
-                // Return user orders in a specific format
-                std::ostringstream oss;
-                oss << "{"
-                    << "\"userId\":" << userId << ","
-                    << "\"orders\":[";
-
-                for (size_t i = 0; i < userOrders.size(); ++i)
-                {
-                    oss << orderToJson(userOrders[i]);
-                    if (i < userOrders.size() - 1)
-                    {
-                        oss << ",";
-                    }
-                }
-
-                oss << "],"
-                    << "\"total\":" << userOrders.size() << ","
-                    << "\"source\":\"orders_service C++ executable\","
-                    << "\"endpoint\":\"" << path << "\","
-                    << "\"timestamp\":" << std::time(nullptr)
-                    << "}";
-
-                std::cout << oss.str() << std::endl;
-                return 0;
-            }
-            catch (const std::exception &e)
-            {
-                std::cout << "{"
-                          << "\"error\":\"Invalid user ID or path format\","
-                          << "\"path\":\"" << path << "\","
-                          << "\"source\":\"orders_service C++ executable\""
-                          << "}" << std::endl;
-                return 1;
             }
         }
+
+        // Method not supported
+        context.log("Method not allowed: " + event.getHttpMethod() + " " + event.getPath(), "WARN");
+        std::cout << OrderController::formatMethodNotAllowedError(event.getHttpMethod(),
+                                                                  event.getPath())
+                  << std::endl;
+        return 1;
+
+    } catch (const std::exception& e) {
+        std::cerr << OrderController::formatServiceError(e.what()) << std::endl;
+        return 1;
     }
-
-    // MMethod not supported
-    std::cout << "{"
-              << "\"error\":\"Method not allowed\","
-              << "\"method\":\"" << method << "\","
-              << "\"path\":\"" << path << "\","
-              << "\"source\":\"orders_service C++ executable\""
-              << "}" << std::endl;
-    return 1;
 }

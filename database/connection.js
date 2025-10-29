@@ -47,7 +47,7 @@ class DatabaseConnection {
         if (this.pool) {
             await this.pool.end();
             this.pool = null;
-            console.log('🔌 Database connection closed');
+            console.log('Database connection closed');
         }
     }
 }

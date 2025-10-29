@@ -71,6 +71,23 @@ jobs:
         echo "npm version: $(npm --version)"
         echo "CMake version: $(cmake --version | head -1)"
 
+    - name: Configure RDWS Environment for Production
+      run: |
+        echo "Configuring RDWS environment for production deployment..."
+        
+        # Make CI/CD setup script executable and run it
+        chmod +x scripts/setup-environment-ci.sh
+        ./scripts/setup-environment-ci.sh production
+        
+        # Export for subsequent steps
+        echo "RDWS_ENVIRONMENT=production" >> $GITHUB_ENV
+        
+        # Verify configuration with check script
+        echo ""
+        echo "Running environment verification..."
+        chmod +x scripts/check-environment.sh
+        RDWS_ENVIRONMENT=production ./scripts/check-environment.sh
+
     - name: Build C++ microservices
       run: |
         cd ${{ env.BUILD_DIR }}
