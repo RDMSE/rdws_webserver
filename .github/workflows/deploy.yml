@@ -2,8 +2,8 @@ name: Deploy API Gateway + Microservices
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:  # Allow manual trigger
+    branches: [main]
+  workflow_dispatch: # Allow manual trigger
     inputs:
       environment:
         description: 'Environment to deploy to'
@@ -11,13 +11,14 @@ on:
         default: 'production'
         type: choice
         options:
-        - production
-        - staging
+          - production
+          - staging
 
 env:
   BUILD_DIR: ${{ github.workspace }}/build
   PRODUCTION_DIR: /opt/rdws_webserver
   NODE_VERSION: '20'
+  RDWS_ENVIRONMENT: production
   # Database Configuration from GitHub Secrets
   DB_HOST: ${{ secrets.DB_HOST }}
   DB_PORT: ${{ secrets.DB_PORT || '5432' }}
@@ -33,104 +34,181 @@ jobs:
     runs-on: [self-hosted, Linux, X64, webserver, fedora]
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          submodules: true
 
-    - name: Clean and prepare
-      run: |
-        rm -rf build
-        mkdir -p build
+      - name: Clean and prepare
+        run: |
+          rm -rf ${{ env.BUILD_DIR }}
+          mkdir -p ${{ env.BUILD_DIR }}
 
-    - name: Verify environment and install dependencies
-      run: |
-        echo "Verifying deployment environment..."
-        echo "Target directory: ${{ env.PRODUCTION_DIR }}"
-        whoami
-        pwd
+      - name: Verify environment
+        run: |
+          echo "Running on self-hosted Fedora runner"
+          echo "Build directory: ${{ env.BUILD_DIR }}"
+          echo "Environment: ${{ env.RDWS_ENVIRONMENT }}"
+          echo "Database DEV: ${{ env.DB_NAME_DEV }}"
+          echo "Database PROD: ${{ env.DB_NAME_PROD }}"
+          whoami
+          pwd
+          which cmake || echo "CMake not found"
+          which g++ || echo "g++ not found"
+          which node || echo "Node.js not found"
+          which npm || echo "npm not found"
 
-        # Install Node.js if needed
-        if ! command -v node &> /dev/null; then
-          echo "Installing Node.js..."
-          curl -fsSL https://rpm.nodesource.com/setup_lts.x | sudo bash -
-          sudo dnf install -y nodejs
-        fi
+      - name: Load database environment
+        run: |
+          echo "Loading database environment variables..."
+          source scripts/load_env.sh ${{ env.RDWS_ENVIRONMENT }}
+          echo "Database configuration loaded for environment: ${{ env.RDWS_ENVIRONMENT }}"
 
-        # Install build tools if needed
-        if ! command -v cmake &> /dev/null; then
-          echo "Installing build tools..."
-          sudo dnf install -y cmake gcc-c++ make
-        fi
+      - name: Check .env.${{ env.RDWS_ENVIRONMENT }} exists
+        run: |
+          ENV_FILE=".env.${{ env.RDWS_ENVIRONMENT }}"
+          if [ -f "$ENV_FILE" ]; then
+            echo "$ENV_FILE found."
+          else
+            echo "ERROR: $ENV_FILE not found!"
+            exit 1
+          fi
 
-        # Install Google Test if needed
-        if ! pkg-config --exists gtest; then
-          echo "Installing Google Test..."
-          sudo dnf install -y gtest-devel gmock-devel
-        fi
+      - name: Install dependencies if needed
+        run: |
+          echo "Verifying deployment environment..."
+          echo "Target directory: ${{ env.PRODUCTION_DIR }}"
+          whoami
+          pwd
 
-        echo "Node.js version: $(node --version)"
-        echo "npm version: $(npm --version)"
-        echo "CMake version: $(cmake --version | head -1)"
+          # Install Node.js if needed
+          if ! command -v node &> /dev/null; then
+            echo "Installing Node.js..."
+            curl -fsSL https://rpm.nodesource.com/setup_lts.x | sudo bash -
+            sudo dnf install -y nodejs
+          fi
 
-    - name: Configure RDWS Environment for Production
-      run: |
-        echo "Configuring RDWS environment for production deployment..."
-        
-        # Make CI/CD setup script executable and run it
-        chmod +x scripts/setup-environment-ci.sh
-        ./scripts/setup-environment-ci.sh production
-        
-        # Export for subsequent steps
-        echo "RDWS_ENVIRONMENT=production" >> $GITHUB_ENV
-        
-        # Verify configuration with check script
-        echo ""
-        echo "Running environment verification..."
-        chmod +x scripts/check-environment.sh
-        RDWS_ENVIRONMENT=production ./scripts/check-environment.sh
+          # Install build tools if needed
+          if ! command -v cmake &> /dev/null; then
+            echo "Installing build tools..."
+            sudo dnf install -y cmake gcc-c++ make
+          fi
 
-    - name: Build C++ microservices
-      run: |
-        cd ${{ env.BUILD_DIR }}
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_STANDARD=17 -G "Unix Makefiles"
-        make -j$(nproc)
+          # Install g++ if needed
+          if ! command -v g++ &> /dev/null; then
+            echo "Installing g++..."
+            sudo dnf groupinstall -y "Development Tools"
+            sudo dnf install -y gcc-c++
+          fi
 
-        # Verify microservices were built
-        echo "Verifying built microservices..."
-        ls -la src/services/*/
-        find . -name "*_service" -type f -executable
-        ./src/services/users/users_service "GET" "/users" | head -2
-        ./src/services/orders/orders_service "GET" "/orders" | head -2
+          # Install Google Test if needed
+          if ! pkg-config --exists gtest; then
+            echo "Installing Google Test..."
+            sudo dnf install -y gtest-devel gmock-devel
+          fi
 
-    - name: Install API Gateway dependencies
-      run: |
-        npm ci
+          if ! pkg-config --exists libpqxx; then
+            echo "Installing libpqxx..."
+            sudo dnf install -y libpqxx-devel
+          fi
 
-    - name: Run quick tests
-      run: |
-        # Test C++ microservices
-        cd ${{ env.BUILD_DIR }}
-        if [ -f "tests/users_service_tests" ]; then
-          ./tests/users_service_tests
-        fi
-        if [ -f "tests/orders_service_tests" ]; then
-          ./tests/orders_service_tests
-        fi
+          if ! pkg-config --exists jsoncpp; then
+            echo "Installing jsoncpp..."
+            sudo dnf install -y jsoncpp-devel
+          fi
 
-        # Test API Gateway
-        cd ..
-        BUILD_PATH=${{ env.BUILD_DIR }} npm test
+          if ! command -v ninja &> /dev/null; then
+            echo "Installing Ninja build system..."
+            sudo dnf install -y ninja-build
+          fi
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v5
-      with:
-        name: deployment-package-${{ github.run_number }}
-        path: |
-          ${{ env.BUILD_DIR }}/
-          api-gateway.js
-          package*.json
-          scripts/
-          API-GATEWAY.md
-          DEPLOY-*.md
+          echo "Node.js version: $(node --version)"
+          echo "npm version: $(npm --version)"
+          echo "CMake version: $(cmake --version | head -1)"
+          echo "g++ version: $(g++ --version | head -1)"
+          echo "Ninja version: $(ninja --version)"
+
+      - name: Configure CMake
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          cmake .. -GNinja
+
+      - name: Build C++ microservices
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          ninja
+          echo "Verifying microservices..."
+          ls -la src/services/*/
+          find . -name "*_service" -type f -executable
+
+      - name: Test microservices executables
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          echo "Testing users_service..."
+          if [ -f "./src/services/users/users_service" ]; then
+            echo "SUCCESS: users_service found"
+          else
+            echo "ERROR: users_service not found"
+            exit 1
+          fi
+          echo "Testing orders_service..."
+          if [ -f "./src/services/orders/orders_service" ]; then
+            echo "SUCCESS: orders_service found"
+          else
+            echo "ERROR: orders_service not found"
+            exit 1
+          fi
+
+      - name: Run C++ tests
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          echo "Current directory structure:"
+          pwd
+          ls -la
+          echo "Services directory:"
+          ls -la src/services/ || echo "No services directory"
+          echo "Tests directory:"
+          ls -la tests/ || echo "No tests directory"
+          if [ -f "tests/microservice_tests" ]; then
+            echo "Running microservice_tests..."
+            ./tests/microservice_tests
+          else
+            echo "microservice_tests not found"
+          fi
+          if [ -f "tests/users_service_unit_tests" ]; then
+            echo "Running users_service_unit_tests..."
+            ./tests/users_service_unit_tests
+          else
+            echo "users_service_unit_tests not found"
+          fi
+          if [ -f "tests/orders_service_unit_tests" ]; then
+            echo "Running orders_service_unit_tests..."
+            ./tests/orders_service_unit_tests
+          else
+            echo "orders_service_unit_tests not found"
+          fi
+
+      - name: Install API Gateway dependencies
+        run: |
+          npm ci
+
+      - name: Run quick tests on API Gateway
+        run: |
+          # Test API Gateway
+          cd ..
+          BUILD_PATH=${{ env.BUILD_DIR }} npm test
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v5
+        with:
+          name: deployment-package-${{ github.run_number }}
+          path: |
+            ${{ env.BUILD_DIR }}/
+            api-gateway.js
+            package*.json
+            scripts/
+            API-GATEWAY.md
+            DEPLOY-*.md
 
   # Job 2: Deploy to production
   deploy:
@@ -141,312 +219,312 @@ jobs:
       name: ${{ github.event.inputs.environment || 'production' }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
+      - name: Checkout code
+        uses: actions/checkout@v5
 
-    - name: Download build artifacts
-      uses: actions/download-artifact@v6
-      with:
-        name: deployment-package-${{ github.run_number }}
-        path: ./deployment
+      - name: Download build artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: deployment-package-${{ github.run_number }}
+          path: ./deployment
 
-    - name: Prepare production directory
-      run: |
-        echo "Preparing production directory: ${{ env.PRODUCTION_DIR }}"
+      - name: Prepare production directory
+        run: |
+          echo "Preparing production directory: ${{ env.PRODUCTION_DIR }}"
 
-        # Create production directory if it doesn't exist
-        sudo mkdir -p ${{ env.PRODUCTION_DIR }}
-        sudo chown $USER:$USER ${{ env.PRODUCTION_DIR }}
+          # Create production directory if it doesn't exist
+          sudo mkdir -p ${{ env.PRODUCTION_DIR }}
+          sudo chown $USER:$USER ${{ env.PRODUCTION_DIR }}
 
-        # Backup existing deployment if it exists
-        if [ -d "${{ env.PRODUCTION_DIR }}/api-gateway.js" ]; then
-          echo "Backing up existing deployment..."
-          sudo cp -r ${{ env.PRODUCTION_DIR }} ${{ env.PRODUCTION_DIR }}.backup.$(date +%Y%m%d_%H%M%S)
-        fi
-
-    - name: Stop existing services
-      run: |
-        echo "Stopping existing services..."
-
-        # Stop PM2 processes if running
-        if command -v pm2 &> /dev/null; then
-          pm2 stop api-gateway || echo "PM2 api-gateway not running"
-          pm2 delete api-gateway || echo "PM2 api-gateway not found"
-        fi
-
-        # Stop Docker containers if running
-        if command -v docker &> /dev/null; then
-          docker stop api-gateway || echo "Docker api-gateway not running"
-          docker rm api-gateway || echo "Docker api-gateway not found"
-        fi
-
-        # Stop systemd service if running
-        sudo systemctl stop api-gateway || echo "Systemd api-gateway not running"
-
-    - name: Deploy files
-      run: |
-        echo "Deploying files to production..."
-
-        # Create a clean copy excluding .git and other unwanted files
-        rsync -av --exclude='.git' --exclude='.github' --exclude='node_modules' --exclude='build' . ${{ env.PRODUCTION_DIR }}/
-
-        # Copy build artifacts from deployment directory
-        if [ -d "deployment/services" ]; then
-          mkdir -p ${{ env.PRODUCTION_DIR }}/build/
-          cp -r deployment/* ${{ env.PRODUCTION_DIR }}/build/
-        fi
-
-        # Set correct ownership and permissions
-        sudo chown -R $USER:$USER ${{ env.PRODUCTION_DIR }}
-
-        cd ${{ env.PRODUCTION_DIR }}
-        chmod +x scripts/*.sh || true
-        chmod +x build/src/services/*/users_service || true
-        chmod +x build/src/services/*/orders_service || true
-
-        # Verify deployment
-        echo "Files deployed successfully:"
-        ls -la
-        echo "Build artifacts:"
-        ls -la build/ || echo "No build directory found"
-
-    - name: Install production dependencies
-      run: |
-        cd ${{ env.PRODUCTION_DIR }}
-
-        # Install Node.js dependencies including ts-node for production
-        npm ci --production
-        npm install ts-node typescript @types/node --save
-
-        # Install PM2 globally if not already installed
-        if ! command -v pm2 &> /dev/null; then
-          sudo npm install -g pm2
-        fi
-
-        echo "=== Installed packages ==="
-        npm list --depth=0
-
-    - name: Configure firewall
-      run: |
-        echo "Configuring firewall..."
-        sudo firewall-cmd --permanent --add-port=8080/tcp || echo "Port 8080 already open"
-        sudo firewall-cmd --reload || echo "Firewall reload failed"
-
-    - name: Setup PostgreSQL Database
-      run: |
-        cd ${{ env.PRODUCTION_DIR }}
-
-        echo "Setting up PostgreSQL database..."
-
-        # Make scripts executable
-        chmod +x scripts/setup-postgresql.sh
-        chmod +x scripts/migrate-database.sh
-
-                # Install PostgreSQL if not already installed
-        if ! command -v psql &> /dev/null; then
-          echo "Installing PostgreSQL..."
-          ./scripts/setup-postgresql.sh
-        else
-          echo "PostgreSQL already installed"
-
-          # Ensure configuration is correct for existing installation
-          echo "Updating PostgreSQL configuration..."
-
-          # Fix authentication for local connections
-          echo "Configuring authentication..."
-          sudo sed -i "s/local   all             postgres                                peer/local   all             postgres                                trust/" /var/lib/pgsql/data/pg_hba.conf
-          sudo sed -i "s/local   all             all                                     peer/local   all             all                                     md5/" /var/lib/pgsql/data/pg_hba.conf
-          sudo sed -i "s/host    all             all             127.0.0.1\/32            ident/host    all             all             127.0.0.1\/32            md5/" /var/lib/pgsql/data/pg_hba.conf
-          sudo sed -i "s/host    all             all             ::1\/128                 ident/host    all             all             ::1\/128                 md5/" /var/lib/pgsql/data/pg_hba.conf
-
-          # Add external access rules (preserve across deploys)
-          echo "Enabling external access..."
-          if ! grep -q "# External access for DBeaver" /var/lib/pgsql/data/pg_hba.conf; then
-            echo "" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
-            echo "# External access for DBeaver" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
-            echo "host    ${{ env.DB_NAME_DEV }}    ${{ env.DB_USER }}       0.0.0.0/0               md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
-            echo "host    ${{ env.DB_NAME_PROD }}     ${{ env.DB_USER }}       0.0.0.0/0               md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
-            echo "# IPv6 support" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
-            echo "host    ${{ env.DB_NAME_DEV }}    ${{ env.DB_USER }}       ::/0                    md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
-            echo "host    ${{ env.DB_NAME_PROD }}     ${{ env.DB_USER }}       ::/0                    md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
+          # Backup existing deployment if it exists
+          if [ -d "${{ env.PRODUCTION_DIR }}/api-gateway.js" ]; then
+            echo "Backing up existing deployment..."
+            sudo cp -r ${{ env.PRODUCTION_DIR }} ${{ env.PRODUCTION_DIR }}.backup.$(date +%Y%m%d_%H%M%S)
           fi
 
-          # Configure postgresql.conf for external connections
-          sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" /var/lib/pgsql/data/postgresql.conf
-          sudo sed -i "s/listen_addresses = 'localhost'/listen_addresses = '*'/" /var/lib/pgsql/data/postgresql.conf
+      - name: Stop existing services
+        run: |
+          echo "Stopping existing services..."
 
-          # Configure firewall
-          sudo firewall-cmd --permanent --add-port=5432/tcp 2>/dev/null || echo "Port 5432 already open"
-          sudo firewall-cmd --reload 2>/dev/null || echo "Firewall reload failed"
+          # Stop PM2 processes if running
+          if command -v pm2 &> /dev/null; then
+            pm2 stop api-gateway || echo "PM2 api-gateway not running"
+            pm2 delete api-gateway || echo "PM2 api-gateway not found"
+          fi
 
-          sudo systemctl restart postgresql
-          sleep 5
+          # Stop Docker containers if running
+          if command -v docker &> /dev/null; then
+            docker stop api-gateway || echo "Docker api-gateway not running"
+            docker rm api-gateway || echo "Docker api-gateway not found"
+          fi
 
-          # Run simple setup (creates DBs, user, permissions)
-          echo "Running simple PostgreSQL setup..."
-          chmod +x scripts/simple-postgresql-setup.sh
-          timeout 180 ./scripts/simple-postgresql-setup.sh
-        fi
+          # Stop systemd service if running
+          sudo systemctl stop api-gateway || echo "Systemd api-gateway not running"
 
-        # Test connection before proceeding
-        echo "Testing database connection..."
-        chmod +x scripts/test-postgresql.sh
-        ./scripts/test-postgresql.sh || echo "Connection test completed with warnings"
+      - name: Deploy files
+        run: |
+          echo "Deploying files to production..."
 
-        # Set up environment variables for database scripts
-        echo "Setting up database environment variables..."
+          # Create a clean copy excluding .git and other unwanted files
+          rsync -av --exclude='.git' --exclude='.github' --exclude='node_modules' --exclude='build' . ${{ env.PRODUCTION_DIR }}/
 
-        # Export database variables for production environment
-        export DB_HOST="${{ env.DB_HOST }}"
-        export DB_PORT="${{ env.DB_PORT }}"
-        export DB_USER="${{ env.DB_USER }}"
-        export DB_PASS="${{ env.DB_PASS }}"
+          # Copy build artifacts from deployment directory
+          if [ -d "deployment/services" ]; then
+            mkdir -p ${{ env.PRODUCTION_DIR }}/build/
+            cp -r deployment/* ${{ env.PRODUCTION_DIR }}/build/
+          fi
 
-        # Production database name
-        export DB_NAME="${{ env.DB_NAME_PROD }}"
-        echo "Production DB config: $DB_USER@$DB_HOST:$DB_PORT/$DB_NAME"
+          # Set correct ownership and permissions
+          sudo chown -R $USER:$USER ${{ env.PRODUCTION_DIR }}
 
-        # Force IPv4 for PostgreSQL connections
-        export PGHOST="$DB_HOST"
-        export PGPORT="$DB_PORT"
-        export PGUSER="$DB_USER"
-        export PGPASSWORD="$DB_PASS"
+          cd ${{ env.PRODUCTION_DIR }}
+          chmod +x scripts/*.sh || true
+          chmod +x build/src/services/*/users_service || true
+          chmod +x build/src/services/*/orders_service || true
 
-        # Test connection first
-        echo "Testing PostgreSQL connection..."
-        psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres -c "SELECT 'Connection successful';" || {
-          echo "Connection failed, trying with localhost..."
-          export DB_HOST="localhost"
-          export PGHOST="localhost"
-        }
+          # Verify deployment
+          echo "Files deployed successfully:"
+          ls -la
+          echo "Build artifacts:"
+          ls -la build/ || echo "No build directory found"
 
-        # Run database migrations for both environments
-        echo "Running database migrations..."
-        echo "Production environment:"
-        ./scripts/migrate-database.sh production migrate
+      - name: Install production dependencies
+        run: |
+          cd ${{ env.PRODUCTION_DIR }}
 
-        echo "Development environment:"
-        # Switch to development database name
-        export DB_NAME="${{ env.DB_NAME_DEV }}"
-        echo "Development DB config: $DB_USER@$DB_HOST:$DB_PORT/$DB_NAME"
-        ./scripts/migrate-database.sh development migrate
+          # Install Node.js dependencies including ts-node for production
+          npm ci --production
+          npm install ts-node typescript @types/node --save
 
-        # Run seeds for both environments
-        echo "Running database seeds..."
-        echo "Production seeds (minimal):"
-        ./scripts/migrate-database.sh production seed || echo "Production seeds failed (may be expected)"
+          # Install PM2 globally if not already installed
+          if ! command -v pm2 &> /dev/null; then
+            sudo npm install -g pm2
+          fi
 
-        echo "Development seeds (rich data):"
-        ./scripts/migrate-database.sh development seed || echo "Development seeds failed (may be expected)"
+          echo "=== Installed packages ==="
+          npm list --depth=0
 
-        # Show database status for both
-        echo "Database status:"
-        echo "Production database:"
-        ./scripts/migrate-database.sh production status || echo "Production status check failed"
+      - name: Configure firewall
+        run: |
+          echo "Configuring firewall..."
+          sudo firewall-cmd --permanent --add-port=8080/tcp || echo "Port 8080 already open"
+          sudo firewall-cmd --reload || echo "Firewall reload failed"
 
-        echo "Development database:"
-        ./scripts/migrate-database.sh development status || echo "Development status check failed"
+      - name: Setup PostgreSQL Database
+        run: |
+          cd ${{ env.PRODUCTION_DIR }}
 
-    - name: Generate C++ Configuration Files
-      run: |
-        cd ${{ env.PRODUCTION_DIR }}
+          echo "Setting up PostgreSQL database..."
 
-        echo "Generating configuration files for C++ microservices..."
-        chmod +x scripts/generate-cpp-config.sh
+          # Make scripts executable
+          chmod +x scripts/setup-postgresql.sh
+          chmod +x scripts/migrate-database.sh
 
-        # Generate config for production environment
-        export DB_NAME="${{ env.DB_NAME_PROD }}"
-        ./scripts/generate-cpp-config.sh production ${{ env.PRODUCTION_DIR }}/config
+                  # Install PostgreSQL if not already installed
+          if ! command -v psql &> /dev/null; then
+            echo "Installing PostgreSQL..."
+            ./scripts/setup-postgresql.sh
+          else
+            echo "PostgreSQL already installed"
 
-        # Generate config for development environment
-        export DB_NAME="${{ env.DB_NAME_DEV }}"
-        ./scripts/generate-cpp-config.sh development ${{ env.PRODUCTION_DIR }}/config
+            # Ensure configuration is correct for existing installation
+            echo "Updating PostgreSQL configuration..."
 
-    - name: Enable External PostgreSQL Access
-      run: |
-        cd ${{ env.PRODUCTION_DIR }}
+            # Fix authentication for local connections
+            echo "Configuring authentication..."
+            sudo sed -i "s/local   all             postgres                                peer/local   all             postgres                                trust/" /var/lib/pgsql/data/pg_hba.conf
+            sudo sed -i "s/local   all             all                                     peer/local   all             all                                     md5/" /var/lib/pgsql/data/pg_hba.conf
+            sudo sed -i "s/host    all             all             127.0.0.1\/32            ident/host    all             all             127.0.0.1\/32            md5/" /var/lib/pgsql/data/pg_hba.conf
+            sudo sed -i "s/host    all             all             ::1\/128                 ident/host    all             all             ::1\/128                 md5/" /var/lib/pgsql/data/pg_hba.conf
 
-        echo "Enabling external PostgreSQL connections..."
-        chmod +x scripts/enable-postgresql-external.sh
+            # Add external access rules (preserve across deploys)
+            echo "Enabling external access..."
+            if ! grep -q "# External access for DBeaver" /var/lib/pgsql/data/pg_hba.conf; then
+              echo "" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
+              echo "# External access for DBeaver" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
+              echo "host    ${{ env.DB_NAME_DEV }}    ${{ env.DB_USER }}       0.0.0.0/0               md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
+              echo "host    ${{ env.DB_NAME_PROD }}     ${{ env.DB_USER }}       0.0.0.0/0               md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
+              echo "# IPv6 support" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
+              echo "host    ${{ env.DB_NAME_DEV }}    ${{ env.DB_USER }}       ::/0                    md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
+              echo "host    ${{ env.DB_NAME_PROD }}     ${{ env.DB_USER }}       ::/0                    md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
+            fi
 
-        # Enable for production environment
-        ./scripts/enable-postgresql-external.sh production || echo "Failed to enable external access for production"
+            # Configure postgresql.conf for external connections
+            sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" /var/lib/pgsql/data/postgresql.conf
+            sudo sed -i "s/listen_addresses = 'localhost'/listen_addresses = '*'/" /var/lib/pgsql/data/postgresql.conf
 
-        # Optionally enable for development environment too
-        ./scripts/enable-postgresql-external.sh development || echo "Failed to enable external access for development"
+            # Configure firewall
+            sudo firewall-cmd --permanent --add-port=5432/tcp 2>/dev/null || echo "Port 5432 already open"
+            sudo firewall-cmd --reload 2>/dev/null || echo "Firewall reload failed"
 
-    - name: Start API Gateway
-      run: |
-        cd ${{ env.PRODUCTION_DIR }}
+            sudo systemctl restart postgresql
+            sleep 5
 
-        echo "Starting API Gateway with PM2..."
+            # Run simple setup (creates DBs, user, permissions)
+            echo "Running simple PostgreSQL setup..."
+            chmod +x scripts/simple-postgresql-setup.sh
+            timeout 180 ./scripts/simple-postgresql-setup.sh
+          fi
 
-        # Try to compile TypeScript first
-        npx tsc src/api-gateway/api-gateway.ts --target es2020 --module commonjs --esModuleInterop --outDir . || echo "TypeScript compilation failed, using ts-node"
+          # Test connection before proceeding
+          echo "Testing database connection..."
+          chmod +x scripts/test-postgresql.sh
+          ./scripts/test-postgresql.sh || echo "Connection test completed with warnings"
 
-        # Use JavaScript if available, otherwise TypeScript with ts-node
-        if [ -f "api-gateway.js" ]; then
-          echo "Using compiled JavaScript"
-          NODE_ENV=production PORT=8080 BUILD_PATH=/opt/rdws_webserver/build SERVICE_TIMEOUT=5000 pm2 start api-gateway.js --name api-gateway --instances 1
-        else
-          echo "Using TypeScript with ts-node"
-          NODE_ENV=production PORT=8080 BUILD_PATH=/opt/rdws_webserver/build SERVICE_TIMEOUT=5000 pm2 start src/api-gateway/api-gateway.ts --name api-gateway --instances 1 --interpreter node --interpreter-args "--require ts-node/register"
-        fi
+          # Set up environment variables for database scripts
+          echo "Setting up database environment variables..."
 
-        pm2 save
+          # Export database variables for production environment
+          export DB_HOST="${{ env.DB_HOST }}"
+          export DB_PORT="${{ env.DB_PORT }}"
+          export DB_USER="${{ env.DB_USER }}"
+          export DB_PASS="${{ env.DB_PASS }}"
 
-        echo "PM2 started successfully"
+          # Production database name
+          export DB_NAME="${{ env.DB_NAME_PROD }}"
+          echo "Production DB config: $DB_USER@$DB_HOST:$DB_PORT/$DB_NAME"
 
-    - name: Health check
-      run: |
-        echo "Performing health check..."
+          # Force IPv4 for PostgreSQL connections
+          export PGHOST="$DB_HOST"
+          export PGPORT="$DB_PORT"
+          export PGUSER="$DB_USER"
+          export PGPASSWORD="$DB_PASS"
 
-        # Wait for service to start
-        sleep 10
+          # Test connection first
+          echo "Testing PostgreSQL connection..."
+          psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres -c "SELECT 'Connection successful';" || {
+            echo "Connection failed, trying with localhost..."
+            export DB_HOST="localhost"
+            export PGHOST="localhost"
+          }
 
-        # Check PM2 status and logs first
-        echo "=== PM2 Status ==="
-        pm2 status
+          # Run database migrations for both environments
+          echo "Running database migrations..."
+          echo "Production environment:"
+          ./scripts/migrate-database.sh production migrate
 
-        echo "=== PM2 Logs (last 20 lines) ==="
-        pm2 logs api-gateway --lines 20 --nostream || echo "No logs available"
+          echo "Development environment:"
+          # Switch to development database name
+          export DB_NAME="${{ env.DB_NAME_DEV }}"
+          echo "Development DB config: $DB_USER@$DB_HOST:$DB_PORT/$DB_NAME"
+          ./scripts/migrate-database.sh development migrate
 
-        echo "=== API Gateway process info ==="
-        pm2 describe api-gateway || echo "Process not found"
+          # Run seeds for both environments
+          echo "Running database seeds..."
+          echo "Production seeds (minimal):"
+          ./scripts/migrate-database.sh production seed || echo "Production seeds failed (may be expected)"
 
-        echo "=== Check if TypeScript is working ==="
-        cd ${{ env.PRODUCTION_DIR }}
-        ls -la *.ts *.js || echo "No TypeScript/JavaScript files found"
+          echo "Development seeds (rich data):"
+          ./scripts/migrate-database.sh development seed || echo "Development seeds failed (may be expected)"
 
-        echo "=== Test direct Node.js execution ==="
-        timeout 5s node --require ts-node/register src/api-gateway/api-gateway.ts || echo "Direct execution failed"
+          # Show database status for both
+          echo "Database status:"
+          echo "Production database:"
+          ./scripts/migrate-database.sh production status || echo "Production status check failed"
 
-        # Use our verification script with correct parameter order
-        echo "=== Running verification script ==="
-        chmod +x scripts/verify-deploy.sh
-        ./scripts/verify-deploy.sh 8080 localhost || echo "Verification failed but continuing..."
+          echo "Development database:"
+          ./scripts/migrate-database.sh development status || echo "Development status check failed"
 
-    - name: Deploy summary
-      run: |
-        echo "Deployment completed successfully!"
-        echo ""
-        echo "Deployment Summary:"
-        echo "  Environment: ${{ github.event.inputs.environment || 'production' }}"
-        echo "  Directory: ${{ env.PRODUCTION_DIR }}"
-        echo "  API Gateway: http://$(hostname -I | awk '{print $1}'):8080"
-        echo "  Health Check: http://$(hostname -I | awk '{print $1}'):8080/health"
-        echo ""
-        echo "Management Commands:"
-        echo "  Status: pm2 status"
-        echo "  Logs: pm2 logs api-gateway"
-        echo "  Restart: pm2 restart api-gateway"
-        echo "  Monitor: pm2 monit"
-        echo ""
-        echo "Endpoints:"
-        echo "  GET /health - Service health"
-        echo "  GET /users - List users"
-        echo "  GET /orders - List orders"
-        echo "  GET /api-docs - API documentation"
+      - name: Generate C++ Configuration Files
+        run: |
+          cd ${{ env.PRODUCTION_DIR }}
+
+          echo "Generating configuration files for C++ microservices..."
+          chmod +x scripts/generate-cpp-config.sh
+
+          # Generate config for production environment
+          export DB_NAME="${{ env.DB_NAME_PROD }}"
+          ./scripts/generate-cpp-config.sh production ${{ env.PRODUCTION_DIR }}/config
+
+          # Generate config for development environment
+          export DB_NAME="${{ env.DB_NAME_DEV }}"
+          ./scripts/generate-cpp-config.sh development ${{ env.PRODUCTION_DIR }}/config
+
+      - name: Enable External PostgreSQL Access
+        run: |
+          cd ${{ env.PRODUCTION_DIR }}
+
+          echo "Enabling external PostgreSQL connections..."
+          chmod +x scripts/enable-postgresql-external.sh
+
+          # Enable for production environment
+          ./scripts/enable-postgresql-external.sh production || echo "Failed to enable external access for production"
+
+          # Optionally enable for development environment too
+          ./scripts/enable-postgresql-external.sh development || echo "Failed to enable external access for development"
+
+      - name: Start API Gateway
+        run: |
+          cd ${{ env.PRODUCTION_DIR }}
+
+          echo "Starting API Gateway with PM2..."
+
+          # Try to compile TypeScript first
+          npx tsc src/api-gateway/api-gateway.ts --target es2020 --module commonjs --esModuleInterop --outDir . || echo "TypeScript compilation failed, using ts-node"
+
+          # Use JavaScript if available, otherwise TypeScript with ts-node
+          if [ -f "api-gateway.js" ]; then
+            echo "Using compiled JavaScript"
+            NODE_ENV=production PORT=8080 BUILD_PATH=/opt/rdws_webserver/build SERVICE_TIMEOUT=5000 pm2 start api-gateway.js --name api-gateway --instances 1
+          else
+            echo "Using TypeScript with ts-node"
+            NODE_ENV=production PORT=8080 BUILD_PATH=/opt/rdws_webserver/build SERVICE_TIMEOUT=5000 pm2 start src/api-gateway/api-gateway.ts --name api-gateway --instances 1 --interpreter node --interpreter-args "--require ts-node/register"
+          fi
+
+          pm2 save
+
+          echo "PM2 started successfully"
+
+      - name: Health check
+        run: |
+          echo "Performing health check..."
+
+          # Wait for service to start
+          sleep 10
+
+          # Check PM2 status and logs first
+          echo "=== PM2 Status ==="
+          pm2 status
+
+          echo "=== PM2 Logs (last 20 lines) ==="
+          pm2 logs api-gateway --lines 20 --nostream || echo "No logs available"
+
+          echo "=== API Gateway process info ==="
+          pm2 describe api-gateway || echo "Process not found"
+
+          echo "=== Check if TypeScript is working ==="
+          cd ${{ env.PRODUCTION_DIR }}
+          ls -la *.ts *.js || echo "No TypeScript/JavaScript files found"
+
+          echo "=== Test direct Node.js execution ==="
+          timeout 5s node --require ts-node/register src/api-gateway/api-gateway.ts || echo "Direct execution failed"
+
+          # Use our verification script with correct parameter order
+          echo "=== Running verification script ==="
+          chmod +x scripts/verify-deploy.sh
+          ./scripts/verify-deploy.sh 8080 localhost || echo "Verification failed but continuing..."
+
+      - name: Deploy summary
+        run: |
+          echo "Deployment completed successfully!"
+          echo ""
+          echo "Deployment Summary:"
+          echo "  Environment: ${{ github.event.inputs.environment || 'production' }}"
+          echo "  Directory: ${{ env.PRODUCTION_DIR }}"
+          echo "  API Gateway: http://$(hostname -I | awk '{print $1}'):8080"
+          echo "  Health Check: http://$(hostname -I | awk '{print $1}'):8080/health"
+          echo ""
+          echo "Management Commands:"
+          echo "  Status: pm2 status"
+          echo "  Logs: pm2 logs api-gateway"
+          echo "  Restart: pm2 restart api-gateway"
+          echo "  Monitor: pm2 monit"
+          echo ""
+          echo "Endpoints:"
+          echo "  GET /health - Service health"
+          echo "  GET /users - List users"
+          echo "  GET /orders - List orders"
+          echo "  GET /api-docs - API documentation"
 
   # Job 3: Post-deployment tests
   post-deploy-tests:
@@ -455,65 +533,65 @@ jobs:
     needs: deploy
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v5
+      - name: Checkout code
+        uses: actions/checkout@v5
 
-    - name: Run comprehensive tests
-      run: |
-        echo "Running post-deployment tests..."
+      - name: Run comprehensive tests
+        run: |
+          echo "Running post-deployment tests..."
 
-        # Wait a bit more for service to stabilize
-        sleep 15
+          # Wait a bit more for service to stabilize
+          sleep 15
 
-        echo "=== Debug: PM2 Status before tests ==="
-        pm2 status
+          echo "=== Debug: PM2 Status before tests ==="
+          pm2 status
 
-        echo "=== Debug: PM2 Logs (latest) ==="
-        pm2 logs api-gateway --lines 30 --nostream || echo "No logs available"
+          echo "=== Debug: PM2 Logs (latest) ==="
+          pm2 logs api-gateway --lines 30 --nostream || echo "No logs available"
 
-        echo "=== Debug: Check if files exist ==="
-        cd /opt/rdws_webserver
-        ls -la
-        echo "TypeScript file content:"
-        head -20 src/api-gateway/api-gateway.ts || echo "File not found"
+          echo "=== Debug: Check if files exist ==="
+          cd /opt/rdws_webserver
+          ls -la
+          echo "TypeScript file content:"
+          head -20 src/api-gateway/api-gateway.ts || echo "File not found"
 
-        echo "=== Debug: Try manual curl ==="
-        curl -v http://localhost:8080/ || echo "Root endpoint failed"
-        curl -v http://localhost:8080/health || echo "Health endpoint failed"
+          echo "=== Debug: Try manual curl ==="
+          curl -v http://localhost:8080/ || echo "Root endpoint failed"
+          curl -v http://localhost:8080/health || echo "Health endpoint failed"
 
-        # Run verification script with correct parameter order (but don't fail on error)
-        chmod +x scripts/verify-deploy.sh
-        ./scripts/verify-deploy.sh 8080 localhost || echo "Verification failed but continuing for debugging..."
+          # Run verification script with correct parameter order (but don't fail on error)
+          chmod +x scripts/verify-deploy.sh
+          ./scripts/verify-deploy.sh 8080 localhost || echo "Verification failed but continuing for debugging..."
 
-    - name: Performance baseline test
-      run: |
-        echo "Running performance baseline test..."
+      - name: Performance baseline test
+        run: |
+          echo "Running performance baseline test..."
 
-        BASE_URL="http://localhost:8080"
+          BASE_URL="http://localhost:8080"
 
-        # Test response times
-        echo "Testing endpoint response times:"
+          # Test response times
+          echo "Testing endpoint response times:"
 
-        for endpoint in "/health" "/users" "/orders"; do
-          echo -n "$endpoint: "
-          time_total=$(curl -s -w "%{time_total}" -o /dev/null "$BASE_URL$endpoint")
-          time_ms=$(echo "$time_total * 1000 / 1" | bc)
-          echo "${time_ms}ms"
-        done
+          for endpoint in "/health" "/users" "/orders"; do
+            echo -n "$endpoint: "
+            time_total=$(curl -s -w "%{time_total}" -o /dev/null "$BASE_URL$endpoint")
+            time_ms=$(echo "$time_total * 1000 / 1" | bc)
+            echo "${time_ms}ms"
+          done
 
-    - name: Load test (basic)
-      run: |
-        echo "Running basic load test..."
+      - name: Load test (basic)
+        run: |
+          echo "Running basic load test..."
 
-        # Simple concurrent requests test
-        BASE_URL="http://localhost:8080"
+          # Simple concurrent requests test
+          BASE_URL="http://localhost:8080"
 
-        echo "Testing 10 concurrent requests to /health..."
-        seq 1 10 | xargs -n1 -P10 -I{} curl -s "$BASE_URL/health" > /dev/null
+          echo "Testing 10 concurrent requests to /health..."
+          seq 1 10 | xargs -n1 -P10 -I{} curl -s "$BASE_URL/health" > /dev/null
 
-        if [ $? -eq 0 ]; then
-          echo "Load test passed"
-        else
-          echo "Load test failed"
-          exit 1
-        fi
+          if [ $? -eq 0 ]; then
+            echo "Load test passed"
+          else
+            echo "Load test failed"
+            exit 1
+          fi
