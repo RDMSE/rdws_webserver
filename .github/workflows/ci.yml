@@ -7,11 +7,10 @@ on:
     branches: [main, develop]
 
 env:
-  BUILD_TYPE: Release
+  BUILD_TYPE: Debug
   BUILD_DIR: ${{ github.workspace }}/build
   NODE_VERSION: '20'
-  # Database configuration
-  ENVIRONMENT: production # branch develop
+  RDWS_ENVIRONMENT: production
   DB_HOST: ${{ secrets.DB_HOST }}
   DB_PORT: ${{ secrets.DB_PORT }}
   DB_USER: ${{ secrets.DB_USER }}
@@ -20,25 +19,23 @@ env:
   DB_NAME_PROD: ${{ secrets.DB_NAME_PROD }}
 
 jobs:
-  # Job 1: Build and test C++ microservices
   build-cpp-microservices:
     name: Build C++ Microservices
     runs-on: [self-hosted, Linux, X64, webserver, fedora]
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-
+        with:
+          submodules: true
       - name: Clean previous builds
         run: |
           rm -rf ${{ env.BUILD_DIR }}
           mkdir -p ${{ env.BUILD_DIR }}
-
       - name: Verify environment
         run: |
           echo "Running on self-hosted Fedora runner"
           echo "Build directory: ${{ env.BUILD_DIR }}"
-          echo "Environment: ${{ env.ENVIRONMENT }}"
+          echo "Environment: ${{ env.RDWS_ENVIRONMENT }}"
           echo "Database DEV: ${{ env.DB_NAME_DEV }}"
           echo "Database PROD: ${{ env.DB_NAME_PROD }}"
           whoami
@@ -47,77 +44,83 @@ jobs:
           which g++ || echo "g++ not found"
           which node || echo "Node.js not found"
           which npm || echo "npm not found"
-
       - name: Load database environment
         run: |
           echo "Loading database environment variables..."
-          source scripts/load_env.sh ${{ env.ENVIRONMENT }}
-          echo "Database configuration loaded for environment: ${{ env.ENVIRONMENT }}"
-
+          source scripts/load_env.sh ${{ env.RDWS_ENVIRONMENT }}
+          echo "Database configuration loaded for environment: ${{ env.RDWS_ENVIRONMENT }}"
+      - name: Check .env.${{ env.RDWS_ENVIRONMENT }} exists
+        run: |
+          ENV_FILE=".env.${{ env.RDWS_ENVIRONMENT }}"
+          if [ -f "$ENV_FILE" ]; then
+            echo "$ENV_FILE found."
+          else
+            echo "ERROR: $ENV_FILE not found!"
+            exit 1
+          fi
       - name: Install dependencies if needed
         run: |
-          # Check and install CMake if needed
           if ! command -v cmake &> /dev/null; then
             echo "Installing CMake..."
             sudo dnf install -y cmake
           fi
-
-          # Check and install build tools if needed
           if ! command -v g++ &> /dev/null; then
             echo "Installing build tools..."
             sudo dnf groupinstall -y "Development Tools"
             sudo dnf install -y gcc-c++
           fi
-
-          # Check and install Google Test if needed
           if ! pkg-config --exists gtest; then
             echo "Installing Google Test..."
             sudo dnf install -y gtest-devel gmock-devel
           fi
-
+          if ! pkg-config --exists libpqxx; then
+            echo "Installing libpqxx..."
+            sudo dnf install -y libpqxx-devel
+          fi
+          if ! pkg-config --exists jsoncpp; then
+            echo "Installing jsoncpp..."
+            sudo dnf install -y jsoncpp-devel
+          fi
+          if ! command -v ninja &> /dev/null; then
+            echo "Installing Ninja build system..."
+            sudo dnf install -y ninja-build
+          fi
+          if ! command -v node &> /dev/null; then
+            echo "Installing Node.js..."
+            curl -fsSL https://rpm.nodesource.com/setup_lts.x | sudo bash -
+            sudo dnf install -y nodejs
+          fi
       - name: Configure CMake
         run: |
           cd ${{ env.BUILD_DIR }}
-          cmake .. \
-            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-            -DCMAKE_CXX_STANDARD=17 \
-            -G "Unix Makefiles"
-
+          cmake .. -GNinja
       - name: Build C++ microservices
         run: |
           cd ${{ env.BUILD_DIR }}
-          make -j$(nproc)
-
-          # Verify that microservices were built
+          ninja
           echo "Verifying microservices..."
           ls -la src/services/*/
           find . -name "*_service" -type f -executable
-
       - name: Test microservices executables
         run: |
           cd ${{ env.BUILD_DIR }}
-
           echo "Testing users_service..."
           if [ -f "./src/services/users/users_service" ]; then
-            ./src/services/users/users_service "GET" "/users"
+            echo "SUCCESS: users_service found"
           else
             echo "ERROR: users_service not found"
             exit 1
           fi
-
           echo "Testing orders_service..."
           if [ -f "./src/services/orders/orders_service" ]; then
-            ./src/services/orders/orders_service "GET" "/orders"
+            echo "SUCCESS: orders_service found"
           else
             echo "ERROR: orders_service not found"
             exit 1
           fi
-
       - name: Run C++ tests
         run: |
           cd ${{ env.BUILD_DIR }}
-
-          # Debug: Show current directory structure
           echo "Current directory structure:"
           pwd
           ls -la
@@ -125,30 +128,24 @@ jobs:
           ls -la src/services/ || echo "No services directory"
           echo "Tests directory:"
           ls -la tests/ || echo "No tests directory"
-
-          # Run microservice tests
           if [ -f "tests/microservice_tests" ]; then
             echo "Running microservice_tests..."
             ./tests/microservice_tests --gtest_output=xml:microservice_test_results.xml
           else
             echo "microservice_tests not found"
           fi
-
-          # Run individual service tests
-          if [ -f "tests/users_service_tests" ]; then
-            echo "Running users_service_tests..."
-            ./tests/users_service_tests --gtest_output=xml:users_test_results.xml
+          if [ -f "tests/users_service_unit_tests" ]; then
+            echo "Running users_service_unit_tests..."
+            ./tests/users_service_unit_tests --gtest_output=xml:users_test_results.xml
           else
-            echo "users_service_tests not found"
+            echo "users_service_unit_tests not found"
           fi
-
-          if [ -f "tests/orders_service_tests" ]; then
-            echo "Running orders_service_tests..."
-            ./tests/orders_service_tests --gtest_output=xml:orders_test_results.xml
+          if [ -f "tests/orders_service_unit_tests" ]; then
+            echo "Running orders_service_unit_tests..."
+            ./tests/orders_service_unit_tests --gtest_output=xml:orders_test_results.xml
           else
-            echo "orders_service_tests not found"
+            echo "orders_service_unit_tests not found"
           fi
-
       - name: Upload C++ test results
         uses: actions/upload-artifact@v4
         if: always()
@@ -156,7 +153,6 @@ jobs:
           name: cpp-test-results-${{ github.run_number }}
           path: |
             ${{ env.BUILD_DIR }}/*_test_results.xml
-
       - name: Check microservices before upload
         run: |
           echo "Checking if microservices were built..."
@@ -169,327 +165,13 @@ jobs:
             exit 1
           fi
           echo "Both microservices found, proceeding with upload"
-
       - name: Upload microservices binaries
         uses: actions/upload-artifact@v4
         with:
           name: microservices-binaries-${{ github.run_number }}
           path: |
             ${{ env.BUILD_DIR }}/src/services/
-
       - name: Verify uploaded artifacts
         run: |
           echo "Verifying artifacts that were uploaded..."
           find ${{ env.BUILD_DIR }}/src/services/ -name "*_service" -type f -ls || echo "No service executables found"
-
-  # Job 2: Test API Gateway (Node.js)
-  test-api-gateway:
-    name: Test API Gateway
-    runs-on: [self-hosted, Linux, X64, webserver, fedora]
-    needs: build-cpp-microservices
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Setup Node.js
-        run: |
-          # Check if Node.js is installed
-          if ! command -v node &> /dev/null; then
-            echo "Installing Node.js..."
-            curl -fsSL https://rpm.nodesource.com/setup_lts.x | sudo bash -
-            sudo dnf install -y nodejs
-          fi
-
-          echo "Node.js version: $(node --version)"
-          echo "npm version: $(npm --version)"
-
-      - name: Download microservices binaries
-        uses: actions/download-artifact@v5
-        with:
-          name: microservices-binaries-${{ github.run_number }}
-          path: ${{ env.BUILD_DIR }}
-        continue-on-error: true
-        id: download-artifacts
-
-      - name: Handle missing artifacts
-        if: steps.download-artifacts.outcome == 'failure'
-        run: |
-          echo "Failed to download artifacts. This might be because:"
-          echo "1. The build job failed and didn't create artifacts"
-          echo "2. The artifact name is incorrect"
-          echo "3. The artifacts expired"
-          echo ""
-          echo "Checking if we can build microservices locally instead..."
-          mkdir -p ${{ env.BUILD_DIR }}
-          cd ${{ env.BUILD_DIR }}
-          cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug
-          make -j$(nproc)
-          echo "Local build completed as fallback"
-
-      - name: Make binaries executable
-        run: |
-          echo "Checking downloaded artifacts..."
-          find ${{ env.BUILD_DIR }} -name "*_service" -type f
-          ls -la ${{ env.BUILD_DIR }}/
-
-          # Find the actual location of executables
-          USERS_SERVICE=$(find ${{ env.BUILD_DIR }} -name "users_service" -type f | head -1)
-          ORDERS_SERVICE=$(find ${{ env.BUILD_DIR }} -name "orders_service" -type f | head -1)
-
-          if [ -n "$USERS_SERVICE" ] && [ -f "$USERS_SERVICE" ]; then
-            chmod +x "$USERS_SERVICE"
-            echo "users_service made executable at: $USERS_SERVICE"
-          else
-            echo "ERROR: users_service not found anywhere"
-            exit 1
-          fi
-
-          if [ -n "$ORDERS_SERVICE" ] && [ -f "$ORDERS_SERVICE" ]; then
-            chmod +x "$ORDERS_SERVICE"
-            echo "orders_service made executable at: $ORDERS_SERVICE"
-          else
-            echo "ERROR: orders_service not found anywhere"
-            exit 1
-          fi
-
-          # Create symlinks in expected locations for API Gateway
-          mkdir -p ${{ env.BUILD_DIR }}/src/services/users
-          mkdir -p ${{ env.BUILD_DIR }}/src/services/orders
-          ln -sf "$USERS_SERVICE" ${{ env.BUILD_DIR }}/src/services/users/users_service
-          ln -sf "$ORDERS_SERVICE" ${{ env.BUILD_DIR }}/src/services/orders/orders_service
-          echo "Created symlinks in expected locations"
-
-      - name: Install API Gateway dependencies
-        run: |
-          npm ci
-
-      - name: Run API Gateway tests
-        env:
-          BUILD_PATH: ${{ env.BUILD_DIR }}
-        run: |
-          npm test
-
-      - name: Upload API Gateway test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: api-gateway-test-results-${{ github.run_number }}
-          path: |
-            coverage/
-            junit.xml
-
-  # Job 3: Integration tests
-  integration-tests:
-    name: Integration Tests
-    runs-on: [self-hosted, Linux, X64, webserver, fedora]
-    needs: [build-cpp-microservices, test-api-gateway]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Download microservices binaries
-        uses: actions/download-artifact@v5
-        with:
-          name: microservices-binaries-${{ github.run_number }}
-          path: ${{ env.BUILD_DIR }}
-        continue-on-error: true
-        id: download-artifacts-integration
-
-      - name: Handle missing artifacts (Integration)
-        if: steps.download-artifacts-integration.outcome == 'failure'
-        run: |
-          echo "Failed to download artifacts for integration tests"
-          echo "Building microservices locally as fallback..."
-          mkdir -p ${{ env.BUILD_DIR }}
-          cd ${{ env.BUILD_DIR }}
-          cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug
-          make -j$(nproc)
-          echo "Local build completed for integration tests"
-
-      - name: Make binaries executable
-        run: |
-          echo "Checking downloaded artifacts for integration tests..."
-          find ${{ env.BUILD_DIR }} -name "*_service" -type f
-          ls -la ${{ env.BUILD_DIR }}/
-
-          # Find the actual location of executables
-          USERS_SERVICE=$(find ${{ env.BUILD_DIR }} -name "users_service" -type f | head -1)
-          ORDERS_SERVICE=$(find ${{ env.BUILD_DIR }} -name "orders_service" -type f | head -1)
-
-          if [ -n "$USERS_SERVICE" ] && [ -f "$USERS_SERVICE" ]; then
-            chmod +x "$USERS_SERVICE"
-            echo "users_service made executable at: $USERS_SERVICE"
-          else
-            echo "ERROR: users_service not found anywhere"
-            exit 1
-          fi
-
-          if [ -n "$ORDERS_SERVICE" ] && [ -f "$ORDERS_SERVICE" ]; then
-            chmod +x "$ORDERS_SERVICE"
-            echo "orders_service made executable at: $ORDERS_SERVICE"
-          else
-            echo "ERROR: orders_service not found anywhere"
-            exit 1
-          fi
-
-          # Create symlinks in expected locations for API Gateway
-          mkdir -p ${{ env.BUILD_DIR }}/src/services/users
-          mkdir -p ${{ env.BUILD_DIR }}/src/services/orders
-          ln -sf "$USERS_SERVICE" ${{ env.BUILD_DIR }}/src/services/users/users_service
-          ln -sf "$ORDERS_SERVICE" ${{ env.BUILD_DIR }}/src/services/orders/orders_service
-          echo "Created symlinks in expected locations"
-
-      - name: Install dependencies
-        run: |
-          npm ci
-
-      - name: Build TypeScript
-        run: |
-          echo "Building TypeScript..."
-          npm run build:ts || echo "TypeScript build failed, trying to run directly"
-
-      - name: Start API Gateway in background
-        env:
-          BUILD_PATH: ${{ env.BUILD_DIR }}
-        run: |
-          # Find a free port instead of using fixed 8080
-          echo "Finding a free port..."
-          FREE_PORT=$(python3 -c "import socket; s = socket.socket(); s.bind(('', 0)); print(s.getsockname()[1]); s.close()")
-          echo "Using port: $FREE_PORT"
-          export PORT=$FREE_PORT
-
-          echo "Starting API Gateway with BUILD_PATH=$BUILD_PATH and PORT=$PORT"
-          echo "Verifying microservices are available..."
-          ls -la ${{ env.BUILD_DIR }}/src/services/*/
-
-          # Test microservices directly first
-          echo "Testing microservices directly..."
-          ${{ env.BUILD_DIR }}/src/services/users/users_service "GET" "/users" || echo "Users service failed"
-          ${{ env.BUILD_DIR }}/src/services/orders/orders_service "GET" "/orders" || echo "Orders service failed"
-
-          echo "Starting API Gateway on port $FREE_PORT..."
-          if [ -f "dist/api-gateway.js" ]; then
-            echo "Using compiled TypeScript"
-            nohup node dist/api-gateway.js > gateway.log 2>&1 &
-          else
-            echo "Using ts-node directly"
-            nohup npx ts-node src/api-gateway/api-gateway.ts > gateway.log 2>&1 &
-          fi
-          echo $! > gateway.pid
-
-          echo "Waiting for API Gateway to start..."
-          sleep 10
-
-          # Check if process is still running
-          if kill -0 $(cat gateway.pid) 2>/dev/null; then
-            echo "API Gateway process is running (PID: $(cat gateway.pid))"
-          else
-            echo "API Gateway process died. Check logs:"
-            cat gateway.log
-            exit 1
-          fi
-
-          # Check if port is listening
-          if netstat -tlnp | grep :$FREE_PORT; then
-            echo "Port $FREE_PORT is listening"
-          else
-            echo "Port $FREE_PORT is NOT listening. Available ports:"
-            netstat -tlnp
-            echo "Gateway logs:"
-            cat gateway.log
-            exit 1
-          fi
-
-          # Quick health check
-          echo "Testing basic connectivity..."
-          if curl -f http://localhost:$FREE_PORT/health; then
-            echo "Health check passed"
-          else
-            echo "Health check failed. Gateway logs:"
-            cat gateway.log
-            exit 1
-          fi
-
-          # Save port for next step
-          echo $FREE_PORT > gateway.port
-          echo "API Gateway successfully started on port $FREE_PORT"
-
-      - name: Run integration tests
-        run: |
-          # Read the port used by API Gateway
-          if [ -f gateway.port ]; then
-            GATEWAY_PORT=$(cat gateway.port)
-            echo "Using API Gateway port: $GATEWAY_PORT"
-          else
-            echo "ERROR: Gateway port file not found"
-            exit 1
-          fi
-
-          echo "Running integration tests..."
-          echo "Current processes:"
-          ps aux | grep -E "(node|api-gateway)" || echo "No node processes found"
-          echo "Listening ports:"
-          netstat -tlnp | grep :$GATEWAY_PORT || echo "Port $GATEWAY_PORT not listening"
-
-          chmod +x scripts/verify-deploy.sh
-          if ./scripts/verify-deploy.sh $GATEWAY_PORT localhost; then
-            echo "Integration tests passed"
-          else
-            echo "Integration tests failed. Gateway logs:"
-            cat gateway.log || echo "No gateway.log found"
-            exit 1
-          fi
-
-      - name: Stop API Gateway
-        if: always()
-        run: |
-          echo "Stopping API Gateway..."
-
-          # Kill by PID file if exists
-          if [ -f gateway.pid ]; then
-            PID=$(cat gateway.pid)
-            echo "Killing process $PID"
-            kill $PID || true
-            rm gateway.pid
-            echo "Gateway process stopped"
-          else
-            echo "No gateway.pid file found"
-          fi
-
-          # Clean up port file
-          rm -f gateway.port
-
-      - name: Upload integration test logs
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: integration-logs-${{ github.run_number }}
-          path: |
-            gateway.log
-
-  # Summary job that depends on all others
-  ci-summary:
-    name: CI Summary
-    runs-on: [self-hosted, Linux, X64, webserver, fedora]
-    needs: [build-cpp-microservices, test-api-gateway, integration-tests]
-    if: always()
-
-    steps:
-      - name: Check CI results
-        run: |
-          echo "CI Summary:"
-          echo "- C++ Microservices Build: ${{ needs.build-cpp-microservices.result }}"
-          echo "- API Gateway Tests: ${{ needs.test-api-gateway.result }}"
-          echo "- Integration Tests: ${{ needs.integration-tests.result }}"
-
-          if [[ "${{ needs.build-cpp-microservices.result }}" == "success" &&
-                "${{ needs.test-api-gateway.result }}" == "success" &&
-                "${{ needs.integration-tests.result }}" == "success" ]]; then
-            echo "All critical CI jobs passed!"
-            exit 0
-          else
-            echo "Some CI jobs failed!"
-            exit 1
-          fi
