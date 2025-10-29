@@ -60,35 +60,43 @@ jobs:
           fi
       - name: Install dependencies if needed
         run: |
+          # Install Node.js if needed
+          if ! command -v node &> /dev/null; then
+            echo "Installing Node.js..."
+            curl -fsSL https://rpm.nodesource.com/setup_lts.x | sudo bash -
+            sudo dnf install -y nodejs
+          fi
+
+          # Install build tools if needed
           if ! command -v cmake &> /dev/null; then
             echo "Installing CMake..."
             sudo dnf install -y cmake
           fi
+
           if ! command -v g++ &> /dev/null; then
             echo "Installing build tools..."
             sudo dnf groupinstall -y "Development Tools"
             sudo dnf install -y gcc-c++
           fi
+
           if ! pkg-config --exists gtest; then
             echo "Installing Google Test..."
             sudo dnf install -y gtest-devel gmock-devel
           fi
+
           if ! pkg-config --exists libpqxx; then
             echo "Installing libpqxx..."
             sudo dnf install -y libpqxx-devel
           fi
+
           if ! pkg-config --exists jsoncpp; then
             echo "Installing jsoncpp..."
             sudo dnf install -y jsoncpp-devel
           fi
+
           if ! command -v ninja &> /dev/null; then
             echo "Installing Ninja build system..."
             sudo dnf install -y ninja-build
-          fi
-          if ! command -v node &> /dev/null; then
-            echo "Installing Node.js..."
-            curl -fsSL https://rpm.nodesource.com/setup_lts.x | sudo bash -
-            sudo dnf install -y nodejs
           fi
       - name: Configure CMake
         run: |
