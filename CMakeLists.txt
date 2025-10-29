@@ -10,15 +10,15 @@ set(CMAKE_CXX_EXTENSIONS ON)
 
 # Set default build type if not specified
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Debug)
+  set(CMAKE_BUILD_TYPE Debug)
 endif()
 
 # identify the environment
 if(DEFINED ENV{RDWS_ENVIRONMENT})
-    set(ENVIRONMENT $ENV{RDWS_ENVIRONMENT})
-else ()
-    set(ENVIRONMENT "development")
-endif ()
+  set(ENVIRONMENT $ENV{RDWS_ENVIRONMENT})
+else()
+  set(ENVIRONMENT "development")
+endif()
 
 message(STATUS "We are on '${ENVIRONMENT}' environment")
 
@@ -29,19 +29,19 @@ set(DEST_ENV_FILE "${DEST_ENV_DIR}/.env")
 
 # verify if file exist
 if(EXISTS ${SOURCE_ENV_FILE})
-    message(STATUS "Using env file: ${SOURCE_ENV_FILE}")
-else ()
-    message(FATAL_ERROR "Env file not found for environment '${ENVIRONMENT}': ${SOURCE_ENV_FILE}")
-endif ()
+  message(STATUS "Using env file: ${SOURCE_ENV_FILE}")
+else()
+  message(FATAL_ERROR "Env file not found for environment '${ENVIRONMENT}': ${SOURCE_ENV_FILE}")
+endif()
 
 # make sure destination directory exists
 file(MAKE_DIRECTORY "${DEST_ENV_DIR}")
 
 # copy env file
 add_custom_target(copy_env ALL
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                ${SOURCE_ENV_FILE} ${DEST_ENV_FILE}
-        COMMENT "Copying ${SOURCE_ENV_FILE} to ${DEST_ENV_FILE}"
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+  ${SOURCE_ENV_FILE} ${DEST_ENV_FILE}
+  COMMENT "Copying ${SOURCE_ENV_FILE} to ${DEST_ENV_FILE}"
 )
 
 
@@ -72,6 +72,9 @@ include_directories(src/third_party/dotenv-cpp/include/laserpants/dotenv)
 
 # Add Valijson header-only library
 include_directories(src/third_party/valijson/include)
+
+# Add rapidjson include directory
+include_directories(src/third_party/valijson/thirdparty/rapidjson/include)
 
 # Add services subdirectory (microservices executables)
 add_subdirectory(src/services)
