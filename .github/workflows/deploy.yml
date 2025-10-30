@@ -341,7 +341,7 @@ jobs:
 
             # Add external access rules (preserve across deploys)
             echo "Enabling external access..."
-            if ! grep -q "# External access for DBeaver" /var/lib/pgsql/data/pg_hba.conf; then
+            if ! sudo grep -q "# External access for DBeaver" /var/lib/pgsql/data/pg_hba.conf; then
               echo "" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
               echo "# External access for DBeaver" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
               echo "host    ${{ env.DB_NAME_DEV }}    ${{ env.DB_USER }}       0.0.0.0/0               md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
