@@ -195,8 +195,8 @@ jobs:
       - name: Run quick tests on API Gateway
         run: |
           # Test API Gateway
-          cd ..
-          BUILD_PATH=${{ env.BUILD_DIR }} npm test
+          cd ${{ env.BUILD_DIR }}
+          npm test
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v5
@@ -221,6 +221,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          submodules: true
 
       - name: Download build artifacts
         uses: actions/download-artifact@v5
@@ -320,7 +322,7 @@ jobs:
           chmod +x scripts/setup-postgresql.sh
           chmod +x scripts/migrate-database.sh
 
-                  # Install PostgreSQL if not already installed
+          # Install PostgreSQL if not already installed
           if ! command -v psql &> /dev/null; then
             echo "Installing PostgreSQL..."
             ./scripts/setup-postgresql.sh
@@ -425,21 +427,6 @@ jobs:
           echo "Development database:"
           ./scripts/migrate-database.sh development status || echo "Development status check failed"
 
-      - name: Generate C++ Configuration Files
-        run: |
-          cd ${{ env.PRODUCTION_DIR }}
-
-          echo "Generating configuration files for C++ microservices..."
-          chmod +x scripts/generate-cpp-config.sh
-
-          # Generate config for production environment
-          export DB_NAME="${{ env.DB_NAME_PROD }}"
-          ./scripts/generate-cpp-config.sh production ${{ env.PRODUCTION_DIR }}/config
-
-          # Generate config for development environment
-          export DB_NAME="${{ env.DB_NAME_DEV }}"
-          ./scripts/generate-cpp-config.sh development ${{ env.PRODUCTION_DIR }}/config
-
       - name: Enable External PostgreSQL Access
         run: |
           cd ${{ env.PRODUCTION_DIR }}
@@ -535,6 +522,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          submodules: true
 
       - name: Run comprehensive tests
         run: |

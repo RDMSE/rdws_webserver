@@ -35,7 +35,7 @@ import {
 
 // Determine which .env file to load based on NODE_ENV
 const environment = process.env.NODE_ENV || 'development';
-const envFile = resolve(process.cwd(), `.env.${environment}`);
+const envFile = resolve(process.cwd(), `.env`);
 
 console.log(`Loading environment: ${environment}`);
 console.log(`Environment file: ${envFile}`);
@@ -250,7 +250,7 @@ app.get('/health', async (req: Request, res: Response) => {
         requestId: req.requestId,
         get: () => 'HealthCheck/1.0',
       } as any;
-      
+
       await callMicroservice(service, mockReq);
       healthData.services[service] = {
         status: 'healthy',
