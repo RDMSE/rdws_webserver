@@ -40,7 +40,7 @@ std::string Config::getDatabaseUser() const {
 }
 
 std::string Config::getDatabasePassword() const {
-    return get("DB_PASSWORD").value_or("");
+    return get("DB_PASS").value_or("");
 }
 
 std::string Config::getConnectionString() const {
@@ -72,7 +72,7 @@ void Config::loadEnvironmentVariables() {
     settings["DB_PORT"] = getEnvVar("DB_PORT").value_or("1234");
     settings["DB_HOST"] = getEnvVar("DB_HOST").value_or("test-server");
     settings["DB_USER"] = getEnvVar("DB_USER").value_or("db_user");
-    settings["DB_PASSWORD"] = getEnvVar("DB_PASSWORD").value_or("db_psswd");
+    settings["DB_PASS"] = getEnvVar("DB_PASS").value_or("db_psswd");
     settings["DB_NAME"] =
         getEnvVar("DB_NAME").value_or("db_name"); // Will be set by getDatabaseName()
 }

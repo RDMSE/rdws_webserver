@@ -63,18 +63,23 @@ pkg_check_modules(PQXX REQUIRED libpqxx)
 set(PQXX_LIBS ${PQXX_LIBRARIES})
 set(PQXX_INCLUDES ${PQXX_INCLUDE_DIRS})
 
+
+include_directories(
+        src/third_party/dotenv-cpp/include/laserpants/dotenv # Make dotenv include available globally
+        src/third_party/valijson/include # Add Valijson header-only library
+        src/third_party/valijson/thirdparty/rapidjson/include # Add rapidjson include directory
+        src/third_party/expected/include
+)
+
+# Add Valijson header-only library
+# include_directories(src/third_party/valijson/include)
+
+# Add rapidjson include directory
+# include_directories(src/third_party/valijson/thirdparty/rapidjson/include)
+
 # Add dotenv-cpp third-party library
 add_subdirectory(src/third_party/dotenv-cpp)
 add_subdirectory(src/third_party/valijson)
-
-# Make dotenv include available globally
-include_directories(src/third_party/dotenv-cpp/include/laserpants/dotenv)
-
-# Add Valijson header-only library
-include_directories(src/third_party/valijson/include)
-
-# Add rapidjson include directory
-include_directories(src/third_party/valijson/thirdparty/rapidjson/include)
 
 # Add services subdirectory (microservices executables)
 add_subdirectory(src/services)
