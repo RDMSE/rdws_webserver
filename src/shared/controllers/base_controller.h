@@ -30,6 +30,10 @@ class BaseController {
         return formatErrorResponse("Failed to connect to database", 500);
     }
 
+    static std::string formatUsageError() {
+        return formatErrorResponse("Usage error: should be <service> <json lambda event> <json lambda context>", 500);
+    }
+
     static std::string formatServiceError(const std::string& message) {
         return formatErrorResponse("Service error: " + message, 500);
     }
