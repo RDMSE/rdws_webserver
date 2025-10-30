@@ -22,11 +22,11 @@ sudo systemctl start postgresql
 sudo systemctl enable postgresql
 
 # Configure PostgreSQL for remote connections (if needed)
-echo "⚙️ Configuring PostgreSQL..."
+echo "Configuring PostgreSQL..."
 sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres123';"
 
 # Configure authentication to allow password authentication
-echo "🔐 Configuring authentication..."
+echo "Configuring authentication..."
 sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = 'localhost'/" /var/lib/pgsql/data/postgresql.conf
 sudo sed -i "s/ident$/md5/" /var/lib/pgsql/data/pg_hba.conf
 sudo sed -i "s/peer$/md5/" /var/lib/pgsql/data/pg_hba.conf
@@ -57,7 +57,7 @@ sudo -u postgres psql -d rdws_production -c "GRANT ALL ON SCHEMA public TO rdws_
 sudo -u postgres psql -d rdws_production -c "GRANT CREATE ON SCHEMA public TO rdws_user;"
 
 # Set default privileges for future objects
-echo "🛡️ Setting default privileges..."
+echo "Setting default privileges..."
 sudo -u postgres psql -d rdws_development -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO rdws_user;"
 sudo -u postgres psql -d rdws_development -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO rdws_user;"
 sudo -u postgres psql -d rdws_production -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO rdws_user;"
@@ -70,9 +70,3 @@ echo ""
 echo "Databases created:"
 sudo -u postgres psql -l | grep rdws
 echo ""
-echo "Connection info:"
-echo "  Host: localhost"
-echo "  User: rdws_user"
-echo "  Password: rdws_pass123"
-echo "  Databases: rdws_development, rdws_production"
-echo "  Port: 5432"
