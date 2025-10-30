@@ -17,8 +17,9 @@ using namespace rdws::controllers;
 
 int main(int argc, char* argv[]) {
     try {
-        if (rdws::utils::LambdaParamsHelper::checkParams(argc, argv)) {
-            std::cerr << UserController::formatUsageError() << std::endl;
+        if (auto checkParameters = rdws::utils::LambdaParamsHelper::checkParams(argc, argv); !checkParameters.has_value()) {
+            std::cerr << UserController::formatUsageError(checkParameters.error()) << std::endl;
+            return 1;
         }
 
         rdws::utils::LambdaParams params{ .eventJson = argv[1], .contextJson = argv[2] };

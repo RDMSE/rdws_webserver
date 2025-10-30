@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <tl/expected.hpp>
 
 namespace rdws::utils {
 
@@ -10,8 +11,7 @@ namespace rdws::utils {
 
     class LambdaParamsHelper {
     public:
-        static bool checkParams(const int argc, char *argv[]);
-
+        static tl::expected<bool, std::string> checkParams(int argc, char *argv[]);
     };
 } // rdws
 

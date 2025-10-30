@@ -17,13 +17,14 @@ using namespace rdws::controllers;
 
 int main(int argc, char* argv[]) {
     try {
-        if (rdws::utils::LambdaParamsHelper::checkParams(argc, argv)) {
-            std::cerr << OrderController::formatUsageError() << std::endl;
+        if (auto checkParameters = rdws::utils::LambdaParamsHelper::checkParams(argc, argv); !checkParameters.has_value()) {
+            std::cerr << OrderController::formatUsageError(checkParameters.error()) << std::endl;
+            return 1;
         }
 
         rdws::utils::LambdaParams params{ .eventJson = argv[1], .contextJson = argv[2] };
         LambdaEvent event = LambdaEvent::fromJson(params.eventJson);
-        // LambdaContext context = LambdaContext::fromJson(params.contextJson);
+        LambdaContext context = LambdaContext::fromJson(params.contextJson);
 
         context.log("Function started", "INFO");
 
