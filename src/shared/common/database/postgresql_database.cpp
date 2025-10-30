@@ -1,8 +1,23 @@
 #include "postgresql_database.h"
 
 #include <stdexcept>
+#include <tuple>
+#include <utility>
 
 namespace rdws::database {
+
+// auxiliar function to expand the parameters
+template <typename Transaction>
+pqxx::result exec_prepared_helper(Transaction& txn, const std::string& stmt_name,
+                                  const std::vector<std::string>& params,
+                                  const std::string& query) {
+    if (params.empty()) {
+        return txn.exec(query);
+    } else {
+        const std::vector<std::string_view> svparams(params.begin(), params.end());
+        return txn.exec(stmt_name, svparams);
+    }
+}
 
 // PostgreSQLResultSet Implementation
 
@@ -104,41 +119,17 @@ PostgreSQLDatabase::execQuery(const std::string& query,
     try {
         ensureConnection();
 
+        std::string stmt_name = "stmt_" + std::to_string(std::hash<std::string>{}(query));
         if (currentTransaction) {
             pqxx::result result;
-            if (parameters.empty()) {
-                result = currentTransaction->exec(query);
-            } else {
-                // Use individual parameters for better compatibility
-                if (parameters.size() == 1) {
-                    result = currentTransaction->exec_params(query, parameters[0]);
-                } else if (parameters.size() == 2) {
-                    result = currentTransaction->exec_params(query, parameters[0], parameters[1]);
-                } else if (parameters.size() == 3) {
-                    result = currentTransaction->exec_params(query, parameters[0], parameters[1],
-                                                             parameters[2]);
-                } else {
-                    result = currentTransaction->exec_params(query, parameters);
-                }
-            }
+            connection->prepare(stmt_name, query);
+            result = exec_prepared_helper(*currentTransaction, stmt_name, parameters, query);
             return std::make_unique<PostgreSQLResultSet>(std::move(result));
         } else {
             pqxx::work txn{*connection};
             pqxx::result result;
-            if (parameters.empty()) {
-                result = txn.exec(query);
-            } else {
-                // Use individual parameters for better compatibility
-                if (parameters.size() == 1) {
-                    result = txn.exec_params(query, parameters[0]);
-                } else if (parameters.size() == 2) {
-                    result = txn.exec_params(query, parameters[0], parameters[1]);
-                } else if (parameters.size() == 3) {
-                    result = txn.exec_params(query, parameters[0], parameters[1], parameters[2]);
-                } else {
-                    result = txn.exec_params(query, parameters);
-                }
-            }
+            connection->prepare(stmt_name, query);
+            result = exec_prepared_helper(txn, stmt_name, parameters, query);
             txn.commit();
             return std::make_unique<PostgreSQLResultSet>(std::move(result));
         }
@@ -152,39 +143,15 @@ bool PostgreSQLDatabase::execCommand(const std::string& command,
     try {
         ensureConnection();
 
+        std::string stmt_name = "stmt_" + std::to_string(std::hash<std::string>{}(command));
         if (currentTransaction) {
-            if (parameters.empty()) {
-                currentTransaction->exec(command);
-            } else {
-                // Use individual parameters for better compatibility
-                if (parameters.size() == 1) {
-                    currentTransaction->exec_params(command, parameters[0]);
-                } else if (parameters.size() == 2) {
-                    currentTransaction->exec_params(command, parameters[0], parameters[1]);
-                } else if (parameters.size() == 3) {
-                    currentTransaction->exec_params(command, parameters[0], parameters[1],
-                                                    parameters[2]);
-                } else {
-                    currentTransaction->exec_params(command, parameters);
-                }
-            }
+            connection->prepare(stmt_name, command);
+            exec_prepared_helper(*currentTransaction, stmt_name, parameters, command);
             return true;
         } else {
             pqxx::work txn{*connection};
-            if (parameters.empty()) {
-                txn.exec(command);
-            } else {
-                // Use individual parameters for better compatibility
-                if (parameters.size() == 1) {
-                    txn.exec_params(command, parameters[0]);
-                } else if (parameters.size() == 2) {
-                    txn.exec_params(command, parameters[0], parameters[1]);
-                } else if (parameters.size() == 3) {
-                    txn.exec_params(command, parameters[0], parameters[1], parameters[2]);
-                } else {
-                    txn.exec_params(command, parameters);
-                }
-            }
+            connection->prepare(stmt_name, command);
+            exec_prepared_helper(txn, stmt_name, parameters, command);
             txn.commit();
             return true;
         }
@@ -210,7 +177,10 @@ bool PostgreSQLDatabase::execBatch(const std::vector<std::string>& commands,
         }
 
         for (size_t i = 0; i < commands.size(); ++i) {
-            currentTransaction->exec_params(commands[i], parameterSets[i]);
+            std::string stmt_name = "stmt_" + std::to_string(std::hash<std::string>{}(commands[i]));
+            connection->prepare(stmt_name, commands[i]);
+            const auto& params = parameterSets[i];
+            exec_prepared_helper(*currentTransaction, stmt_name, params, commands[i]);
         }
 
         if (!wasInTransaction) {

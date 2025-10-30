@@ -15,6 +15,7 @@ pkg_check_modules(LIBPQXX REQUIRED libpqxx)
 
 # Find jsoncpp via pkg-config
 pkg_check_modules(JSONCPP REQUIRED jsoncpp)
+pkg_check_modules(LIBPQ REQUIRED libpq)
 
 # Include directories
 include_directories(${LIBPQXX_INCLUDE_DIRS})
@@ -22,6 +23,8 @@ include_directories(${JSONCPP_INCLUDE_DIRS})
 include_directories(../../../third_party/valijson/include)
 include_directories(/usr/include/rapidjson)
 include_directories(../../shared) # Add shared directory to include path
+# Optionally include libpq headers (not usually needed)
+# include_directories(${LIBPQ_INCLUDE_DIRS})
 
 # Add executable
 add_executable(users_service
@@ -40,6 +43,7 @@ add_executable(users_service
 # Link libraries
 target_link_libraries(users_service
   ${LIBPQXX_LIBRARIES}
+  ${LIBPQ_LIBRARIES}
   ${JSONCPP_LIBRARIES}
 )
 
