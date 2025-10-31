@@ -339,16 +339,12 @@ jobs:
             sudo sed -i "s/host    all             all             127.0.0.1\/32            ident/host    all             all             127.0.0.1\/32            md5/" /var/lib/pgsql/data/pg_hba.conf
             sudo sed -i "s/host    all             all             ::1\/128                 ident/host    all             all             ::1\/128                 md5/" /var/lib/pgsql/data/pg_hba.conf
 
-            # Add external access rules (preserve across deploys)
+            # Add external access rule (preserve across deploys)
             echo "Enabling external access..."
-            if ! sudo grep -q "# External access for DBeaver" /var/lib/pgsql/data/pg_hba.conf; then
+            if ! sudo grep -q "# IPv4 external connections" /var/lib/pgsql/data/pg_hba.conf; then
               echo "" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
-              echo "# External access for DBeaver" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
-              echo "host    ${{ env.DB_NAME_DEV }}    ${{ env.DB_USER }}       0.0.0.0/0               md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
-              echo "host    ${{ env.DB_NAME_PROD }}     ${{ env.DB_USER }}       0.0.0.0/0               md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
-              echo "# IPv6 support" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
-              echo "host    ${{ env.DB_NAME_DEV }}    ${{ env.DB_USER }}       ::/0                    md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
-              echo "host    ${{ env.DB_NAME_PROD }}     ${{ env.DB_USER }}       ::/0                    md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
+              echo "# IPv4 external connections" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
+              echo "host    all             all             0.0.0.0/0               md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
             fi
 
             # Configure postgresql.conf for external connections
@@ -426,19 +422,6 @@ jobs:
 
           echo "Development database:"
           ./scripts/migrate-database.sh development status || echo "Development status check failed"
-
-      - name: Enable External PostgreSQL Access
-        run: |
-          cd ${{ env.PRODUCTION_DIR }}
-
-          echo "Enabling external PostgreSQL connections..."
-          chmod +x scripts/enable-postgresql-external.sh
-
-          # Enable for production environment
-          ./scripts/enable-postgresql-external.sh production || echo "Failed to enable external access for production"
-
-          # Optionally enable for development environment too
-          ./scripts/enable-postgresql-external.sh development || echo "Failed to enable external access for development"
 
       - name: Start API Gateway
         run: |
