@@ -14,16 +14,6 @@
 
 namespace rdws::validation {
 
-// SchemaValidator Implementation
-SchemaValidator::SchemaValidator(std::string  name, const std::string& schemaFile)
-    : schemaName(std::move(name)), schema(std::make_unique<valijson::Schema>()),
-      validator(std::make_unique<valijson::Validator>()) {
-
-    if (!loadSchemaFromFile(getSchemaPath(schemaFile))) {
-        throw std::runtime_error("Failed to load schema: " + schemaFile);
-    }
-}
-
 // Static factory method for string-based schemas
 SchemaValidator SchemaValidator::fromString(const std::string& name,
                                             const std::string& schemaString) {
@@ -73,24 +63,7 @@ std::string SchemaValidator::getSchemaPath(const std::string& schemaFile) {
     return relativePath;
 }
 
-bool SchemaValidator::loadSchemaFromFile(const std::string& filePath) const {
-    try {
-        Json::Value schemaDoc;
-        if (!valijson::utils::loadDocument(filePath, schemaDoc)) {
-            std::cerr << "Failed to load schema document: " << filePath << std::endl;
-            return false;
-        }
 
-        valijson::SchemaParser parser;
-        const valijson::adapters::JsonCppAdapter schemaAdapter(schemaDoc);
-        parser.populateSchema(schemaAdapter, *schema);
-
-        return true;
-    } catch (const std::exception& e) {
-        std::cerr << "Error loading schema " << filePath << ": " << e.what() << std::endl;
-        return false;
-    }
-}
 
 bool SchemaValidator::loadSchemaFromString(const std::string& schemaString) const {
     try {
