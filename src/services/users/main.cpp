@@ -14,15 +14,16 @@ using namespace rdws::types;
 using namespace rdws::database;
 using namespace rdws::users;
 using namespace rdws::controllers;
+using namespace rdws::utils;
 
 int main(int argc, char* argv[]) {
     try {
-        if (auto checkParameters = rdws::utils::LambdaParamsHelper::checkParams(argc, argv); !checkParameters.has_value()) {
+        if (const auto checkParameters = LambdaParamsHelper::checkParams(argc, argv); !checkParameters.has_value()) {
             std::cerr << UserController::formatUsageError(checkParameters.error()) << std::endl;
             return 1;
         }
 
-        rdws::utils::LambdaParams params{ .eventJson = argv[1], .contextJson = argv[2] };
+        const LambdaParams params{ .eventJson = argv[1], .contextJson = argv[2] };
         LambdaEvent event = LambdaEvent::fromJson(params.eventJson);
         LambdaContext context = LambdaContext::fromJson(params.contextJson);
 
