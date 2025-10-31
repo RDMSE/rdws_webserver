@@ -37,6 +37,7 @@ add_executable(orders_service
   ../../shared/common/config/config.cpp
   ../../shared/validation/schema_validator.cpp
   ../../shared/common/database/postgresql_database.cpp
+  ../../shared/common/utils/lambda_params_helper.cpp
 )
 
 # Link with static libgcc to reduce dependencies

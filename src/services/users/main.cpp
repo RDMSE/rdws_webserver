@@ -8,6 +8,8 @@
 #include <memory>
 #include <string>
 
+#include "common/utils/lambda_params_helper.h"
+
 using namespace rdws::types;
 using namespace rdws::database;
 using namespace rdws::users;
@@ -15,28 +17,14 @@ using namespace rdws::controllers;
 
 int main(int argc, char* argv[]) {
     try {
-        LambdaEvent event("GET", "/", "");                 // Initialize with defaults
-        LambdaContext context("unknown", "users-service"); // Initialize with defaults
-
-        // Check if we have JSON parameters (new API Gateway approach)
-        if (argc >= 3) {
-            // New approach: API Gateway passes JSON strings
-            std::string eventJson = argv[1];
-            std::string contextJson = argv[2];
-
-            try {
-                event = LambdaEvent::fromJson(eventJson);
-                context = LambdaContext::fromJson(contextJson);
-            } catch (...) {
-                // Fallback to old approach if JSON parsing fails
-                event = LambdaEvent(argc, argv);
-                context = LambdaContext(event.getRequestContext().requestId, "users-service");
-            }
-        } else {
-            // Fallback to old approach for backwards compatibility
-            event = LambdaEvent(argc, argv);
-            context = LambdaContext(event.getRequestContext().requestId, "users-service");
+        if (auto checkParameters = rdws::utils::LambdaParamsHelper::checkParams(argc, argv); !checkParameters.has_value()) {
+            std::cerr << UserController::formatUsageError(checkParameters.error()) << std::endl;
+            return 1;
         }
+
+        rdws::utils::LambdaParams params{ .eventJson = argv[1], .contextJson = argv[2] };
+        LambdaEvent event = LambdaEvent::fromJson(params.eventJson);
+        LambdaContext context = LambdaContext::fromJson(params.contextJson);
 
         context.log("Function started", "INFO");
 
