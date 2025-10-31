@@ -32,8 +32,6 @@
     "db:seed:prod": "./scripts/migrate-database.sh production seed",
     "db:reset": "./scripts/migrate-database.sh development reset",
     "db:status": "./scripts/migrate-database.sh development status",
-    "db:external": "./scripts/enable-postgresql-external.sh development",
-    "db:external:prod": "./scripts/enable-postgresql-external.sh production",
     "cpp:config": "./scripts/generate-cpp-config.sh development ./config",
     "cpp:config:prod": "./scripts/generate-cpp-config.sh production ./config"
   },

@@ -31,15 +31,11 @@ class SchemaValidator {
     SchemaValidator() = default;
 
     [[nodiscard]] static std::string getSchemaPath(const std::string& schemaFile) ;
-    [[nodiscard]] bool loadSchemaFromFile(const std::string& filePath) const;
     [[nodiscard]] bool loadSchemaFromString(const std::string& schemaString) const;
     [[nodiscard]] static std::vector<ValidationError>
         convertValidationResults(const valijson::ValidationResults& results) ;
 
   public:
-    // Constructor for file-based schemas (legacy)
-    SchemaValidator(std::string  name, const std::string& schemaFile);
-
     // Constructor for string-based schemas (recommended)
     static SchemaValidator fromString(const std::string& name, const std::string& schemaString);
 
