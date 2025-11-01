@@ -38,14 +38,15 @@ sudo systemctl restart postgresql
 # Wait a moment for restart
 sleep 3
 
-# Create application databases
-echo "Creating application databases..."
-sudo -u postgres createdb rdws_development 2>/dev/null || echo "Development DB already exists"
-sudo -u postgres createdb rdws_production 2>/dev/null || echo "Production DB already exists"
 
-# Create application user
+# Create application databases only if not exist
+echo "Creating application databases..."
+sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = 'rdws_development'" | grep -q 1 || sudo -u postgres createdb rdws_development
+sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = 'rdws_production'" | grep -q 1 || sudo -u postgres createdb rdws_production
+
+# Create application user only if not exist
 echo "Creating application user..."
-sudo -u postgres psql -c "CREATE USER rdws_user WITH PASSWORD 'rdws_pass123';" 2>/dev/null || echo "User already exists"
+sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname = 'rdws_user'" | grep -q 1 || sudo -u postgres psql -c "CREATE USER rdws_user WITH PASSWORD 'rdws_pass123';"
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE rdws_development TO rdws_user;"
 sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE rdws_production TO rdws_user;"
 
