@@ -340,15 +340,6 @@ jobs:
           sudo sed -i "s/host    all             all             127.0.0.1\/32            ident/host    all             all             127.0.0.1\/32            md5/" /var/lib/pgsql/data/pg_hba.conf
           sudo sed -i "s/host    all             all             ::1\/128                 ident/host    all             all             ::1\/128                 md5/" /var/lib/pgsql/data/pg_hba.conf
 
-          # Add external access rule (preserve across deploys)
-          echo "Enabling external access..."
-          # Adiciona regra de acesso externo se não existir
-          if ! sudo grep -q "^host[[:space:]]\+all[[:space:]]\+all[[:space:]]\+0.0.0.0/0[[:space:]]\+md5" /var/lib/pgsql/data/pg_hba.conf; then
-            echo "" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
-            echo "# IPv4 external connections" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
-            echo "host    all             all             0.0.0.0/0               md5" | sudo tee -a /var/lib/pgsql/data/pg_hba.conf
-          fi
-
           # Configure postgresql.conf for external connections
           sudo sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/" /var/lib/pgsql/data/postgresql.conf
           sudo sed -i "s/listen_addresses = 'localhost'/listen_addresses = '*'/" /var/lib/pgsql/data/postgresql.conf
@@ -361,7 +352,7 @@ jobs:
           sleep 5
 
 
-          # Escolhe o script de setup conforme ambiente
+          # Choose setup script based on environment
           if [ "${{ github.event.inputs.environment }}" = "production" ]; then
             echo "Running idempotent production setup..."
             chmod +x scripts/setup-postgresql.sh
