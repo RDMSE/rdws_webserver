@@ -155,7 +155,7 @@ jobs:
             echo "orders_service_unit_tests not found"
           fi
       - name: Upload C++ test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: cpp-test-results-${{ github.run_number }}
@@ -174,7 +174,7 @@ jobs:
           fi
           echo "Both microservices found, proceeding with upload"
       - name: Upload microservices binaries
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: microservices-binaries-${{ github.run_number }}
           path: |
