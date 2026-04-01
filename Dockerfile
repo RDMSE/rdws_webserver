@@ -1,7 +1,7 @@
 # Dockerfile for local development
 # This allows you to develop locally with the same environment as the server
 
-FROM fedora:42
+FROM fedora:43
 
 # Set environment variables
 ENV PKG_CONFIG_PATH="/usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig"
